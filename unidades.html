@@ -1,0 +1,862 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nossas unidades | Lavô</title>
+  <meta name="description" content="Encontre a Lavô mais próxima: busque por cidade, bairro, estado ou CEP e trace a rota no Google Maps ou no Waze.">
+  <meta name="theme-color" content="#532458">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Lavô">
+  <meta property="og:title" content="Nossas unidades | Lavô">
+  <meta property="og:description" content="Encontre a Lavô mais próxima: busque por cidade, bairro, estado ou CEP e trace a rota no Google Maps ou no Waze.">
+  <meta property="og:image" content="assets/img/loja-interior.webp">
+  <link rel="icon" href="assets/img/logo.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/img/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+
+  <div class="faixa-topo">Sorteio final: concorra a um BYD Mini 0 km e a vouchers de R$ 500. <a href="https://lp-byd-lavo.kexj38.easypanel.host/" target="_blank" rel="noopener">Participe agora</a></div>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="logo" href="index.html" aria-label="Lavô, página inicial">
+        <img src="assets/img/logo.png" alt="" width="54" height="54">
+        <span>Lavô<small>Lavanderia self-service</small></span>
+      </a>
+      <nav class="nav" id="nav-principal" aria-label="Principal">
+        <a href="index.html">Início</a><a href="nossa-historia.html">Nossa história</a><a href="vantagens.html">Vantagens</a><a href="noticias.html">Notícias</a><a href="unidades.html" aria-current="page">Unidades</a>
+        <a class="btn btn-lima" href="https://lavobrasil.com.br/franquia/" target="_blank" rel="noopener">Seja um franqueado</a>
+      </nav>
+      <div class="header-acoes">
+        <a class="btn btn-franquia" href="https://lavobrasil.com.br/franquia/" target="_blank" rel="noopener">Seja um franqueado</a>
+        <button class="menu-toggle" type="button" aria-controls="nav-principal" aria-expanded="false" aria-label="Abrir menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      </div>
+    </div>
+  </header>
+
+  <main id="conteudo">
+    <section class="page-hero on-dark">
+      <div class="deco-anel" aria-hidden="true"></div>
+      <div class="container">
+        <span class="eyebrow">Nossas unidades</span>
+        <h1>A roxinha mais amada está presente em todo o país!</h1>
+        <p>Somos a maior rede de lavanderias self-service do Brasil, com presença nacional e em breve na Europa. Abrimos uma loja nova a cada 36 horas.</p>
+      </div>
+      <svg class="onda" viewBox="0 0 1440 90" preserveAspectRatio="none" aria-hidden="true"><path fill="#f6f1fb" d="M0 60c180 30 360 30 540 0s360-60 540-30 270 40 360 30v30H0z"/></svg>
+    </section>
+
+    <section class="secao secao-nevoa" style="padding-top:clamp(40px,5vw,64px)">
+      <div class="container">
+        <!-- BUSCADOR UNIFICADO DE UNIDADES LAVÔ -->
+        <div id="lavo-store-locator" class="lavo-container">
+          <div class="lavo-painel">
+            <span class="eyebrow">Encontre uma unidade</span>
+            <h2>Encontre a Lavô mais próxima</h2>
+            <p class="lavo-desc">Digite seu endereço, CEP, cidade ou estado para encontrar a rota no Google Maps ou no Waze.</p>
+            <label class="lavo-label" for="lavo-input-busca">Buscar por logradouro, bairro, cidade, estado ou CEP:</label>
+            <div class="lavo-input-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <input type="search" id="lavo-input-busca" placeholder="Ex.: Blumenau, Moema, SP ou 04088-003" autocomplete="off">
+            </div>
+            <div class="lavo-sugestoes" aria-label="Buscas rápidas">
+              <button type="button" data-lavo-sugestao="São Paulo">São Paulo</button>
+              <button type="button" data-lavo-sugestao="Santa Catarina">Santa Catarina</button>
+              <button type="button" data-lavo-sugestao="Minas Gerais">Minas Gerais</button>
+              <button type="button" data-lavo-sugestao="Brasília">Brasília</button>
+              <button type="button" data-lavo-sugestao="Rio de Janeiro">Rio de Janeiro</button>
+            </div>
+            <div class="lavo-meta">
+              <span id="lavo-contador" aria-live="polite">Carregando unidades...</span>
+              <span id="lavo-status" aria-live="polite"></span>
+            </div>
+            <div id="lavo-lista-cards"></div>
+            <div class="lavo-paginacao">
+              <button type="button" id="lavo-btn-prev">← Anterior</button>
+              <span id="lavo-info-pagina">Página 1</span>
+              <button type="button" id="lavo-btn-next">Próxima →</button>
+            </div>
+          </div>
+          <div class="lavo-mapa-wrap">
+            <iframe
+              id="lavo-iframe-mapa"
+              title="Mapa das unidades Lavô"
+              src="https://www.google.com/maps/d/u/1/embed?mid=1C070ks3zDcTEq7Z2qIbjW17pjGOd7MQ&ehbc=2E312F&noprof=1"
+              allowfullscreen loading="lazy"></iframe>
+          </div>
+        </div>
+
+        <!--
+          DADOS DAS UNIDADES (TSV, separado por TAB)
+          Colunas: Logradouro | País | Bairro | Cidade | UF | CEP
+          A primeira linha é o cabeçalho. Para incluir uma loja, adicione uma linha.
+        -->
+        <script id="lavo-dados-tsv" type="text/plain">
+Logradouro	País	Bairro	Cidade	UF	CEP
+Avenida do Estado Dalmo Vieira, 3066	Brasil	Centro	Balneário Camboriú	SC	88338-065
+5ª Avenida, 140	Brasil	Vila Real	Balneário Camboriú	SC	88330-260
+4ª Avenida, 3360	Brasil		Balneário Camboriú	SC	88330-131
+Av. das Torres S/N	Brasil	Recanto dos Passaros	Cuiabá	MT	78075-260
+Av. Fernando Corrêa da Costa, 2350	Brasil	Jardim Petrópolis	Cuiabá	MT	78070-000
+Av. Efigênio Salles, 2600, Sala 05	Brasil	Aleixo	Manaus	AM	69060-020
+Praça da Bandeira, 232	Brasil	Centro	Itumbiara	GO	75503-520
+Avenida Multirão esquina com T9, 2730	Brasil	Setor Bueno	Goiânia	GO	74215-240
+Alameda dos Jurupis, 1299	Brasil	Moema	São Paulo	SP	04088-003
+Rua Luís Góis, 1752	Brasil	Vila Clementino	São Paulo	SP	04043-200
+Rua Clodomiro Amazonas, 980	Brasil	Itaim Bibi	São Paulo	SP	04537-002
+Av. Santo Amaro, 3240	Brasil	Cidade Monções - Brooklin Paulista	São Paulo	SP	04556-200
+R. Alvorada, 550	Brasil	Vila Olímpia	São Paulo	SP	04550-002
+Avenida Giovanni Gronchi 3577	Brasil	Morumbi	São Paulo	SP	05724-001
+Av. dos Estados, 1586	Brasil	Parque Central	Santo André	SP	09210-580
+Rodovia Mário Covas, 1158	Brasil	Coqueiro	Ananindeua	PA	67113-330
+AVENIDA JORGE SCHIMMELPFENG 340	Brasil	Centro	Foz do Iguaçu	PR	85851-110
+Av. Maria Lacerda Montenegro, 971	Brasil	Nova Parnamirim	Parnamirim	RN	59152-600
+Av Praia de Ponta Negra, 101	Brasil	Ponta Negra	Natal	RN	59094-100
+Trav. Assis de Vasconcelos 741	Brasil	Aldeia	Santarém	PA	68040-565
+Av. Nossa Senhora da Luz, 17 - Loja 06	Brasil	Centro	Curitiba	PR	82510-020
+Avenida Ricardo Jafet, 1501	Brasil	VL Santa Eulália	São Paulo	SP	04260-020
+R Doutor Clemente Jobim, 209	Brasil	Vila Mariana	São Paulo	SP	01545-040
+Av. Piracicamirim, 2511	Brasil	Piracocamirim	Piracicaba	SP	13417-780
+R. Giuseppe Sacco, 337	Brasil	Parque das Bandeiras	Osasco	SP	06160-380
+Rua Barão da Lagoa Dourada, 340 - Loja 08	Brasil	Pelinca	Campos dos Goytacazes	RJ	28035-212
+Av Martin Luther, 1112	Brasil	Victor Konder	Blumenau	SC	89012-010
+Rua República Argentina, 563	Brasil	Ponta Aguda	Blumenau	SC	89050-101
+Rua Iguaçu, nº 186	Brasil	Itoupava Seca	Blumenau	SC	89030-030
+Avenida Brasil, nº 256	Brasil	Ponta Aguda	Blumenau	SC	89050-000
+Rua Murici, nº 85	Brasil	Garcia	Blumenau	SC	89020-310
+Rua Prudente de Moraes, nº. 130	Brasil	Vila Nova	Blumenau	SC	89035-360
+Rua Morom, 1848, Salas 1 e 3	Brasil	Centro	Passo Fundo	RS	99010-030
+Avenida Presidente Vargas, 1610 Sala 08	Brasil	São Cristovão	Passo Fundo	RS	99070-000
+Posto Shell - Quadra 307 Sul	Brasil	Asa Sul	Brasília	DF	70354-500
+Rua Alexandre Guimarães, 1850	Brasil	Areal	Porto Velho	RO	76804-374
+Rua Tenente Francisco Lehmkhul, 328	Brasil	Centro	Palhoça	SC	88130-040
+Rua Ituiutaba, 480b	Brasil	São Benedito	Uberaba	MG	38020-310
+Av. Barão de Gurguéia 3450	Brasil	Tabuleta	Teresina	PI	64019-352
+Rua Dr Pedro Zimmermann, 2600	Brasil	Itoupava Central	Blumenau	SC	89066-000
+Rua Dr Pedrinho nº 79	Brasil	Rio Morto	Indaial	SC	89082-262
+Rua Arthur Azevedo, 1368	Brasil	Pinheiros	São Paulo	SP	05404-003
+Av. Presidente Vargas, Lote AM, s/n	Brasil	Uraim	Paragominas	PA	68625-130
+Avenida Fernando Ferrari, 808	Brasil	Jd da Penha	Vitória	ES	29060-240
+Av. Marinheiro Max Schramm, 3268	Brasil	Jd Atlântico	Florianópolis	SC	88095-000
+Rod, SC-281, 2665	Brasil	Sertão do Maruim	São José	SC	88106-115
+R. Cel. Teixeira de Oliveira, 467	Brasil	Centro	Biguaçu	SC	88160-130
+Rua Pedro Neri Schwinder 1850 - Auto Posto Sto Amaro	Brasil	Vargem dos Pinheiros	Santo Amaro da Imperatriz	SC	88140-000
+Avenida madre maria Vilac, 1224	Brasil	Canavieiras	Florianópolis	SC	88054-000
+Av. Vidal Procópio Lohn, 1081	Brasil	Nova Palhoça	Palhoça	SC	88131-551
+R. Sebastião Alzemiro dos Santos s/n Posto Vale Verde Acesso a Av paulo Roberto Vidal	Brasil	Caminho Novo	Palhoça	SC	88137-640
+Rodovia PA 275 s/nº Posto Camargos	Brasil	Beira Rio	Parauapebas	PA	68515-000
+R. Gov. Agamenon Magalhães, 240	Brasil	Cristo Rei	Curitiba	PR	80050-510
+Rua João Rodolfo Schlenker, 1634	Brasil	Agua Verde	Curitiba	PR	80610-334
+Avenida Goioerê, 379	Brasil	Centro	Campo Mourão	PR	87302-070
+Rua Aleixo Rodrigues de Queiroz, 519 - Qd 04, Lt 21, Loja 07 - Galeria VR	Brasil	Jundiaí	Anápolis	GO	75110-850
+R. Tuiuti, 2295 - Aventureiro	Brasil	Joinville	Joinville	SC	89226-001
+Avenida Santos Dumont, 601	Brasil	Santo Antônio	Joinville	SC	89223-001
+Av. Getúlio Vargas, 500	Brasil	Bucarein	Joinville	SC	89202-002
+Rua Guilherme, 1990 posto de combustível Madalena Ii	Brasil	Costa e Silva	Joinville	SC	89218-501
+R. Monsenhor Gercino, 3997	Brasil	Jarivatuba	Joinville	SC	89230-290
+R. Santa Catarina, 845	Brasil	Floresta	Joinville	SC	89211-305
+Rua. Albano Schmidt, 1200	Brasil	Boa Vista	Joinville	SC	89205-098
+Avenida Marcelino Pires, 3497	Brasil	Jd Carisma	Dourados	MS	79830-001
+Rua Balbina de Matos 1536	Brasil	Jd Climax	Dourados	MS	79820-090
+Av. Francisco Navarra, 101	Brasil	Centro	Varginha	MG	37006-003
+Av. Benjamin Constant, 150	Brasil	Centro	Varginha	MG	37010-000
+Rua Serra de Bragança 1675	Brasil	Vila Gomes Cardim	São Paulo	SP	03318-000
+Av. Universitária, n° 2221 - 5	Brasil	Vila Santa Isavel	Anápolis	GO	75083-350
+Avenida Wild Jose de Souza, 542	Brasil	Vila Tupy	Registro	SP	11900-000
+AVENIDA PADRE ANCHIETA Nº 4580	Brasil	Três Marias	Peruíbe	SP	11772-314
+AVENIDA RUI BARBOSA Nº 763	Brasil	Centro	Itanhaém	SP	11740-056
+QCLN 111 nº 39 - BLOCO C	Brasil	Asa Norte	Brasília	DF	70754-530
+Posto da 302 Norte	Brasil	Asa Norte	Brasília	DF	70377-000
+CHIN CA 9, LT 2 - Edifício San Diego	Brasil	Lago Norte	Brasília	DF	71503-509
+Rua Godofredo Maciel 4035	Brasil	Mondubim	Fortaleza	CE	60710-000
+Av. Godofredo Maciel, 1945	Brasil	Maraponga	Fortaleza	CE	60710-683
+Quadra 302 - Conj 06 - Loja 01 - Centro Urbano Loja 16 - Lote B	Brasil	Centro Urbano	Samambaia do Sul	DF	72314-500
+R. Clevelândia, 164-D	Brasil	Centro	Chapecó	SC	89802-410
+Rua Marechal Deodoro da Fonseca 616D	Brasil	Centro	Chapecó	SC	89802-140
+Av. Coronel Dico, 674	Brasil	Assis Brasil	Ijuí	RS	98700-000
+Rua São Francisco 361	Brasil	São Geraldo	Ijuí	RS	98700-000
+Rua Frei Gabriel, ao lado do nº 749	Brasil	Universitário	Lages	SC	88509-070
+Av. Marechal Rondon, 1582 - esquina com Rua 22 de Novembro	Brasil	Centro	Ji-Paraná	RO	76900-136
+Avenida Maringá, 182, sala 1	Brasil	Nova Brasilia	Ji-Paraná	RO	76908-349
+R. Cap. Adão Pereira da Silva Cabral, 883	Brasil	Jd Paraiso	São Carlos	SP	13561-000
+Rua Bento Pereira Mundim 235	Brasil	Amoreiras	Paracatu	MG	38600-428
+Quadra 101 Sul, Rua NS A, Conj. 02, Lote 08	Brasil	Plano Diretor Sul	Palmas	TO	77015-004
+Avenida Carlos Liviero, 1023	Brasil	Vila Libieiro	São Paulo	SP	04186-100
+Rua 10, Chácara 325, nº 20, Loja 03	Brasil	Setor Habitacional Vicente Pires	Brasília	DF	72007-409
+St. Hab. Vicente Pires - Taguatinga	Brasil	Taguatinga	Taguatinga	DF	72007-830
+Av. Des. João Machado, 63	Brasil	Planalto	Manaus	AM	69044-000
+Av. Getúlio Vargas, 1743	Brasil	Bosque	Rio Branco	AC	69900-610
+Av. Jacuí, 2434, QD 43 - Lote 10	Brasil	Pq Residencial Cidade Alta	Rondonópolis	MT	78730-436
+Av. Osmar Demeneck, 785	Brasil	Setor Industrial	Aripuanã	MT	78325-000
+Rua José Bernardo Medeiro, 237	Brasil	Centro	Guarulhos	SP	07013-050
+Rua Prudente de Moraes, 567	Brasil	Centro	Salto	SP	13322-010
+Rua Henrique Dumont 748	Brasil	Jd Paulista	Ribeirão Preto	SP	14090-200
+Av. Torquato Tapajós, 6584	Brasil	Colônia Terra Nova	Manaus	AM	69093-415
+Rua Quatorze de Julho, 114	Brasil	Bela Vista	São Paulo	SP	01325-001
+Rua Laurinda Fontes, 05	Brasil	Pontalzinho	Itabuna	BA	45603-103
+Avenida Cinquentenario, 1405	Brasil	Centro	Itabuna	BA	45600-093
+Rodovia Mario Covas, 180	Brasil	Coqueiro	Belém	PA	66650-000
+Av. Pres. Vargas, 316	Brasil	Vitoria Regia	Rio Verde	GO	75913-001
+Av. Dorgival Pinheiro de Sousa, 673	Brasil	Centro	Imperatriz	MA	65901-610
+Av. Pedro Neiva de Santana, 926 - Galeria do Posto Paraty	Brasil	Babaçulândia	Imperatriz	MA	65912-535
+BR-010, 1346	Brasil	Bacuri	Imperatriz	MA	65916-205
+Rua Mauriti 2206	Brasil	Março	Belém	PA	66087-680
+Rua Copaíba, Lote 01, Torre A, Sala 2603	Brasil	Norte (Águas Claras)	Águas Claras	DF	71919-540
+Avenida Nilo Peçanha, 415 Loja E - Condomínio Graziella	Brasil	Centro	Cabo Frio	RJ	28907-000
+Av. Jequitibá, 585	Brasil	Norte Aguas Claras	Águas Claras	DF	71929-540
+Av. Alfredo Sá (BR 116), 2332	Brasil	Concórdia	Teófilo Otoni	MG	39800-115
+Av. Dr Gastão Vidigal, 2345	Brasil	Vila Leopoldina	São Paulo	SP	05314-001
+Avenida Dr Ismael Alonso Y Alonso, 177 - Loja 2	Brasil	Centro	Franca	SP	14400-770
+Av Senador Teotônio Vilela, 2.631	Brasil	Cidade Dultra	São Paulo	SP	04801-010
+Rua Dr. Oscar Guimarães, 345 Esquina da rua Dr. Munir Thomé	Brasil	Centro	Três Lagoas	MS	79600-020
+Avenida Ranupho Marques Leal, no 874, anexo ao Pátio Posto	Brasil	Jardim Brasília	Três Lagoas	MS	79620-340
+Rua Raul Seixas, 6A	Brasil	Centro	Itacaré	BA	45530-000
+Av. Antônio Athanásio dos Santos, s/n - esquina com Rua João Coutinho	Brasil	Orla	Itacaré	BA	45530-000
+Av. Humberto de Campos, 3499	Brasil	Bocaina	Ribeirão Pires	SP	09424-600
+R. Padre Anchieta, 2639	Brasil	Mercês	Curitiba	PR	80730-001
+Rua Dom Pedro II, 130	Brasil	Centro	Ponta Porã	MS	79904-706
+Av Brasil 1799	Brasil	Centro	Ponta Porã	MS	79904-698
+Av: Dom Pedro I, 195	Brasil	Tejeraba	Guarujá	SP	11440-000
+Rua Emílio Portel, 249	Brasil	Vila Alzira	Guarujá	SP	11420-070
+Avenida Tocantins, 150 B	Brasil	Novo Horizonte	Marabá	PA	68503-660
+Av. Major Willians 1585	Brasil	Centro	Boa Vista	RR	69301-110
+Av. Gen. Ataíde Teive, 2309	Brasil	Liberdade	Boa Vista	RR	69309-000
+Rua: Joaquim Francisco de Paula, 353	Brasil	Chico de Paula	Jaraguá do Sul	SC	89254-710
+R. Rio Paraná, 206	Brasil	Weissópolis	Pinhais	PR	83322-000
+Av. Marcolino Martins Cabral, 1900	Brasil	Vila Moema	Tubarão	SC	88705-000
+Av. Rio Arinos, 1127-S	Brasil	Centro	Juara	MT	78575-000
+Av. das Araras 1795w	Brasil	Nova Mutum	Nova Mutum	MT	78450-000
+Rua Baltazar Passos, 480 loja 1	Brasil	Setubal	Recife	PE	51130-290
+Av Tabapuã 329 -sala 2	Brasil	Centro	Ariquemes	RO	76870-518
+Rua 1º de Maio, 130	Brasil	Centro	Caçador	SC	89509-003
+Avenida Nossa da Glória, 1789	Brasil	Cavaleiros	Macaé	RJ	27920-360
+Av. Comendador Gustavo Paiva, 2650 A	Brasil	Mangabeiras	Maceió	AL	57036-540
+R. Primeiro de Março, 980	Brasil	Centro	São Leopoldo	RS	93010-210
+Rua Vinte e Quatro de Gosto 327	Brasil	Centro	Esteio	RS	93280-000
+Avenida Feitoria 257 loja A	Brasil	Rio Branco	São Leopoldo	RS	93040-331
+AV DOM JOAO BECKER, 170	Brasil	Centro	São Leopoldo	RS	93010-010
+Avenida Eusébio de Queiroz, 955, Lojas 14 e 15	Brasil	Centro	Eusébio	CE	61760-000
+BR-153, 2188 - Posto Coopercarga	Brasil	Vila Jacob Biezus	Concórdia	SC	89700-000
+Avenida Gabriela Prado Maia Ribeiro, 86	Brasil	Tijuca	Rio de Janeiro	RJ	20520-025
+Av. Mato Grosso, 1132	Brasil	Centro	Araguari	MG	38440-046
+Rua Dr Alves do banho, 65b	Brasil	São Bernardo	Campinas	SP	13030-580
+CCSW 6, Bloco B/C, Sala 27	Brasil	Setor Sudoeste	Brasília	DF	70680-680
+Avenida General Flores da Cunha, 894 - Container 3	Brasil	Vila Veranopolis	Cachoeirinha	RS	94910-001
+Rua Epitácio Pessoa, 1050	Brasil	Centro	Quixadá	CE	63900-133
+Av.: Vereador João de Lucca, 1777	Brasil	Jd Cupece	São Paulo	SP	04381-000
+Av. Gov. Celso Ramos, 184	Brasil	Pereque	Porto Belo	SC	88210-000
+Avenida Cel Teixeira, 7461	Brasil	Ponta Negra	Manaus	AM	69036-725
+Rua Barão de Indaiá, 712	Brasil	Flores	Manaus	AM	69058-448
+Rua Barão do Rio Branco, 15	Brasil	Flores	Manaus	AM	69058-581
+Rua Aurora, 1, loja 03	Brasil	Praia do Forte	Mata de São João	BA	48280-000
+Av. Otávio Mangabeira, 1945, loja 15	Brasil	Pituba	Salvador	BA	41830-050
+Setor Central, Qd 55, Lt 8 - Posto Ipiranga	Brasil	Setor Central	Gama	DF	72405-550
+Rua Dourados, 49	Brasil	Boqueirão	Praia Grande	SP	11701-010
+Av. Rouxinol, 36	Brasil	Tiradentes	Campo Grande	MS	79041-150
+Av. Sen. Filinto Müler, 476 - Sala 5	Brasil	Vila Ipiranga	Campo Grande	MS	79080-190
+R. da Divisão, 3060/3150	Brasil	Jd Monte Alegre	Campo Grande	MS	79074-340
+Rua 15 de novembro, 822	Brasil	Centro	Campo Grande	MS	79002-140
+Calçada das Violetas 332/334	Brasil	Alphaville Comercial	Barueri	SP	06453-003
+Rua Americano do Brasil 237	Brasil	Centro	Catalão	GO	75707-360
+Av. Roberto Silveira, 1350	Brasil	Portão de Ferro	Paraty	RJ	23970-000
+Avenida José Paulino da Costa, 961	Brasil	Vila Texeira	Alfenas	MG	37130-000
+Av dos Navegantes, 333	Brasil	Manoel Carneiro	Porto Seguro	BA	45810-000
+Avenida dos Navegantes 1417, ANTONIO TITO - SEDE	Brasil	Areião	Porto Seguro	BA	45810-000
+Rua Presidente Vargas, 100	Brasil	Centro	Santa Cruz Cabrália	BA	45807-000
+Av Itamaraju, 670	Brasil	Centro	Prado	BA	45980-000
+Rua Carneiro da Cunha, 494	Brasil	Vila Saúde	São Paulo	SP	04144-000
+Av. Jabaquara, 2979	Brasil	Mirandópolis	São Paulo	SP	04045-004
+Avenida Telesforo Cândido Rezende, 555	Brasil	Centro	Conselheiro Lafaiete	MG	36400-000
+Alameda Aristiliano Ramos, 1320	Brasil	Centro	Rio do Sul	SC	89160-113
+Av. Washington Soares, 4370 A	Brasil	Edson Queiroz	Fortaleza	CE	60822-142
+Rua Avelina Jaci Bohn, 255 s	Brasil	Centro	Tangará da Serra	MT	78300-060
+Avenida Vereador Nilo Torres, nº. 1.659-W	Brasil	Jd Santa Lúcia	Tangará da Serra	MT	78304-000
+BR 316 KM 361	Brasil	Centro	Bacabal	MA	65700-000
+Estrada do Coco, km 8 (nº 356)	Brasil		Camaçari	BA	42802-540
+Rua Deputado Aral Moreira, 316	Brasil	Centro	Ponta Porã	MS	79904-640
+Rua Euvaldo Santos Leite, nº 239	Brasil	Centro	Lauro de Freitas	BA	42703-510
+Travessa Vitor Campos, 121B	Brasil	Comércio	Itaituba	PA	68180-070
+Rua Roberto Simonsen 395	Brasil	Gruta de Lourdes	Maceió	AL	57052-675
+Av Presidente Getúlio Vargas, 54	Brasil	Serraria	Maceió	AL	57046-140
+Av Tavares Bastos, 1533	Brasil	Marambaia	Belém	PA	66615-005
+Avenida Santa Catarina, n2065	Brasil	Tabuleiro	Camboriú	SC	88348-050
+Av. da Produção 1115N	Brasil	Setor Industrial	Lucas do Rio Verde	MT	78460-381
+Avenida Mato Grosso 1017E (Posto de Gasolina)	Brasil		Lucas do Rio Verde	MT	78455-000
+Estrada do Coco, AV. Santos.Dumont, 5772	Brasil		Lauro de Freitas	BA	42700-000
+Av. Santos Dumont, 4360	Brasil	Centro	Lauro de Freitas	BA	42702-400
+Praça 13 de Maio, 181	Brasil	Centro	Ubatuba	SP	11690-168
+Rua Capitão Felipe, 331	Brasil	Itagua	Ubatuba	SP	11688-602
+Rodovia Oswaldo Cruz, 850	Brasil	Mato Dentro	Ubatuba	SP	11691-032
+Av. Andrelino Miguel, 398 (Praia Domingos Dias)	Brasil	Lázaro	Ubatuba	SP	11685-538
+Rua Padre Manoel da Nóbrega, 761	Brasil	Perequê-Acu	Ubatuba	SP	11680-000
+R. José Antônio Picoral, 267	Brasil	Torres	Torres	RS	95560-000
+Avenida Altino Guimarães 455	Brasil	Santo Antônio	Patrocínio	MG	38740-210
+Rua Santo Antônio, 140	Brasil	Centro	Criciúma	SC	88801-440
+Av. Ligia Latufe Salomão, 605 -box 102 e 103	Brasil	João Rossi	Ribeirão Preto	SP	14026-520
+Av. Antônio e Helena Zerrenner, n. 1500	Brasil	Sumarezinho	Ribeirão Preto	SP	14055-130
+Av Goiás 167	Brasil	São Cristóvão	Goianésia	GO	76381-125
+Av. Prefeito José Juvenal Mafra, 7173	Brasil	Gravatá	Navegantes	SC	88372-506
+Av. Princesa Isabel, 1126	Brasil	Perquê	Ilhabela	SP	11633-000
+Av. José Pacheco do Nascimento, 1493	Brasil	Veloso	Ilhabela	SP	11630-000
+Av. Padre Francisco Salles Colturato, 470	Brasil	Centro	Araraquara	SP	14802-010
+Avenida Centenário, 173	Brasil	Centenário	Boa Vista	RR	69312-603
+RR-205, 4993	Brasil	Murilo Teixeira Cidade	Boa Vista	RR	69317-508
+Rua Pedro Adelmar bantim, 1855	Brasil	Jd tropical	Boa Vista	RR	69314-543
+Av. Ayrton Senna da Silva, 2884	Brasil	Piedade	Jaboatão dos Guararapes	PE	54410-240
+Rua Silva Jardim 2169	Brasil	Pq Industrial	São José do Rio Preto	SP	15025-065
+AV MIGUEL PETRONI LOTE 3A	Brasil	Jd Ipanema	São Carlos	SP	13563-470
+Avenida Eugênio Krause 631	Brasil	Centro	Penha	SC	88385-000
+Avenida Nereu Ramos, R. Itacolomi 4853	Brasil		Balneário Piçarras	SC	88380-000
+R. Dr. Reinaldo Schmithausen, 857	Brasil	Cordeiros	Itajaí	SC	88310-002
+R. Brusque, 1229	Brasil	Centro	Itajaí	SC	88303-391
+Av Presidente Wilson 903	Brasil	Gonzaguinha	São Vicente	SP	11320-001
+Av Presidente Wilson 136	Brasil	Centro	São Vicente	SP	11320-000
+Rua Visconde de Piraja, 318. Galeria 318	Brasil	Ipanema	Rio de Janeiro	RJ	22410-000
+Rua Domingos Ferreira 76	Brasil	Copacabana	Rio de Janeiro	RJ	22050-012
+Praça Jauru, 32	Brasil	Taquara	Rio de Janeiro	RJ	22725-520
+QN 07 AE 1 RIACHO MALL LOJA 03-A	Brasil	Riacho Fundo I	Riacho Fundo	DF	71805-700
+R. Major-Polícia Militar Antônio Pompílio da Fonseca, 38	Brasil	Vila Ipiranga	Porto Alegre	RS	91360-450
+Av Bento Gonçalves, 919	Brasil	Santo Antônio	Porto Alegre	RS	90650-002
+Rua República, 518	Brasil	Cidade Baixa	Porto Alegre	RS	90050-320
+R. José de Alencar, 399	Brasil	Menino Deus	Porto Alegre	RS	90880-480
+Rua Portugal, 319	Brasil	Higienópolis	Porto Alegre	RS	90520-310
+Av. Cavalhada 2315 Loja 06	Brasil	Cavalhada	Porto Alegre	RS	91740-001
+Avenida Cavalhada, 4611	Brasil	Cavalhada	Porto Alegre	RS	91740-001
+Av. Protasio Alves, 5128	Brasil	Chacara das Pedras	Porto Alegre	RS	91310-000
+Av Baía dos Golfinhos 1778	Brasil	Praia da Pipa	Tibau do Sul	RN	59178-000
+Av General Francisco Glicério 369 a 387	Brasil	Gonzaga	Santos	SP	11065-401
+R. Alferes Poli, 633	Brasil	Centro	Curitiba	PR	80220-050
+Rua Marcílio Dias, 1169	Brasil	Centro	Novo Hamburgo	RS	93320-047
+Quadra Central, Lote K, Lojas 24 e 26 - Edifício Varanda Shopping	Brasil	Setor Central	Sobradinho	DF	73010-528
+Rua Inácio Lustosa, 339	Brasil	São Francisco	Curitiba	PR	80510-000
+Av. Paraná, 1600 - Loja 5	Brasil	Zona 07	Maringá	PR	87020-085
+Av. São Paulo, 743 - Shopping Avenida Center	Brasil	Zona 07	Maringá	PR	87020-035
+Avenida Diocesana, 297	Brasil	Nova Betânia	Mossoró	RN	59607-030
+Avenida Presidente Dutra, n° 3418	Brasil	Alto de São Manoel	Mossoró	RN	59628-000
+Rua José Lourenço, 463 - 111	Brasil	São Pedro	Juiz de Fora	MG	36036-230
+Av. Orosimbo Maia, 1309	Brasil	Jd. Guanabara	Campinas	SP	13023-002
+Av. Nazeazeno Ferreira, s/n - esquina com Rua Vigário Mota	Brasil	Centro	Bragança	PA	68600-000
+Avenida JK, nº 1616 E	Brasil	Setor de Serviços	Juína	MT	78320-000
+Av. Júlio Campos, s/n (Posto de combustível)	Brasil	Centro	Água Boa	MT	78635-000
+Rua Coronel Ferraz - Loja 65	Brasil	Centro	São Lourenço	MG	37470-000
+Rua Padre Carmene, 99 - Loja 3	Brasil	Vila Suíça	Gramado	RS	95670-000
+Rua Osvaldo Aranha, 700 loja 1	Brasil	Centro	Canela	RS	95680-079
+R. Moacir Simões da Rocha, 105	Brasil	Vila São Pedro	São Paulo	SP	04674-150
+Rua Santa Rita, 60	Brasil		Arraial d'Ajuda	BA	45810-000
+Rua Padre Cassemiro, 1530	Brasil	Vila Mariana	Cáceres	MT	78210-318
+Travessa Lourival Campos Cunha, s/n - Qd 29, Lote 129, Box 01	Brasil	Comercial	Barcarena	PA	68445-000
+Av. Coronel Gaspar, 163 - Qd 1, Lt 1-2	Brasil	Setor Central	Uruaçu	GO	76400-000
+Av. JK, Qd 6, Lt 17	Brasil	Jardim Aeroporto	Jaraguá	GO	76330-000
+Av. Brasil, 865 - Qd 22, Lt 5	Brasil	Centro	Ceres	GO	76300-132
+Av. Adélino Américo de Azevedo, 268	Brasil		Porangatu	GO	76550-000
+Av. Minas Gerais, 1395 - Qd 323, Lt 1 a 5	Brasil	Setor Central	Gurupi	TO	77403-110
+Av. São Geraldo, s/n	Brasil	Novo Eldorado	Eldorado do Carajás	PA	68524-000
+Av. Rio Verde, Qd 95, Lt 14E, Sala 01	Brasil	Setor Jardim Luz	Aparecida de Goiânia	GO	74915-015
+Av. Gov. Fernando Guilhon, 1300	Brasil	São Luiz II	Conceição do Araguaia	PA	68540-000
+Rua 4, s/n - Posto L. Farol, Rodovia GO-060	Brasil	Setor Anhanguera	São Luís de Montes Belos	GO	76100-000
+Av Blumenau 3634	Brasil	Bom Jesus	Sorriso	MT	78896-147
+Av. Rio Grande do Sul, 824	Brasil	Centro	Canarana	MT	78640-000
+Av. Araés, 513 - Qd 09, Lt 11	Brasil	Jardim Oliveira	Nova Xavantina	MT	78690-000
+Av. Bandeirantes, 2331	Brasil	Centro	Paranatinga	MT	78870-000
+RODOVIA BR 230, KM 9	Brasil	Intermares	Cabedelo	PB	58102-202
+Avenida Cristo rei, 646	Brasil	Industrial	Jacundá	PA	68590-000
+Av. Presidente Nereu Ramos, s/nº (lote nº 28)	Brasil	Jardim do Moinho	Mafra	SC	89306-076
+Rua XV de novembro, nº 831	Brasil	Centro	Rio Negro	PR	83880-065
+R. Álvares Cabral, 430	Brasil	Centro	Marília	SP	17501-100
+Av. Senador Valdon Varjão, 2077	Brasil	Jd. Araguaia	Barra do Garças	MT	78600-000
+Rua Frederico Lemos, 1018	Brasil	Centro	Porto Nacional	TO	77500-188
+Avenida Porto Seguro, 712	Brasil	Centro	Eunápolis	BA	45820-006
+Avenida Tefé, 226	Brasil	Japiim	Manaus	AM	69078-000
+Rua Raul Saraiva Ribeiro, 21	Brasil	Angola	Betim	MG	32604-172
+Rua Salgado Filho, 74 - esquina com Rua Miranda de Carvalho	Brasil	Setor Antena	Jataí	GO	75804-080
+Rua Coronel Antônio Borges do Amaral, 358	Brasil		São João Evangelista	MG	39705-000
+Rua Philadelpho Coutinho de Araújo	Brasil	Alfa Sul	Manhuaçu	MG	36904-165
+Av. Ludovico da Riva Neto 771	Brasil		Alta Floresta	MT	78580-000
+Rua Capitão Germano, 225	Brasil	Centro	Extrema	MG	37640-058
+Avenida Presidente Kennedy, 7501	Brasil	Ocian	Praia Grande	SP	11704-105
+Avenida Diamantino Cruz Ferreira Mourão, no 3356, box B	Brasil	Samambaia	Praia Grande	SP	11714-630
+R. São Sebastião, 33	Brasil	Todos Os Santos	Montes Claros	MG	39400-120
+Av. Mestra Fininha, 3602	Brasil	Augusta Mota	Montes Claros	MG	39403-431
+Rodovia do Sol, 808 loja 5	Brasil	Praia de Itaparica	Vila Velha	ES	29102-020
+Rodovia Juscelino Kubitschek, 991 - Letra G	Brasil	Jardim Equatorial	Macapá	AP	68903-014
+R. Gen. Ubaldo Figueira, 732 E	Brasil	Centro	Santana	AP	
+Avenida Ernestino Borges 1110 A	Brasil	Julião Ramos	Macapá	AP	68908-198
+Rodovia PE-15 - KM 16, 5, nº 242	Brasil	Centro	Paulista	PE	53401-445
+Av. João Ramalho, 1504 B	Brasil	Parque São Vicente	Mauá	SP	09371-520
+Av. Santana, 821	Brasil	Parque Ortolândia	Hortolândia	SP	13184-210
+Av. José Romão, s/n - Posto Atem	Brasil	São José Operário	Manaus	AM	69085-288
+Rua Tiradentes, 1026	Brasil	Centro	Amambai	MS	79990-057
+Rua Oliveira Gouveia, 111	Brasil	Vila Prudente	São Paulo	SP	03138-020
+Rua Bixira, 31	Brasil	Mooca	São Paulo	SP	03119-020
+Rua Hormindo Barros, 770 - Loja	Brasil	Candeias	Vitória da Conquista	BA	45029-094
+Avenida Nossa Senhora da Conceição, 87	Brasil	Conforto	Volta Redonda	RJ	27262-011
+Av. Antonio Pires Pimentel, 2520	Brasil	Taboão	Bragança Paulista	SP	12914-001
+Av. Conselheiro Julius Arp, nº 80	Brasil	Centro	Nova Friburgo	RJ	28623-000
+Praça Pres. Getúlio Vargas, 139	Brasil	Centro	Nova Friburgo	RJ	28610-175
+Av. Doutor Delfim Moreira, 17B	Brasil	Centro	Santa Rita do Sapucaí	MG	37536-086
+Avenida Vereador da Costa Rios 1515	Brasil	São Geraldo	Pouso Alegre	MG	37558-149
+Rua Dom Pedro II, 348 - Loja 7	Brasil	Centro	Governador Valadares	MG	35010-090
+Rua Barão de Aratanha 1344	Brasil	Fátima	Fortaleza	CE	60150-071
+Rua Ataliba Barros, 190 Lj 09	Brasil	São Mateus	Juiz de Fora	MG	36025-275
+Rua Fortunato Ferraz, 365 e 851	Brasil	Vila Anastácio	São Paulo	SP	05093-000
+Rua Machado de Assis, 595 - esquina com Rua Salem Bechara	Brasil	Centro	Osasco	SP	06018-030
+Av. Edmundo Amaral, 111	Brasil	Piratininga	Osasco	SP	06230-150
+Estrada União e Indústria, 9429	Brasil	Itaipava	Petrópolis	RJ	25730-730
+R. Gen. Rondon, 1015	Brasil	Quitandinha	Petrópolis	RJ	25650-027
+Rua Marechal Deodoro, 195	Brasil	Centro	Petrópolis	RJ	25620-150
+Av. Vila Ema, 3952	Brasil	Vila Ema	São Paulo	SP	03282-001
+Av. Renata, 500	Brasil	Vila Formosa	São Paulo	SP	03377-000
+Av Inglaterra, 313	Brasil	Centro	Cambé	PR	86181-000
+Av. Juscelino Kubitscheck, 2540	Brasil	Vila Ipiranga	Londrina	PR	86020-005
+Rua Pio XII, 313	Brasil	Centro	Londrina	PR	86020-380
+Rua João Huss, 520	Brasil	Gleba Fazenda Palhano	Londrina	PR	86050-490
+Av. Saul Elkind, 1740 - Lote CH 16/A-2.1	Brasil	Conjunto Habitacional Violim	Londrina	PR	86084-000
+Rua Comendador Vicente Leone, 200	Brasil	Jardim Nossa Sra. de Fátima	Limeira	SP	13482-376
+Av. Presidente Artur Bernardes, 251	Brasil	Jardim Aeroporto	Várzea Grande	MT	78125-100
+Avenida Nossa Senhora da Conceição, 30	Brasil	São João do Outeiro	Belém	PA	66840-010
+Rua São Luiz, 425	Brasil	Centro	Açailândia	MA	65930-000
+Rodovia BR-010, Km 81	Brasil		Ulianópolis	PA	68632-000
+Rua SÍLVIA, nº 143	Brasil	Colina de Laranjeiras	Serra	ES	29164-329
+Estrada do arraial 3606	Brasil	Casa Amarela	Recife	PE	52070-230
+Rua Prefeito Abdon Arroxelas, n 147, loja 05	Brasil	Ponta Verde	Maceió	AL	57035-380
+Rua Major Gote, 239	Brasil	Centro	Patos de Minas	MG	38700-107
+Av. dos Esportes, 607	Brasil	Bela Vista	Valinhos	SP	13270-210
+Avenida Otávio Braga de Mesquita 1001	Brasil	Vila Florida	Guarulhos	SP	07191-000
+Rua Jacatiba, 01	Brasil	Vila Carmosina	São Paulo	SP	08270-160
+Av Julia kubitshek, 343	Brasil	Centro	Congonhas	MG	36410-084
+Av. Almirante Barroso, 284 - Loja 03 (Posto de gasolina)	Brasil	Quarenta	Campina Grande	PB	58415-670
+Avenida Prefeito Manoel Salustiano de Souza, 705, Loja 01	Brasil	Novo Horizonte	Linhares	ES	29902-055
+Av. Presidente Getúlio Vargas, 794	Brasil		Linhares	ES	29901-212
+Rua Bela Vista, 840	Brasil	Santo Amaro	São Paulo	SP	04709-001
+Av Reinaldo Porcari, 270	Brasil	Medeiros	Jundiaí	SP	13212-258
+Av Benedito de castilho, 852	Brasil	Eloy Chaves	Jundiaí	SP	13211-771
+R. São Paulo, 773	Brasil	Santa Regina	Camboriú	SC	88345-581
+Avenida Presidente Castelo Branco 1990	Brasil	Cadeias	Jaboatão dos Guararapes	PE	54450-015
+Rua Benjamim Pereira, 809	Brasil	Jaçanã	São Paulo	SP	02274-001
+Av. Jerônimo de Camargo, 4905	Brasil	Caetetuba	Atibaia	SP	12944-000
+Av. Nereu Ramos, 867 - esquina com Rua 153	Brasil	Centro	Itapema	SC	88220-000
+Rua Carvalho de Mendonça 12	Brasil	Copacabana	Rio de Janeiro	RJ	22020-050
+Estr. do Bananal, 277/301 - Auto Posto Tirol	Brasil	Freguesia de Jacarepaguá	Rio de Janeiro	RJ	22745-010
+Rua Mem de Sá, 19 - Edifício Olympic Business & Fitness	Brasil	Icaraí	Niterói	RJ	24220-260
+QI 31, CL, Bloco A, Loja 07 - Edifício Florida Center	Brasil	Guará II	Brasília	DF	71065-310
+Rua João Bettega, 4280	Brasil	Cidade Industrial	Curitiba	PR	81350-274
+Av. Água Verde, 860	Brasil	Água Verde	Curitiba	PR	80620-200
+R. João Dembinki, 1410	Brasil	Cidade Industrial	Curitiba	PR	81270-330
+R. Comendador Norberto, 1290	Brasil	Santa Cruz	Guarapuava	PR	85015-240
+Av. Prefeito José Juvenal Mafra, 2110	Brasil	Centro	Navegantes	SC	88370-168
+Av. Pref. Cirino Adolfo Cabral, 9516	Brasil	Gravatá	Navegantes	SC	88372-612
+Avenida Nereu Ramos 270	Brasil	Centro	Timbó	SC	89120-000
+Tv. Antônio Bentes de Oliveira Guimarães, 2424	Brasil	Nossa Senhora das Graças	Oriximiná	PA	68270-000
+Av. José do Patrocínio, 1481 - Loja 03	Brasil	Coqueiro	Itapipoca	CE	62508-048
+Rua Coronel Mont Alverne, 345	Brasil	Centro	Sobral	CE	62011-210
+Rua Mena Barreto, 38	Brasil	Botafogo	Rio de Janeiro	RJ	22271-100
+Rua Antônio da Cunha Leite, 228, box 04	Brasil	Portão	Atibaia	SP	12948-110
+Av. Santo Antônio, 214 - esquina com Rua Quinze de Novembro	Brasil	Santo Antônio	Garanhuns	PE	55293-000
+Rua Antônio Vitório Giordani, 291	Brasil	Centro	Xanxerê	SC	89820-000
+Rua Marabá, 2262 Loja 17	Brasil	Centro	Capão da Canoa	RS	94690-062
+Rod. SC-445, Km 63, 5	Brasil	Nossa Senhora de Fátima	Içara	SC	88823-278
+Av. Jorge Elias de Lucca, 677 - Sala S01	Brasil	Nossa Senhora da Salete	Criciúma	SC	88813-901
+Rua Tiradentes 96, Loja 01	Brasil	Cidade Nobre	Ipatinga	MG	35162-413
+Rua Leblon, 3	Brasil	Ivete Vargas	Rio Branco	AC	69900-190
+Av. João Ferreira Pinto, 316	Brasil	Jardim Jalisco	Resende	RJ	27510-071
+Estr. do Maguari, 377	Brasil	Maguari	Ananindeua	PA	67145-200
+PE-009, Estrada de Porto de Galinhas - esquina com Rua Cerejeira	Brasil	Porto de Galinhas	Ipojuca	PE	55590-000
+PE-009, Rua da Esperança, s/n - Lotes 03 e 04, Loteamento Merepe V	Brasil	Porto de Galinhas	Ipojuca	PE	55590-000
+Rua Rio Eiru, 285	Brasil	Nossa Senhora das Graças	Manaus	AM	69053-520
+Avenida Conselheiro Rose e Silva, 660	Brasil	Graças	Recife	PE	52020-220
+Avenida Ferreira Viana 1695	Brasil	Areal	Pelotas	RS	96085-000
+Av. Itália, 1200	Brasil	Vila Maria Jose	Rio Grande	RS	96203-295
+Avenida Fernando Pinto Queiroz, 1100	Brasil	SIM	Feira de Santana	BA	44085-620
+Av. Prudente de Morais, 210	Brasil	Centro	Itu	SP	13309-050
+Av. Goiás, 4100 - Sala 4	Brasil	Setor Crimeia Oeste	Goiânia	GO	74563-220
+Rua Paulo Frontin 394	Brasil	Centro	Sete Lagoas	MG	35700-049
+Av. Dr. José Aníbal Soares de Oliveira, 1800	Brasil	Jardim América	Ituverava	SP	14500-000
+R. Dr. César, 1234	Brasil	Santana	São Paulo	SP	02013-004
+Av. Brasil, 65	Brasil	Centro	Douradina	PR	87485-000
+Av Parana 5166	Brasil	Centro	Umuarama	PR	87502-000
+Av. Independência, 837	Brasil	Centro	Palotina	PR	85950-013
+Av. Juscelino Kubitschek de Oliveira, 870	Brasil	Campo do Galvão	Guaratinguetá	SP	12505-300
+Rua Tiradentes 1190	Brasil	Centro	Ibirubá	RS	98200-000
+R. Francisco Leocádio Ribeiro Coutinho, 630	Brasil	Aeroclube	João Pessoa	PB	58036-450
+QI 07 conjunto W casa 03 Loja 02	Brasil	Guará I	Brasília	DF	71020-246
+Av Professor Francisco Morato, 3077	Brasil	Butantã	São Paulo	SP	05513-400
+Rua Mariz e Barros 975	Brasil	Tijuca	Rio de Janeiro	RJ	20270-004
+Rua capitão Pedro Ivo, centro	Brasil		Palmares	PE	55540-000
+Rua Joaquina Ramalho, 886	Brasil	Vila Guilherme	São Paulo	SP	02065-000
+Rua Heróis do Acre, 451	Brasil	Passaré	Fortaleza	CE	60743-790
+Rua Largo Portugal, 1155	Brasil	Centro	Pelotas	RS	96010-340
+Av. Luiz Boiteux Piazza, 2099	Brasil	Cachoeira do Bom Jesus	Florianópolis	SC	88056-000
+Avenida General Ataliba Leonel, 1555	Brasil	Vila Guilherme	São Paulo	SP	02033-010
+Estrada da balsa, 2222	Brasil		Arraial d'Ajuda	BA	45810-000
+Rua Aparecido Rosa, 155	Brasil	Centro	Naviraí	MS	79947-092
+Rua 9 de agosto, 151	Brasil	Centro	Trancoso	BA	46098-000
+Av. Francisco Lacerda de Aguiar, 558	Brasil	Paraíso	Cachoeiro de Itapemirim	ES	29304-048
+Av. Piraporinha, 1144	Brasil	Vila Nogueira	Diadema	SP	09950-000
+Av. dos Coqueiros, 3710	Brasil	Canto Grande	Bombinhas	SC	88215-000
+Av. das Cataratas, 3570	Brasil	Vila Yolanda	Foz do Iguaçu	PR	85853-000
+Rua Santa Catarina, 363	Brasil	Itapuã	Vila Velha	ES	29101-545
+Av. Charles Schnneider, 850	Brasil	Parque Sr. do Bonfim	Taubaté	SP	12040-001
+Av. Dr. Januário Miraglia, 2140	Brasil	Vila Jaguaribe	Campos do Jordão	SP	12467-014
+Rua Cerro Corá, 1850 - Quiosque 003	Brasil	Vila Romana	São Paulo	SP	05061-300
+Rua Dr. Irineu A. Bays, 393 C	Brasil	Setor Industrial	Balsas	MA	65800-000
+R. União da Vitória, 1635	Brasil	Vila Nova	Francisco Beltrão	PR	85601-660
+Av. Professor Roberto Frade Monte, 470	Brasil	Marieta	Barretos	SP	14783-226
+Rua Dom Bosco, n.33 centro	Brasil	Centro	Coronel Fabriciano	MG	35170-031
+Rua Major Ataliba José da Cunha	Brasil	Santo Antônio	Sacramento	MG	38190-000
+Avenida Rio Grande do Sul 768	Brasil	Centro	Divinópolis	MG	35500-025
+Avenida Paracatu 647	Brasil		Vazante	MG	38780-000
+Rua Dr. Souza Nunes, 296D - Loja 7	Brasil	Centro	Valença	RJ	27600-161
+Av. Celso Garcia, 1472	Brasil	Belém	São Paulo	SP	03014-000
+Av. Ademar de Barros, 1882	Brasil	Jardim Helena Maria	Guarujá	SP	11430-002
+Av. Magalhães Pinto, 446 - esquina com Rua Donato Rocha	Brasil		Arcos	MG	35588-000
+Av. Leite de Castro, 686	Brasil	Fábricas	São João del-Rei	MG	36301-182
+Av. Abílio Machado, 470	Brasil	Sagrado Coração de Jesus	Formiga	MG	35574-348
+SC-355, 555	Brasil	Santa Tereza	Videira	SC	89560-308
+Rua 18, Qd 20, Lt 15 - esquina com Av. Goiás	Brasil		São Simão	GO	75890-000
+Rua Monsenhor Távora, 330 - próximo ao Hospital João Câncio Fernandes	Brasil		Sena Madureira	AC	69940-000
+Rua Armando Sales n. 90	Brasil	Centro	Taubaté	SP	12020-050
+Avenida Imbaúba 1676	Brasil	Chacaras Tubalina	Uberlândia	MG	38413-316
+Avenida Fernandes Lima s/n	Brasil	Gruta de Lourdes	Maceió	AL	57052-403
+Rua Marquês de Herval, 270	Brasil	Praça da Bandeira	Caçapava	SP	12281-510
+Rua Marcos Gorresen, 2005	Brasil	São José do Acaraí	São Francisco do Sul	SC	89330-210
+R. Minas Gerais, 1068 - esquina com R. Goiânia	Brasil	Praia da Enseada	São Francisco do Sul	SC	89337-044
+Av Sete de setembro, 487	Brasil	Centro	Três Corações	MG	37410-155
+Av. Atlântica, 3771	Brasil	Jardim Santa Helena	São Paulo	SP	04772-004
+Tv. Corino de Déa, 80	Brasil	Centro	Joaçaba	SC	89600-000
+Rua 229, 195 - Qd 55, Lt 21/4B, Sala 5	Brasil	Setor Leste Universitário	Goiânia	GO	74605-100
+Avenida JK, 569	Brasil	Centro	Conceição do Mato Dentro	MG	35860-000
+Av. Juscelino Kubitschek, 3073	Brasil	Jardim Imperial	Luís Eduardo Magalhães	BA	47850-000
+Estrada da Maioba, 81	Brasil	Cohatrac V	São José de Ribamar	MA	65054-040
+Av. Casemiro Júnior, 3, Letra C - Sala 04	Brasil	Anil	São Luís	MA	65045-180
+Av. República, E001	Brasil		Santa Izabel do Pará	PA	68790-000
+Rua Estrela Dalva, 44	Brasil	Jardim Riacho das Pedras	Contagem	MG	32241-260
+Rua Tamoio n°578	Brasil	Centro	Pato Branco	PR	85501-067
+Av Isaías Pinheiro, 700	Brasil	Santa Luzia	Novo Progresso	PA	68193-000
+Av. Pref. João Daher, 770	Brasil	Lundcéia	Lagoa Santa	MG	33239-050
+R. Dona Mariana da Costa, 135	Brasil	Centro	Vespasiano	MG	33200-000
+R. Alvarenga, 1041	Brasil	Butantã	São Paulo	SP	05509-001
+Av. São Paulo, 1149 - esquina com Rua Padre Madureira	Brasil	Jardim Europa	Sorocaba	SP	18013-003
+Rodovia Raposo Tavares, Km 99	Brasil	Vila Artura	Sorocaba	SP	18023-000
+Avenida engenheiro Armando de Arruda Pereira, 1646	Brasil	Jabaquara	São Paulo	SP	04308-001
+Av. Arthur Nonato, 5531	Brasil	Jardim Panorama	São José do Rio Preto	SP	15091-050
+Av. Presidente Dutra, 1105 - Loja 1	Brasil		Itaperuna	RJ	28300-000
+Estrada do Sítio Grande, 230-392 - esquina com Rua Principal, 900	Brasil	Vila Maioba do Janipapeiro	Paço do Lumiar	MA	65130-000
+Rua Barão do Rio Branco 669, sala 661	Brasil	Centro	Canoinhas	SC	89460-100
+Rua Dr. Lili, 650 - Loja 5	Brasil	Barra Grande	Maraú	BA	45520-000
+Estrada de Barra Grande, s/n	Brasil	Taipu de Fora	Maraú	BA	45528-000
+Av. Marechal Rondon, s/n - entre as ruas Sara Kubitschek e Newton Miranda	Brasil		Rondon do Pará	PA	68638-000
+Avenida Flora, 975	Brasil	Jd Jaguaribe	Osasco	SP	06053-040
+Rua Alcides Ramos Nogueira, 583	Brasil	Condominio Residencial Real Ville	Pindamonhangaba	SP	12421-705
+Rua Alfredo de Moraes, 260	Brasil	Santana	Mariana	MG	35424-042
+Av. Lomanto Júnior, 130	Brasil	Centro	Jacobina	BA	44700-000
+Av. General Olímpio da Silveira, 105	Brasil	Santa Cecília	São Paulo	SP	01150-010
+Av. Antônio de Almeida Filho, 505 - Loja 5	Brasil	Praia de Itaparica	Vila Velha	ES	29102-265
+Av. José Mancini, 373	Brasil	Centro	Sumaré	SP	13170-040
+Rua Tabelião Facundo, 309	Brasil	Centro	Canindé	CE	62700-000
+Av Presidente Kennedy, 2031	Brasil	Horto	Teresina	PI	64052-675
+Rua Treze de Junho, lote 109	Brasil	Dom Bosco	Corumbá	MS	79331-070
+Avenida João Júlio de Faria, 581	Brasil	Centro	Boa Esperança	MG	37170-000
+Rua Professor José de Azevedo Minhoto	Brasil	Vila Quitaúna	Osasco	SP	06114-000
+Av. Antônio Piranga, 2697	Brasil	Canhema	Diadema	SP	09942-000
+Rua Júlio de Castilho, 120 - Loja 02	Brasil	Cinquentenário	Belo Horizonte	MG	30570-080
+Rua Tomé de Souza, 831	Brasil	Savassi	Belo Horizonte	MG	30140-130
+R. Juscelino Kubitscheck, 2-16	Brasil	Jardim Paraíso Fase I	Luís Eduardo Magalhães	BA	47850-000
+Av. João César de Oliveira, 1275	Brasil	Eldorado	Contagem	MG	32315-000
+Av. da Integração, 222	Brasil	São José	Petrolina	PE	56306-150
+Av. dos Holandeses, 25	Brasil	Calhau	São Luís	MA	65077-357
+Avenida das Figueiras, 100 sala 05	Brasil	Setor Industrial	Sinop	MT	78557-097
+Rod. Pres. Tancredo de Almeida Neves, 2135	Brasil	Serpa	Caieiras	SP	07713-000
+Rua Alexandre Salomão n° 1615	Brasil	Centro	Andradina	SP	16900-023
+Av. Dorival Cândido Luz de Oliveira, 166	Brasil	Centro	Gravataí	RS	94030-000
+Rua 408, 248 - Sala 2	Brasil	Morretes	Itapema	SC	88220-000
+Av. Antonio Frederico Ozanam, 6000	Brasil	Vila Rio Branco	Jundiaí	SP	13215-900
+Rua José Maria Figueiredo, 87 - esquina com Rua Prefeito Cido Franco	Brasil		Rio Grande da Serra	SP	09450-000
+Rua Manoel Elígio da Mota, 139 B	Brasil	Brasilia	Nossa Senhora da Glória	SE	49680-000
+Av. Corifeu de Azevedo Marques, 4160	Brasil	Jaguaré	São Paulo	SP	05340-002
+Rua General Osório, 667 - Posto Guarani	Brasil	Guarani	Brusque	SC	88350-480
+Avenida Padre Anchieta, 1660	Brasil	Centro	Bertioga	SP	11250-360
+Avenida Marginal Sul - Rio-Santos, 9520	Brasil	Jardim Vicente de Carvalho	Bertioga	SP	11250-503
+Av Sete de Setembro, 1600	Brasil	Centro	Erechim	RS	99709-220
+Rua Professora Ana Costa, 2237	Brasil	Chácara Bela Vista	Sumaré	SP	13175-563
+Rua Professor Rubens Oscar Guelli	Brasil	Jardim Adélia II	Santa Bárbara D'Oeste	SP	13450-696
+Av. Gen. Carneiro, 1850	Brasil	Vila Lucy	Sorocaba	SP	18043-004
+Av. das Nações Unidas, 15187	Brasil	Chácara Santo Antônio	São Paulo	SP	04794-000
+Av. Macapá, 280	Brasil	Veneza I	Ipatinga	MG	35164-253
+Rua Pastor Dohms, 310	Brasil	Centro	Campo Bom	RS	93701-580
+Av. Santa Catarina, 814	Brasil	Centro	Cianorte	PR	87200-129
+R. Carlos Romero Marangoni, 340-400	Brasil	Jardim Camburi	Vitória	ES	29090-620
+Av Henriqueta Mendes Guerra, 1330 - Loja 03A	Brasil	Centro	Barueri	SP	06401-015
+Rua do Chacon, 64	Brasil	Poço da Panela	Recife	PE	52061-400
+Folha 20 Q 16 Lote 38 Sala 02	Brasil	Nova Marabá	Marabá	PA	68505-390
+Avenida Selim José de Sales, 1048	Brasil	Canaã	Ipatinga	MG	35164-506
+Rua Jarangari, 267 - Loja 5	Brasil	Candeias	Jaboatão dos Guararapes	PE	54420-120
+Rodovia BR-163, Km 730 - Trevo com a BR-359	Brasil		Coxim	MS	79400-000
+R. Hermantino Coelho, 886	Brasil	Mansões Santo Antônio	Campinas	SP	13087-500
+Avenida Conselheiro Nébias, 568	Brasil	Boqueirão	Santos	SP	11045-002
+Av. Des. Antônio José Miguel Feu Rosa	Brasil	Praia da Baleia	Serra	ES	29172-680
+Av. Minas Gerais, 1281 - Centro Comercial Lagoa	Brasil	Jardim Atlântico	Serra	ES	29175-271
+Av. João Pessoa, 1.189	Brasil	Vila Comendador	Guaratinguetá	SP	12515-010
+R. General Divisão Pedro Rodrigues da Silva, 400	Brasil	Aldeia	Barueri	SP	06440-180
+Av. Aprígio Bezerra da Silva, 2643 - Loja LE 02	Brasil	Cidade Intercap	Taboão da Serra	SP	06768-200
+Rua Ângelo Gajardoni, 221	Brasil		Pontes e Lacerda	MT	78250-000
+Estrada Porto Acre 10, nro 88	Brasil	Alto Alegre	Rio Branco	AC	69921-230
+Rua Bahia, 691	Brasil	Centro	Buritis	MG	38660-000
+Avenida Almirante Jair Carneiro Toscano de Brito, 531	Brasil	Praia da Chácara	Angra dos Reis	RJ	23906-805
+Av. Engenheiro Winston Maruca, s/n	Brasil	Jacuacanga	Angra dos Reis	RJ	23914-345
+Rua Cesário Alvim, 93, sala 3	Brasil	Centro	Uberlândia	MG	38400-096
+Rua Carmem Duarte, 110	Brasil	Boa Vista de Minas	Nova Serrana	MG	35517-000
+Av. Juscelino Kubitschek, 941, loja 1	Brasil	Bauxita	Ouro Preto	MG	35400-000
+Rua Wenceslau Brás, 37 - Loja 03	Brasil	Pontal da Cruz	São Sebastião	SP	11606-127
+Av. dos Ipês, 800	Brasil	Portal dos Ipês	Cajamar	SP	07790-840
+Rua Visconde de Laguna, 161	Brasil	Mooca	São Paulo	SP	03112-110
+Avenida João Pena Sobrinho, 340	Brasil	Alvorada	Salinas	MG	39560-000
+R. Nossa Sra. das Graças, 300 - Loja 8	Brasil	Centro	Sapucaia do Sul	RS	93220-280
+Rua Danilo Bicalho, 155 - Loja 15	Brasil	JK	João Monlevade	MG	35930-676
+Av Ronaldo Flausino, 376	Brasil	São Tarcísio	Mário Campos	MG	32470-000
+Rua Jacuí, 58 - esquina com Rua Silviano Brandão	Brasil		Machado	MG	37750-000
+Av Gov. Jose de Magalhaes Pinto 1813	Brasil	Giovanni	Coronel Fabriciano	MG	35170-097
+Av Paschoal Thomeu, 2416	Brasil	Vila Nova Bonsucesso	Guarulhos	SP	07175-090
+R. Cirne Maia, 78 - Loja L	Brasil	Cachambi	Rio de Janeiro	RJ	20771-410
+Av. Dr. Cláudio José Gueiros Leite, 2491	Brasil	Janga	Paulista	PE	53437-000
+Av. Comendador Franco, 6005 - Mercado Condor (subsolo)	Brasil	Uberaba	Curitiba	PR	81560-000
+Rua Candinha del Grande, 1151 - Loja 03	Brasil	Centro	Sertãozinho	SP	14160-780
+Rua Marquês de Caravelas, 514 - Loja 001	Brasil	Barra	Salvador	BA	40140-241
+Quadra 18, Lote 1A, nº 18	Brasil	Vila Juracy	Luziânia	GO	72813-970
+Av. Sgt. Hermínio, 1409	Brasil	São Vicente	Crateús	CE	63700-285
+Rodovia Ivo Silveira, 9755	Brasil	Barracão	Gaspar	SC	89113-370
+Rua Araritaguaba nº 42	Brasil	Vila Maria	São Paulo	SP	02122-011
+Rua Brasil, 626	Brasil	Centro	Pacaraima	RR	69345-000
+Estr. Prof. Leandro Faria Sarzedas	Brasil	Atlântica	Rio das Ostras	RJ	28895-640
+Rua São Cristóvão, 249 - Loteamento Jardim Metrópole	Brasil	Itinga	Lauro de Freitas	BA	42739-005
+Av. Getúlio Vargas, 3247	Brasil	Tubalina	Uberlândia	MG	38412-066
+Rua Nossa Senhora do Carmo, 53	Brasil	Santa Terezinha	Piracicaba	SP	13411-030
+Rua Tiradentes, 51 - Praça Pedro Cunha	Brasil	Centro	Barra do Piraí	RJ	27135-500
+Rua Abdo Felipe, 202 loja 4	Brasil	Ano Bom	Barra Mansa	RJ	27323-000
+Av. Sergipe, s/n (referência nº 333)	Brasil	Setor Campinas	Goiânia	GO	74520-010
+Av. Eng. Caetano Álvares, 6000	Brasil	Imirim	São Paulo	SP	02413-100
+Rua Ramiro Barcelos, centro, n° 826	Brasil	Centro	Vacaria	RS	95200-127
+Av. Antônio Carlos Magalhães, 1685	Brasil	Posto da Mata	Nova Viçosa	BA	45928-000
+Avenida São Vicente, 5401 loja 01	Brasil	Chácara Espraiado	Franca	SP	14403-830
+Av. Alphaville, Qd E03, Lote 01, Loja 02 - Alpha Boulevard Business Mall	Brasil	Alphaville (Abrantes)	Camaçari	BA	42821-871
+Rua Diogo Correia, 210	Brasil	João XXIII	Fortaleza	CE	60525-580
+Rua Tijucas do Sul, 2331 loja 7B	Brasil	Sítio Cercado	Curitiba	PR	81925-060
+Rua Willy Jung, 194	Brasil	Centro	Rio Negrinho	SC	89295-041
+Rodovia Presidente Dutra, Km 216	Brasil	Cidade Industrial Satélite de São Paulo	Guarulhos	SP	07224-000
+R. Araçatuba, 375	Brasil	Loteamento Planalto do Sol	Santa Bárbara D'Oeste	SP	13454-410
+R. do Chumbo, 861	Brasil	Mollon	Santa Bárbara D'Oeste	SP	13456-420
+Av. Prefeito André Antônio Maggi, 649 SW - Qd 01, Lt 01 (Posto Zero Km)	Brasil	Centro	Sapezal	MT	78365-000
+Av. Brasil Japão, s/n - Chimar Supermercados	Brasil	Trigal	Mairinque	SP	18120-000
+Av. Almirante Cochrane, 220	Brasil	Embaré	Santos	SP	11040-002
+Av. Conselheiro Aguiar, 1350	Brasil	Boa Viagem	Recife	PE	51111-011
+Rua Porto Ferreira, 25	Brasil	Centro	Poá	SP	08562-150
+Rua Santa Catarina, 164	Brasil	Centro	Poços de Caldas	MG	37701-015
+Rua Silveira Martins, 802	Brasil	Centro	Santana do Livramento	RS	97573-508
+R. João XXIII, 233	Brasil	São Gonçalo	Janaúba	MG	39445-048
+QI 616, Lote 3	Brasil	Samambaia Norte	Brasília	DF	72322-800
+Av. Belém, 880	Brasil	Morumbi Centro	Tucumã	PA	68386-000
+Av. Sul - Auto Posto Rohden	Brasil		Querência	MT	78643-000
+Rua Paineiras, s/n - Qd 10, Lt 6	Brasil	Jardim Alvorada	Ribeirão Cascalheira	MT	78675-000
+R. Rubens Francisco Dias, 2101	Brasil	Papagaio	Feira de Santana	BA	44059-375
+Av. José Falcão da Silva, 150	Brasil	Baraúna	Feira de Santana	BA	44020-122
+Av. Piauí, 700 - Cocais Shopping, Salas 103 e 104	Brasil	Centro	Timon	MA	65630-030
+Rua Doutor Epifânio Carvalho, 1391 - Uni Center, Sala 04	Brasil	Ininga	Teresina	PI	64049-760
+R. Mato Grosso, 851	Brasil	Ilhotas	Teresina	PI	64014-053
+Travessa Rio de Janeiro, 19 - ao lado da Praça do Feijão	Brasil	Centro	Guanambi	BA	46430-000
+Praça Tancredo Neves, nº 340	Brasil	Centro	Caetité	BA	46400-005
+Av Floriano Peixoto 2251 Loja 03	Brasil	Nossa Senhora Aparecida	Uberlândia	MG	38400-702
+Rua 4	Brasil	Centro	São Miguel do Araguaia	GO	76590-000
+Quadra ACSV NE 53, Av. LO 14, nº 04, Lote 02, Sala 01	Brasil	Plano Diretor Norte	Palmas	TO	77006-464
+Av. Marquês de São Vicente, 2219	Brasil	Jardim das Perdizes	São Paulo	SP	05036-040
+Rua Jatobá, 851	Brasil	Eucaliptos	Fazenda Rio Grande	PR	83820-096
+Av. Antônio Lira, 300	Brasil	Tambaú	João Pessoa	PB	58039-050
+Av. Ranolfo de Souza Gato, 116A	Brasil	Marabaixo	Macapá	AP	68906-503
+Av. Assis Brasil, 894	Brasil		Arroio do Sal	RS	95585-000
+Av. Presidente JK, 6633	Brasil	Pradense	Vacaria	RS	95200-000
+Rua Hermann Weege, 523	Brasil	Centro	Pomerode	SC	89107-000
+R. José Quintino Pereira, 277	Brasil		Barra Velha	SC	88390-000
+Av Oceânica 1962 loja 1	Brasil	Praia do Morro	Guarapari	ES	29216-080
+Rua João José Guimarães, 491 - Sala 7	Brasil	Centro	Sombrio	SC	88960-000
+SPMS Rodovia Brasília-Anápolis, Posto 01, s/n	Brasil	Park Way	Núcleo Bandeirante	DF	71735-000
+Av. São Camilo, 1181	Brasil	Granja Viana	Cotia	SP	06709-150
+Av. Antônio Sales, 1340	Brasil	Joaquim Távora	Fortaleza	CE	60135-100
+Rua Duque de Caxias, 687	Brasil	Centro	Santiago	RS	97700-445
+Rua Tito Beccon nº 136	Brasil	Vila Nova	Santiago	RS	97714-156
+Rua 306, 84 SALA 9	Brasil	Meia Praia	Itapema	SC	88220-000
+Rua Dr. Astrogildo de Azevedo, 139	Brasil	Centro	Santa Maria	RS	97015-150
+Avenida das Nações, n 2209	Brasil	Centro	Ourilândia do Norte	PA	68390-000
+R. Dr. Pedro de Melo Cahú, 400	Brasil	Boa Viagem	Recife	PE	51020-080
+Rua José Nicolau Abage, 287	Brasil	Centro	Guaratuba	PR	83280-000
+Av São Miguel 1151	Brasil	Vila Marieta	São Paulo	SP	03619-000
+Av. João XXIII, 805	Brasil	Jóquei	Teresina	PI	64049-010
+Av. do Nazário, 1783	Brasil	Olaria	Canoas	RS	92035-000
+Av. Padre Anchieta, 909	Brasil	Sumaré	Caraguatatuba	SP	11660-010
+R. Teixeira Soares, 390	Brasil	Navegantes	União da Vitória	PR	84600-093
+AV JOSE MANOEL REIS 959	Brasil	Centro	Tijucas	SC	88200-208
+R. Cenno Sbrighi, 700	Brasil	Água Branca	São Paulo	SP	05036-011
+Estrada Coronel Pedro Correa, 740 - Loja 120	Brasil	Barra Olímpica	Rio de Janeiro	RJ	22775-090
+Rua Tiradentes, 157	Brasil		Itabela	BA	45848-000
+Avenida Alfredo Brunetti, 608	Brasil	Armação	Penha	SC	88385-000
+Rua Coronel Lambert, 382	Brasil		Cambuí	MG	37600-000
+R. João Marques Vieira, 455	Brasil	Centro	Fraiburgo	SC	89580-049
+Av. Eng. Max de Souza, 1387	Brasil	Coqueiros	Florianópolis	SC	88080-000
+R. Alfredo Feiten, 1060	Brasil	Centro	Parobé	RS	95630-000
+Rua Tome de Oliveira Cata Preta, 130	Brasil	Centro	São Thomé das Letras	MG	37408-000
+Rua Carlos Lisdegno Carlucci, 519	Brasil	Jardim Peri Peri	São Paulo	SP	05536-900
+Rua 09, número 2.135, salão B	Brasil	Centro	Jales	SP	15700-018
+Rua Claudio Machado, nº 322	Brasil	Petrópolis	Natal	RN	59012-310
+Av. José de Brito, 110	Brasil	Setor Anhanguera	Araguaína	TO	77818-530
+Av. São Paulo, s/n - Qd 20, Lt 13, Loja 06	Brasil	Jardim das Esmeraldas	Aparecida de Goiânia	GO	74905-065
+R. Independência, 852 - Centro	Brasil		Farroupilha	RS	95170-436
+Av. Assis Brasil, 468 - Centro	Brasil		Bento Gonçalves	RS	95703-050
+R. Dr. Abílio Farias, 474 - em frente à antiga Telebahia	Brasil	Parque Santa Lúcia	Barreiras	BA	47800-030
+Avenida Frederico Grulke, 1435 A	Brasil	Centro	Santa Maria de Jetibá	ES	29645-012
+Rua Campo Sales, 21 - Shopping Vila Elza, Loja 19B	Brasil	Centro	São Gonçalo dos Campos	BA	44330-000
+Rua Anselmo de Vasconcelos, 22 - Loja 02	Brasil	Guarapiranga	Ponte Nova	MG	35430-207
+Av. Gen. Ataliba Leonel, 3529	Brasil	Tucuruvi	São Paulo	SP	02242-001
+Avenida Fagundes Filho, nº 798	Brasil	Vila Monte Alegre	São Paulo	SP	04304-001
+Av. Sérgio Luís Pessoa Braga, 5620, Letra A - Qd 1060, Lote 80	Brasil	Antares	Maceió	AL	57048-025
+R. Rio Branco, 1080	Brasil	Centro	Taquara	RS	95600-098
+SQPS 102, Sala 107 - Edifício Hotel Jade	Brasil	Park Sul	Brasília	DF	71215-650
+Rua 7 Norte - Max Mall	Brasil	Águas Claras	Águas Claras	DF	71908-180
+Rodovia BR-226, Km 209	Brasil	Vila Militar	Grajaú	MA	65940-000
+R. Antônio Scodeler, 595	Brasil	Fatima III	Pouso Alegre	MG	37555-032
+Rua Comendador José Garcia, 1026	Brasil	Centro	Pouso Alegre	MG	37550-007
+Av. Barão de Itapura, 2137 - Sala 13, 1º andar	Brasil	Centro	Campinas	SP	13073-300
+Avenida Copacabana, n 698	Brasil	Morada de Laranjeiras	Serra	ES	29166-820
+Av. Edmeia Mattos Lazzarotti, 3484 - Loja 4	Brasil	Ingá	Betim	MG	32604-155
+Rua Sergipe, 1-61	Brasil	Vila Cardia	Bauru	SP	17013-670
+Av. Thales Loureiro - Centro Comercial AlphaMall, Loja 19	Brasil	Ponta Negra	Manaus	AM	69037-107
+R. João de Alencar, 2181 - Sala 106 H	Brasil	Cauamé	Boa Vista	RR	69311-137
+Av. Parque, 1565	Brasil	Pedreiras	Itacoatiara	AM	69101-035
+Av. Laguna, 1000	Brasil	Lírio do Vale	Manaus	AM	69038-010
+Av. Tabajara, 245	Brasil	Centro	São Benedito	CE	62370-000
+Avenida Euvaldo Lodi, 29	Brasil	Centro	Frutal	MG	38200-002
+Rua Santa Cruz, 315 sala 5	Brasil	Nova Paulínia	Paulínia	SP	13140-291
+Av. Tancredo Neves, 3508	Brasil	Centro	Mirassol D'Oeste	MT	78280-000
+Av. Pres. Juscelino Kubitschek, 6812	Brasil	Monte Castelo	São José dos Campos	SP	12215-380
+SRES Qd 10, Bloco A, Loja 39	Brasil	Cruzeiro Velho	Brasília	DF	70645-010
+R. Ermelino de Leão, 1431	Brasil	Olarias	Ponta Grossa	PR	84035-000
+R. Gulhot Rodrigues, 152	Brasil	Campos Elíseos	Resende	RJ	27542-040
+Rua Nove de Agosto, 65	Brasil	Centro	Tapejara	RS	99950-000
+Setor Centro Comercial, s/n - Bloco 02, Loja 2B	Brasil	Vila Permanente	Tucuruí	PA	68464-000
+R. Dias Vieira, 403	Brasil	Vila Sônia	São Paulo	SP	05632-090
+Qadra 34, Área Especial F, nº 10	Brasil	Ceilândia Sul	Ceilândia	DF	72220-346
+Rua Sete de Setembro, 915 - Sala 1	Brasil	Centro	Santo Ângelo	RS	98801-723
+Avenida Coronel Teixeira, 6225	Brasil	Ponta Negra	Manaus	AM	69037-000
+Rua Pinto Madeira, 1131	Brasil	Aldeota	Fortaleza	CE	60150-055
+Rua Ausônia, 28	Brasil	Vila Mazzei	São Paulo	SP	02308-050
+Av. Tocantins, 1122	Brasil	Setor Aeroporto	Goiânia	GO	74075-100
+R. Sapucaia, 871	Brasil	Água Rasa	São Paulo	SP	03170-050
+Estrada Francisco da Cruz Nunes, 10397	Brasil	Itaipu	Niterói	RJ	24340-000
+QE 40, Rua 15, Lote 38, Loja 02 - Polo de Modas	Brasil	Guará II	Brasília	DF	71070-515
+Av. Anápolis, 204	Brasil	Bethaville I	Barueri	SP	06404-250
+Avenida Campos Sales, 885	Brasil	Jd Girassol	Americana	SP	13465-590
+Av. Pref. Luís Latorre, 4140 - Auto Posto Jardim das Hortências	Brasil	Vila das Hortências	Jundiaí	SP	13209-430
+Rua Venâncio Aires, 407	Brasil	Perdizes	São Paulo	SP	05024-030
+R. CONSUELO FREIRE, 186	Brasil	Parque Iracema	Fortaleza	CE	60824-000
+Av. Monumental, Qd 301, Lote 01 - Centro Comercial Total Ville Mall	Brasil	Setor Meireles	Santa Maria	DF	72583-500
+R. Ernesto Mauerberg, 42	Brasil	Jd Bela Vista	Nova Odessa	SP	13380-033
+Rua Presidente Kennedy 328 loja 1	Brasil	Centro	Sapiranga	RS	93800-140
+R. Comendador José García, 414	Brasil	Centro	Pouso Alegre	MG	37550-010
+Avenida do Ingas 2800 Sala 4	Brasil	Setor Comercial	Sinop	MT	78550-124
+Avenida Ivar Saldanha 96	Brasil	Centro	Santa Rita	MA	65145-000
+Rua Rio Grande, 1074, sala 102	Brasil	Centro	Xaxim	SC	89825-000
+Rod. Fernão Dias, 3700	Brasil	Riacho das Pedras	Contagem	MG	32280-680
+Av José Singer 170	Brasil	Humaita	São Vicente	SP	11349-000
+Av. 31 de março, s/n	Brasil	Centro	Barreirinhas	MA	65590-000
+Rua da Mineração s/n	Brasil	Centro	Boquira	BA	46530-065
+Rua Dr. João Ribeiro Vargens S/N	Brasil	Centro	Canavieiras	BA	45860-000
+Av. Pres. Tancredo Neves, 1237 - 01	Brasil	Ipanema	Patos de Minas	MG	38706-509
+Rua M.M.D.C., nº. 283	Brasil	Paulicéia	São Bernardo do Campo	SP	09690-000
+R. Gen. Polidoro, 414	Brasil	Varzea	Recife	PE	50740-050
+Av. Marginal Neblina, 1566 - Qd 01, Lt 08-A1, Sala 15, Galeria Boulevard do Lago	Brasil	Loteamento Alaska	Araguaína	TO	77817-805
+Rodovia CE-040, Km 19, nº 19.980	Brasil	Parque Arco Íris	Aquiraz	CE	61700-000
+Av. Nossa Senhora de Fátima, 470/2 - Quadra 030	Brasil	Centro	Mucajaí	RR	69340-970
+Rua Itapicuru, 826	Brasil	Perdizes	São Paulo	SP	05006-000
+Avenida Filinto Muller, 2850	Brasil	Jd das Palmeiras	Três Lagoas	MS	79645-000
+</script>
+      </div>
+    </section>
+
+    <section class="secao secao-escura on-dark">
+      <div class="container">
+        <div class="secao-head">
+          <span class="eyebrow">Presença nacional</span>
+          <h2><span data-lavo-total>681</span> lojas em 26 estados e no Distrito Federal.</h2>
+          <p>Toque em um estado para ver as unidades.</p>
+        </div>
+        <div class="estados-chip"><a href="#lavo-store-locator" data-lavo-sugestao="Acre">Acre <small>4</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Alagoas">Alagoas <small>6</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Amapá">Amapá <small>4</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Amazonas">Amazonas <small>13</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Bahia">Bahia <small>38</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Ceará">Ceará <small>17</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Distrito Federal">Distrito Federal <small>23</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Espírito Santo">Espírito Santo <small>14</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Goiás">Goiás <small>22</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Maranhão">Maranhão <small>14</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Mato Grosso">Mato Grosso <small>27</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Mato Grosso do Sul">Mato Grosso do Sul <small>16</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Minas Gerais">Minas Gerais <small>68</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Paraná">Paraná <small>34</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Paraíba">Paraíba <small>4</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Pará">Pará <small>25</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Pernambuco">Pernambuco <small>17</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Piauí">Piauí <small>5</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Rio Grande do Norte">Rio Grande do Norte <small>6</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Rio Grande do Sul">Rio Grande do Sul <small>45</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Rio de Janeiro">Rio de Janeiro <small>31</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Rondônia">Rondônia <small>4</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Roraima">Roraima <small>8</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Santa Catarina">Santa Catarina <small>71</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Sergipe">Sergipe <small>1</small></a><a href="#lavo-store-locator" data-lavo-sugestao="São Paulo">São Paulo <small>158</small></a><a href="#lavo-store-locator" data-lavo-sugestao="Tocantins">Tocantins <small>6</small></a></div>
+      </div>
+    </section>
+
+    <section class="secao" id="franquia">
+      <div class="container">
+        <div class="franquia on-dark reveal">
+          <div>
+            <span class="eyebrow">Seja um franqueado</span>
+            <h2>Quer fazer parte da família Lavô e abrir sua própria unidade?</h2>
+            <p>Somos a maior rede de lavanderias self-service do Brasil, com presença nacional e em breve na Europa. O modelo une tecnologia, praticidade e alto potencial de retorno, e abrimos uma loja nova a cada 36 horas.</p>
+            <div class="acoes">
+              <a class="btn btn-lima" href="https://lavobrasil.com.br/franquia/" target="_blank" rel="noopener">Quero ser franqueado <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+              <a class="btn btn-contorno" href="vantagens.html#investir">Por que investir</a>
+            </div>
+          </div>
+          <img class="percentual" src="assets/img/percentual-3d.webp" alt="" width="700" height="904" loading="lazy">
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p class="footer-grande">A maior rede de lavanderias <span>self-service</span> do Brasil.</p>
+      <div class="footer-grid">
+        <div>
+          <div class="footer-logo"><img src="assets/img/logo.png" alt="Lavô" width="64" height="64" loading="lazy"></div>
+          <p>Lave e seque suas roupas em cerca de 1 hora, com economia de água e energia e produtos dosados automaticamente.</p>
+          <div class="sociais">
+            <a href="https://www.instagram.com/lavo.franchising/" target="_blank" rel="noopener" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".6" fill="currentColor"/></svg></a>
+            <a href="https://www.facebook.com/lavofranchising/" target="_blank" rel="noopener" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.5 21v-7.5h2.5l.4-3h-2.9V8.6c0-.87.24-1.46 1.49-1.46h1.59V4.47A21 21 0 0 0 14.27 4.3c-2.3 0-3.87 1.4-3.87 3.97v2.23H7.8v3h2.6V21h3.1z"/></svg></a>
+            <a href="https://wa.me/5511939034803?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Lav%C3%B4." target="_blank" rel="noopener" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91A9.86 9.86 0 0 0 12.04 2zm5.8 14.03c-.25.69-1.44 1.32-2 1.36-.51.05-1 .24-3.36-.7-2.84-1.12-4.63-4.03-4.77-4.22-.14-.19-1.14-1.52-1.14-2.9 0-1.38.72-2.06.98-2.34.25-.28.55-.35.74-.35l.53.01c.17.01.4-.06.62.48.25.6.84 2.06.92 2.21.07.15.12.32.02.51-.1.19-.15.32-.29.49-.15.17-.31.38-.44.51-.15.15-.3.31-.13.6.17.29.76 1.25 1.63 2.02 1.12 1 2.06 1.31 2.35 1.45.29.15.46.12.63-.07.17-.2.73-.85.92-1.14.19-.29.39-.24.65-.15.27.1 1.7.8 1.99.95.29.15.48.22.55.34.07.12.07.69-.18 1.37z"/></svg></a>
+          </div>
+        </div>
+        <div>
+          <h4>Navegue</h4>
+          <ul><li><a href="index.html">Início</a></li><li><a href="nossa-historia.html">Nossa história</a></li><li><a href="vantagens.html">Vantagens</a></li><li><a href="noticias.html">Notícias</a></li><li><a href="unidades.html">Unidades</a></li></ul>
+        </div>
+        <div>
+          <h4>Para você</h4>
+          <ul>
+            <li><a href="unidades.html">Encontre uma loja</a></li>
+            <li><a href="index.html#como-funciona">Como funciona</a></li>
+            <li><a href="vantagens.html">Economia e sustentabilidade</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Para investir</h4>
+          <ul>
+            <li><a href="https://lavobrasil.com.br/franquia/" target="_blank" rel="noopener">Seja um franqueado</a></li>
+            <li><a href="vantagens.html#investir">Por que investir</a></li>
+            <li><a href="index.html#franquia">Taxas especiais com o BB</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-base">
+        <span>© <span data-ano>2026</span> Lavô Franchising Ltda · CNPJ 35.310.040/0001-14</span>
+        <a href="https://lavo.eco.br/politica-de-privacidade/" target="_blank" rel="noopener">Política de Privacidade</a>
+      </div>
+    </div>
+  </footer>
+
+  <a class="whats" href="https://wa.me/5511939034803?text=Ol%C3%A1!%20Vim%20pelo%20site%20da%20Lav%C3%B4." target="_blank" rel="noopener" aria-label="Fale com a Lavô pelo WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91A9.86 9.86 0 0 0 12.04 2zm5.8 14.03c-.25.69-1.44 1.32-2 1.36-.51.05-1 .24-3.36-.7-2.84-1.12-4.63-4.03-4.77-4.22-.14-.19-1.14-1.52-1.14-2.9 0-1.38.72-2.06.98-2.34.25-.28.55-.35.74-.35l.53.01c.17.01.4-.06.62.48.25.6.84 2.06.92 2.21.07.15.12.32.02.51-.1.19-.15.32-.29.49-.15.17-.31.38-.44.51-.15.15-.3.31-.13.6.17.29.76 1.25 1.63 2.02 1.12 1 2.06 1.31 2.35 1.45.29.15.46.12.63-.07.17-.2.73-.85.92-1.14.19-.29.39-.24.65-.15.27.1 1.7.8 1.99.95.29.15.48.22.55.34.07.12.07.69-.18 1.37z"/></svg></a>
+
+  <script src="assets/js/main.js" defer></script>
+  <script src="assets/js/lavo-locator.js" defer></script>
+</body>
+</html>
