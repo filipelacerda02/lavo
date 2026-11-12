@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Sua prévia | Reforma</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/estilo.css">
+</head>
+<body class="previa-body">
+  <header class="topo">
+    <div class="container"><a class="marca" href="/">Reforma<span>.</span></a></div>
+  </header>
+
+  <main id="app">
+    <section class="carregando" id="carregando">
+      <div>
+        <div class="anel" aria-hidden="true"></div>
+        <h2 id="titulo-status">Criando o seu novo site</h2>
+        <p id="texto-status" style="color:var(--tinta-suave)">Isso leva de 2 a 5 minutos. Pode deixar esta aba aberta.</p>
+        <ul class="etapas" id="etapas">
+          <li data-e="extraindo">Lendo o seu site atual</li>
+          <li data-e="gerando">Criando o novo design</li>
+          <li data-e="renderizando">Preparando a pré-visualização</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="visualizador" hidden>
+      <div class="barra-previa">
+        <div class="container">
+          <div class="alternar" role="group" aria-label="Tamanho da tela">
+            <button type="button" data-v="desktop" aria-pressed="true">Computador</button>
+            <button type="button" data-v="celular" aria-pressed="false">Celular</button>
+          </div>
+          <span id="dominio" style="font-weight:600;color:var(--tinta-suave)"></span>
+        </div>
+      </div>
+      <div class="container">
+        <div class="moldura desktop" id="moldura">
+          <div class="chrome"><i></i><i></i><i></i><span id="endereco"></span></div>
+          <div class="tela" id="tela" aria-label="Prévia do novo site"></div>
+        </div>
+      </div>
+      <div class="compra" id="compra">
+        <div><strong>Gostou do seu novo site?</strong><span id="preco-texto">Leve o código completo por R$ 499,90</span></div>
+        <button class="btn btn-destaque" id="comprar" type="button">Quero este site</button>
+      </div>
+    </section>
+
+    <section id="final" hidden>
+      <div class="aviso-final" id="final-conteudo"></div>
+    </section>
+  </main>
+
+  <script src="/previa.js" defer></script>
+</body>
+</html>

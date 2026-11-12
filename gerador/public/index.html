@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reforma | Seu site, de cara nova, em minutos</title>
+  <meta name="description" content="Cole o endereço do seu site e veja, em minutos, uma versão moderna e redesenhada. Gostou? Leve o código pronto para publicar.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,600&family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/estilo.css">
+</head>
+<body>
+  <header class="topo">
+    <div class="container">
+      <a class="marca" href="/" data-nome>Reforma<span>.</span></a>
+      <nav><a href="#como">Como funciona</a><a href="#preco">Preço</a><a href="#duvidas">Dúvidas</a></nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="deco" aria-hidden="true"></div>
+      <div class="container">
+        <span class="selo"><i></i>Prévia gratuita em poucos minutos</span>
+        <h1>Seu site antigo,<br>de <em>cara nova</em>.</h1>
+        <p class="lead">Cole o endereço do seu site. A nossa inteligência artificial lê o seu conteúdo, as suas fotos e a sua marca e cria uma versão moderna, rápida e pronta para vender mais. Você vê a prévia de graça.</p>
+
+        <form class="formulario" id="form" novalidate>
+          <div class="campos">
+            <div class="campo">
+              <label for="url">Endereço do seu site</label>
+              <input id="url" name="url" type="text" inputmode="url" placeholder="www.suaempresa.com.br" autocomplete="url" required>
+            </div>
+            <div class="campo">
+              <label for="email">Seu e-mail</label>
+              <input id="email" name="email" type="email" placeholder="voce@empresa.com" autocomplete="email" required>
+            </div>
+            <button class="btn btn-destaque" type="submit" id="enviar">Gerar prévia grátis</button>
+          </div>
+          <label class="aceite"><input type="checkbox" id="aceite" required> Sou o responsável por este site, ou tenho autorização dele, e concordo com o uso do conteúdo do site para criar a prévia.</label>
+          <div id="turnstile"></div>
+          <div class="erro" id="erro" role="alert"></div>
+        </form>
+
+        <div class="provas"><span>Sem cadastro</span><span>Usa os seus textos e fotos</span><span>Funciona no celular</span><span>Código seu para sempre</span></div>
+      </div>
+    </section>
+
+    <section class="secao" id="como">
+      <div class="container">
+        <div class="cabeca">
+          <span class="rotulo">Como funciona</span>
+          <h2>Três passos. Nenhuma reunião.</h2>
+          <p class="sub">Esqueça orçamento, briefing e semanas de espera.</p>
+        </div>
+        <div class="passos">
+          <article class="passo"><h3>Cole o seu link</h3><p>Lemos as páginas do seu site e reunimos textos, fotos, cores, fontes e contatos.</p></article>
+          <article class="passo"><h3>Veja a prévia</h3><p>Em poucos minutos você vê como o novo site fica no computador e no celular.</p></article>
+          <article class="passo"><h3>Gostou? É seu</h3><p>Pague uma vez e baixe o código completo, pronto para publicar em qualquer hospedagem.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="secao secao-escura">
+      <div class="container">
+        <div class="cabeca">
+          <span class="rotulo">O que você recebe</span>
+          <h2>Um site de verdade, não um modelo genérico.</h2>
+          <p class="sub">Cada projeto é criado do zero a partir do seu conteúdo e da sua identidade visual.</p>
+        </div>
+        <div class="inclui">
+          <div><strong>Design moderno</strong><p>Tipografia, cores e layout atuais, respeitando a sua marca.</p></div>
+          <div><strong>Perfeito no celular</strong><p>Responsivo de verdade, com menu mobile e botões fáceis de tocar.</p></div>
+          <div><strong>Rápido e leve</strong><p>Um arquivo HTML enxuto, sem plugins nem WordPress para manter.</p></div>
+          <div><strong>Feito para converter</strong><p>Chamadas claras para WhatsApp, telefone e redes sociais.</p></div>
+          <div><strong>Acessível</strong><p>Contraste adequado, textos alternativos e navegação por teclado.</p></div>
+          <div><strong>Código seu</strong><p>Sem mensalidade. Publique onde quiser e edite quando quiser.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="secao" id="preco">
+      <div class="container">
+        <div class="preco-card">
+          <div>
+            <span class="rotulo">Preço único</span>
+            <div class="valor" id="valor">R$ 499,90 <small>à vista no Pix ou no cartão</small></div>
+            <p class="sub" style="margin-top:18px;color:var(--tinta-suave)">Você só paga se gostar da prévia.</p>
+            <a class="btn btn-destaque" href="#form" style="margin-top:12px">Gerar minha prévia grátis</a>
+          </div>
+          <ul class="lista">
+            <li>Código completo (HTML, CSS e JavaScript)</li>
+            <li>Todas as imagens otimizadas para o site</li>
+            <li>Versões para computador, tablet e celular</li>
+            <li>Instruções simples para publicar</li>
+            <li>Sem mensalidade e sem fidelidade</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="secao" id="duvidas" style="padding-top:0">
+      <div class="container faq">
+        <span class="rotulo">Dúvidas</span>
+        <h2>Perguntas frequentes</h2>
+        <details><summary>A prévia é mesmo grátis?</summary><p>Sim. Você vê o novo design completo antes de pagar qualquer coisa.</p></details>
+        <details><summary>Vocês inventam informações sobre a minha empresa?</summary><p>Não. Usamos apenas os textos, fotos e contatos que já estão no seu site. Podemos reescrever os textos para ficarem mais claros, mantendo os fatos.</p></details>
+        <details><summary>Como publico o site depois de comprar?</summary><p>Você recebe um arquivo .zip. Basta enviar a pasta para a sua hospedagem atual ou arrastá-la para um serviço gratuito como o Netlify Drop. As instruções vão junto.</p></details>
+        <details><summary>Funciona com qualquer site?</summary><p>Funciona com a maioria dos sites institucionais, de serviços e de pequenas empresas. Lojas virtuais completas e sistemas com login não são recriados, mas podemos destacar os links para eles.</p></details>
+        <details><summary>Posso editar o site depois?</summary><p>Sim. O código é seu. Qualquer pessoa que saiba HTML consegue editar, e os textos podem ser trocados num editor de texto comum.</p></details>
+      </div>
+    </section>
+  </main>
+
+  <footer class="rodape">
+    <div class="container">© <span id="ano"></span> <span data-nome-texto>Reforma</span>. A prévia é gerada por inteligência artificial e pode conter imperfeições.</div>
+  </footer>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>

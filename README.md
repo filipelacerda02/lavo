@@ -63,3 +63,9 @@ Basta subir os arquivos para qualquer hospedagem estática, como Netlify, Vercel
 - Os links "Seja um franqueado" apontam para `https://lavobrasil.com.br/franquia/`, como no site atual.
 - O link "Política de Privacidade" e os cards de notícias "boom em SC" e "Lavô Street" apontam para as páginas do WordPress atual. Atualize esses links se o WordPress for desativado.
 - A faixa e o banner do sorteio BYD apontam para a landing page atual da campanha. Remova os dois quando a campanha acabar.
+
+---
+
+## Gerador de sites (pasta `gerador/`)
+
+Ferramenta separada: recebe o link de qualquer site, gera uma versão redesenhada com IA, mostra uma prévia protegida e vende o código. Veja `gerador/README.md` e `gerador/CUSTOS.md`.
