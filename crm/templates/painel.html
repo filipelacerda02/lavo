@@ -11,12 +11,30 @@
       <div class="fraco" x-text="hoje ? hoje.conversas_novas + ' conversas novas hoje' : ''"></div></div>
   </div>
 
+  <div class="grade grade-4" style="margin-top:16px" x-show="semana">
+    <div class="cartao"><div class="fraco">⏱ SLA estourado agora</div><div class="numero-grande" :style="semana && semana.sla.estouradas_agora ? 'color:var(--perigo)' : ''" x-text="semana ? semana.sla.estouradas_agora : '—'"></div></div>
+    <div class="cartao"><div class="fraco">⭐ Satisfação (7 dias)</div><div class="numero-grande" x-text="semana && semana.csat.media !== null ? semana.csat.media.toFixed(1) + ' / 5' : '—'"></div>
+      <div class="fraco" x-text="semana ? semana.csat.respostas + ' avaliações' : ''"></div></div>
+    <div class="cartao" style="grid-column: span 2">
+      <div class="fraco" style="margin-bottom:6px">👥 Equipe agora</div>
+      <div class="linha">
+        <template x-for="u in equipe.filter(u => u.ativo)" :key="u.id">
+          <span class="selo neutro"><span class="ponto" :class="u.disponivel ? 'on' : (u.status === 'ausente' ? 'aus' : 'off')"></span>
+            <span x-text="u.nome.split(' ')[0] + ' · ' + u.conversas_abertas + '/' + u.max_conversas"></span></span>
+        </template>
+      </div>
+    </div>
+  </div>
+
   <div class="grade grade-2" style="margin-top:16px">
     <div class="cartao">
       <div class="linha entre"><h2>Fila de atendimento</h2><a href="/conversas" class="fraco">ver tudo</a></div>
       <template x-for="c in fila" :key="c.id">
         <a class="linha entre" :href="'/conversas?c=' + c.id" style="padding:8px 0; border-bottom:1px solid var(--borda); color:inherit">
-          <span><b x-text="c.contato.nome"></b><br><span class="fraco" x-text="c.motivo_fila || ''"></span></span>
+          <span><b x-text="c.contato.nome"></b>
+            <span class="selo" :class="c.prioridade" x-show="['alta','urgente'].includes(c.prioridade)" x-text="ROTULO_PRIORIDADE[c.prioridade]"></span>
+            <span class="selo" x-show="c.sla && c.sla.fila" :class="c.sla && c.sla.fila && c.sla.fila.estourado ? 'sla-estourado' : 'sla-ok'" x-text="c.sla && c.sla.fila ? fmt.prazo(c.sla.fila.vence_em) : ''"></span>
+            <br><span class="fraco" x-text="c.motivo_fila || ''"></span></span>
           <span class="fraco" x-text="fmt.relativo(c.ultima_mensagem_em)"></span>
         </a>
       </template>
@@ -62,17 +80,18 @@
 <script>
 function painel() {
   return {
-    contagem: {}, fila: [], tarefas: [], hoje: null, agente: null,
+    contagem: {}, fila: [], tarefas: [], hoje: null, agente: null, semana: null, equipe: [],
     async iniciar() {
       await this.carregar()
       let t
       const f = () => { clearTimeout(t); t = setTimeout(() => this.carregar(), 500) }
-      for (const ev of ['conversa', 'mensagem', 'tarefa', 'agente_status']) window.addEventListener('lavo:' + ev, f)
+      for (const ev of ['conversa', 'mensagem', 'tarefa', 'agente_status', 'equipe']) window.addEventListener('lavo:' + ev, f)
     },
     async carregar() {
-      const [fila, tarefas, hoje, agente] = await Promise.all([
+      const [fila, tarefas, hoje, agente, semana, equipe] = await Promise.all([
         api('/api/conversas?filtro=fila&limite=8'), api('/api/tarefas?filtro=minhas'),
-        api('/api/relatorios/resumo?dias=1'), api('/api/agente/status')])
+        api('/api/relatorios/resumo?dias=1'), api('/api/agente/status'), api('/api/relatorios/resumo?dias=7'), api('/api/usuarios')])
+      this.semana = semana; this.equipe = equipe
       this.contagem = fila.contagem; this.fila = fila.conversas; this.tarefas = tarefas.slice(0, 8)
       this.hoje = hoje; this.agente = agente
     },

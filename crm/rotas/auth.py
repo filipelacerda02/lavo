@@ -59,7 +59,8 @@ def login(dados: Login, request: Request, resp: Response, db: Session = Depends(
     u = db.scalar(select(Usuario).where(func.lower(Usuario.email) == dados.email.strip().lower()))
     if not u or not u.ativo or not conferir_senha(dados.senha, u.senha_hash):
         raise HTTPException(401, "E-mail ou senha inválidos.")
-    u.ultimo_acesso = agora()
+    u.ultimo_acesso = u.ultimo_sinal = agora()
+    u.status = "online"  # entra disponível para a distribuição
     auditar(db, u, "login")
     db.commit()
     _definir_cookie(resp, u)
@@ -67,7 +68,14 @@ def login(dados: Login, request: Request, resp: Response, db: Session = Depends(
 
 
 @rotas.post("/logout")
-def logout(resp: Response):
+def logout(resp: Response, request: Request, db: Session = Depends(obter_db)):
+    from .base import usuario_opcional
+
+    u = usuario_opcional(request, db)
+    if u:
+        u.status = "offline"
+        auditar(db, u, "logout")
+        db.commit()
     resp.delete_cookie(COOKIE)
     return {"ok": True}
 

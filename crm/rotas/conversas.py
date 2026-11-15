@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
@@ -10,8 +14,11 @@ from sqlalchemy.orm import Session
 from .. import atendimento as at
 from .. import serializar as s
 from ..db import obter_db
-from ..modelos import Contato, Conversa, Etiqueta, Mensagem, Usuario, contato_etiquetas
-from ..preferencias import ler_config
+from ..eventos import barramento
+from ..modelos import (Contato, Conversa, Equipe, Etiqueta, Mensagem, MensagemAgendada, Usuario, agora,
+                       contato_etiquetas)
+from ..preferencias import PRIORIDADES, ler_config
+from ..recursos import distribuir_fila, notificar, solicitar_csat
 from .base import usuario_logado
 
 rotas = APIRouter(prefix="/api/conversas", tags=["conversas"])
@@ -22,7 +29,18 @@ class Texto(BaseModel):
 
 
 class Transferencia(BaseModel):
-    usuario_id: int
+    usuario_id: int | None = None
+    equipe_id: int | None = None  # sem usuário: vai para a fila da equipe
+
+
+class Edicao(BaseModel):
+    prioridade: str | None = Field(None, pattern="^(baixa|media|alta|urgente)$")
+    equipe_id: int | None = None
+
+
+class Agendamento(BaseModel):
+    texto: str = Field(min_length=1, max_length=4000)
+    enviar_em: datetime
 
 
 def _conversa(db: Session, conversa_id: int) -> Conversa:
@@ -43,7 +61,7 @@ def _ultimas(db: Session, ids: list[int]) -> dict[int, Mensagem]:
 
 @rotas.get("")
 def listar(filtro: str = "abertas", busca: str = "", etiqueta_id: int | None = None,
-           limite: int = Query(100, le=300), u: Usuario = Depends(usuario_logado), db: Session = Depends(obter_db)):
+           equipe_id: int | None = None, prioridade: str | None = None, limite: int = Query(100, le=300), u: Usuario = Depends(usuario_logado), db: Session = Depends(obter_db)):
     q = select(Conversa).join(Contato)
     filtros = {
         "abertas": Conversa.status == "aberta",
@@ -64,14 +82,21 @@ def listar(filtro: str = "abertas", busca: str = "", etiqueta_id: int | None = N
     if etiqueta_id:
         q = q.join(contato_etiquetas, contato_etiquetas.c.contato_id == Contato.id).where(
             contato_etiquetas.c.etiqueta_id == etiqueta_id)
+    if equipe_id:
+        q = q.where(Conversa.equipe_id == equipe_id)
+    if prioridade:
+        q = q.where(Conversa.prioridade == prioridade)
     convs = list(db.scalars(q.order_by(Conversa.ultima_mensagem_em.desc()).limit(limite)).unique())
+    if filtro == "fila":  # fila: mais urgente e mais antiga primeiro
+        convs.sort(key=lambda c: (-PRIORIDADES.index(c.prioridade or "media"), c.modo_desde))
     ultimas = _ultimas(db, [c.id for c in convs])
-    nome_agente = ler_config(db)["agente_nome"]
+    cfg = ler_config(db)
+    nome_agente = cfg["agente_nome"]
     contagem = dict(db.execute(select(Conversa.modo, func.count()).where(Conversa.status == "aberta")
                                .group_by(Conversa.modo)).all())
     minhas = db.scalar(select(func.count()).where(Conversa.status == "aberta", Conversa.modo == "humano",
                                                   Conversa.atendente_id == u.id))
-    return {"conversas": [s.conversa(c, ultimas.get(c.id), nome_agente) for c in convs],
+    return {"conversas": [s.conversa(c, ultimas.get(c.id), nome_agente, cfg) for c in convs],
             "contagem": {"agente": contagem.get("agente", 0), "fila": contagem.get("fila", 0),
                          "humano": contagem.get("humano", 0), "minhas": minhas}}
 
@@ -79,11 +104,16 @@ def listar(filtro: str = "abertas", busca: str = "", etiqueta_id: int | None = N
 @rotas.get("/{conversa_id}")
 def detalhe(conversa_id: int, u: Usuario = Depends(usuario_logado), db: Session = Depends(obter_db)):
     conv = _conversa(db, conversa_id)
-    nome_agente = ler_config(db)["agente_nome"]
+    cfg = ler_config(db)
+    nome_agente = cfg["agente_nome"]
     msgs = db.scalars(select(Mensagem).where(Mensagem.conversa_id == conv.id).order_by(Mensagem.id))
     anteriores = db.scalars(select(Conversa).where(Conversa.contato_id == conv.contato_id, Conversa.id != conv.id)
                             .order_by(Conversa.id.desc()).limit(10))
-    return {"conversa": s.conversa(conv, None, nome_agente),
+    agendadas = db.scalars(select(MensagemAgendada).where(MensagemAgendada.conversa_id == conv.id,
+                                                           MensagemAgendada.status.in_(["pendente", "erro"]))
+                           .order_by(MensagemAgendada.enviar_em))
+    return {"conversa": s.conversa(conv, None, nome_agente, cfg),
+            "agendadas": [s.agendada(a) for a in agendadas],
             "mensagens": [s.mensagem(m, nome_agente, conv.contato) for m in msgs],
             "anteriores": [{"id": c.id, "status": c.status, "criada_em": s.iso(c.criada_em)} for c in anteriores]}
 
@@ -146,25 +176,91 @@ def devolver(conversa_id: int, forcar: bool = False, u: Usuario = Depends(usuari
 
 
 @rotas.post("/{conversa_id}/fila")
-def para_fila(conversa_id: int, u: Usuario = Depends(usuario_logado), db: Session = Depends(obter_db)):
+async def para_fila(conversa_id: int, u: Usuario = Depends(usuario_logado), db: Session = Depends(obter_db)):
     conv = _conversa(db, conversa_id)
-    return _executar(db, conv, lambda: at.enviar_para_fila(db, conv, db.merge(u)))
+    r = _executar(db, conv, lambda: at.enviar_para_fila(db, conv, db.merge(u)))
+    await asyncio.to_thread(distribuir_fila, {conv.id: u.id})
+    return r
 
 
 @rotas.post("/{conversa_id}/transferir")
-def transferir(conversa_id: int, dados: Transferencia, u: Usuario = Depends(usuario_logado),
-               db: Session = Depends(obter_db)):
+async def transferir(conversa_id: int, dados: Transferencia, u: Usuario = Depends(usuario_logado),
+                     db: Session = Depends(obter_db)):
     conv = _conversa(db, conversa_id)
-    destino = db.get(Usuario, dados.usuario_id)
-    if not destino:
-        raise HTTPException(404, "Colaborador não encontrado.")
-    return _executar(db, conv, lambda: at.transferir(db, conv, db.merge(u), destino))
+    if dados.usuario_id:
+        destino = db.get(Usuario, dados.usuario_id)
+        if not destino:
+            raise HTTPException(404, "Colaborador não encontrado.")
+        if dados.equipe_id is not None:
+            conv.equipe_id = dados.equipe_id
+        r = _executar(db, conv, lambda: at.transferir(db, conv, db.merge(u), destino))
+        notificar("atribuida", f"{u.nome} transferiu uma conversa para você: {conv.contato.nome}", conv.id, destino.id)
+        return r
+    equipe = db.get(Equipe, dados.equipe_id) if dados.equipe_id else None
+    if not equipe:
+        raise HTTPException(400, "Informe um colaborador ou uma equipe.")
+    conv.equipe_id = equipe.id
+    r = _executar(db, conv, lambda: at.enviar_para_fila(db, conv, db.merge(u), motivo=f"Transferida para a equipe {equipe.nome}"))
+    await asyncio.to_thread(distribuir_fila)
+    return r
+
+
+@rotas.patch("/{conversa_id}")
+def editar(conversa_id: int, dados: Edicao, u: Usuario = Depends(usuario_logado), db: Session = Depends(obter_db)):
+    conv = _conversa(db, conversa_id)
+    mudancas = dados.model_dump(exclude_unset=True)
+    textos = []
+    if "prioridade" in mudancas and mudancas["prioridade"] != conv.prioridade:
+        conv.prioridade = mudancas["prioridade"]
+        textos.append(f"prioridade → {conv.prioridade}")
+    if "equipe_id" in mudancas and mudancas["equipe_id"] != conv.equipe_id:
+        equipe = db.get(Equipe, mudancas["equipe_id"]) if mudancas["equipe_id"] else None
+        conv.equipe_id = equipe.id if equipe else None
+        textos.append(f"equipe → {equipe.nome if equipe else 'nenhuma'}")
+    if textos:
+        at.evento_sistema(db, conv, f"✏️ {u.nome} alterou " + ", ".join(textos) + ".", u)
+        at.auditar(db, u, "conversa_editada", "conversa", conv.id, **mudancas)
+    db.commit()
+    at.publicar_conversa(conv.id)
+    return {"ok": True}
 
 
 @rotas.post("/{conversa_id}/resolver")
-def resolver(conversa_id: int, u: Usuario = Depends(usuario_logado), db: Session = Depends(obter_db)):
+async def resolver(conversa_id: int, u: Usuario = Depends(usuario_logado), db: Session = Depends(obter_db)):
     conv = _conversa(db, conversa_id)
-    return _executar(db, conv, lambda: at.resolver(db, conv, db.merge(u)))
+    r = _executar(db, conv, lambda: at.resolver(db, conv, db.merge(u)))
+    await solicitar_csat(conv.id)
+    return r
+
+
+# ---------------------------------------------------------------- mensagens agendadas
+@rotas.post("/{conversa_id}/agendadas")
+def agendar(conversa_id: int, dados: Agendamento, u: Usuario = Depends(usuario_logado), db: Session = Depends(obter_db)):
+    conv = _conversa(db, conversa_id)
+    quando = dados.enviar_em if dados.enviar_em.tzinfo else dados.enviar_em.replace(
+        tzinfo=ZoneInfo(ler_config(db)["fuso_horario"]))
+    if quando <= agora():
+        raise HTTPException(400, "Escolha um horário no futuro.")
+    a = MensagemAgendada(conversa_id=conv.id, texto=dados.texto.strip(), enviar_em=quando, criada_por_id=u.id)
+    db.add(a)
+    db.flush()
+    at.evento_sistema(db, conv, f"⏰ {u.nome} agendou uma mensagem para {quando.astimezone(ZoneInfo(ler_config(db)['fuso_horario'])):%d/%m %H:%M}.", u)
+    at.auditar(db, u, "mensagem_agendada", "conversa", conv.id, agendada_id=a.id)
+    db.commit()
+    barramento.publicar("mensagem", {"conversa_id": conv.id})
+    return s.agendada(a)
+
+
+@rotas.delete("/agendadas/{agendada_id}")
+def cancelar_agendada(agendada_id: int, u: Usuario = Depends(usuario_logado), db: Session = Depends(obter_db)):
+    a = db.get(MensagemAgendada, agendada_id)
+    if not a or a.status != "pendente":
+        raise HTTPException(404, "Agendamento não encontrado ou já enviado.")
+    a.status = "cancelada"
+    at.auditar(db, u, "agendamento_cancelado", "conversa", a.conversa_id, agendada_id=a.id)
+    db.commit()
+    barramento.publicar("mensagem", {"conversa_id": a.conversa_id})
+    return {"ok": True}
 
 
 @rotas.post("/{conversa_id}/reabrir")

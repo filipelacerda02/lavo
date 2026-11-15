@@ -30,7 +30,7 @@ from lavo.agente import SYSTEM, Agente
 from lavo.conversa import Conversa as ConversaAgente
 from lavo.ferramentas import Loja
 
-from . import whatsapp
+from . import recursos, whatsapp
 from .agenda import estado_do_agente
 from .db import sessao
 from .eventos import barramento
@@ -137,6 +137,7 @@ def localizar_ou_criar_contato(db: Session, jid: str, telefone: str | None, nome
         db.add(contato)
         _vincular_cliente_por_telefone(contato)
         db.flush()
+        contato._novo = True  # marca transitória: contato acabou de ser criado
         auditar(db, None, "contato_criado_whatsapp", "contato", contato.id)
     elif nome and (not contato.nome or contato.nome == contato.telefone):
         contato.nome = nome
@@ -179,6 +180,19 @@ async def receber_do_whatsapp(evento: dict[str, Any]) -> int | None:
     texto = (evento.get("texto") or "").strip()
     midia = evento.get("midia")
     aviso: tuple[str, str] | None = None
+    nova_conversa = False
+    if not evento.get("de_mim"):
+        # Resposta à pesquisa de satisfação de uma conversa já resolvida?
+        with sessao() as db:
+            existente = db.scalar(select(Contato.id).where(Contato.whatsapp_jid == jid))
+        if existente:
+            if wid:
+                with sessao() as db:
+                    if db.scalar(select(Mensagem.id).where(Mensagem.whatsapp_id == wid)):
+                        return None
+            conv_csat = await recursos.tratar_resposta_csat(existente, texto)
+            if conv_csat:
+                return conv_csat
     with sessao() as db:
         if wid and db.scalar(select(Mensagem.id).where(Mensagem.whatsapp_id == wid)):
             return None  # duplicada
@@ -212,8 +226,11 @@ async def receber_do_whatsapp(evento: dict[str, Any]) -> int | None:
                                 motivo_fila=None if agente_pode else motivo_off)
                 db.add(conv)
                 db.flush()
+                nova_conversa = True
                 evento_sistema(db, conv, "Nova conversa — 🤖 atendida pelo agente." if agente_pode
                                else f"Nova conversa — ⏳ na fila. {motivo_off}.")
+                if getattr(contato, "_novo", False) and cfg.get("criar_negocio_novo_contato"):
+                    recursos.criar_negocio_lead(db, contato)
             elif conv.modo == MODO_FILA and agente_pode and conv.atendente_id is None \
                     and (conv.motivo_fila or "").startswith(MOTIVO_FORA_HORARIO):
                 mudar_modo(db, conv, MODO_AGENTE)
@@ -232,14 +249,24 @@ async def receber_do_whatsapp(evento: dict[str, Any]) -> int | None:
                 conv.aviso_fora_horario_enviado = True
                 aviso = (contato.whatsapp_jid or whatsapp.jid_de_telefone(contato.telefone or ""),
                          cfg["mensagem_fora_horario"])
-            modo = conv.modo
+        modo, atendente_id = conv.modo, conv.atendente_id
+        nome_contato = contato.nome or contato.telefone or "Contato"
 
+    if not evento.get("de_mim"):
+        if modo == MODO_HUMANO and atendente_id:
+            recursos.notificar("mensagem", f"{nome_contato}: {texto[:80] or '📎 ' + (midia or '')}", conv_id, atendente_id)
+        elif modo == MODO_FILA and nova_conversa:
+            recursos.notificar("fila", f"Nova conversa na fila: {nome_contato}", conv_id)
+        if nova_conversa and texto and cfg.get("triagem_ia"):
+            asyncio.create_task(asyncio.to_thread(recursos.triagem_ia, conv_id, texto))
     if aviso:
         await _enviar_automatico(conv_id, *aviso)
     publicar_conversa(conv_id)
     barramento.publicar("mensagem", {"conversa_id": conv_id})
     if not evento.get("de_mim") and modo == MODO_AGENTE:
         agendar_agente(conv_id)
+    elif modo == MODO_FILA:
+        await asyncio.to_thread(recursos.distribuir_fila)
     return conv_id
 
 
@@ -335,8 +362,12 @@ async def executar_agente(conv_id: int) -> None:
             if erro:
                 mudar_modo(db, conv, MODO_FILA, motivo="Falha do agente")
                 evento_sistema(db, conv, f"⚠️ O agente falhou e a conversa foi para a fila. ({erro[:200]})")
-                publicar_conversa(conv_id)
-                return
+        if erro:
+            publicar_conversa(conv_id)
+            await asyncio.to_thread(recursos.distribuir_fila)
+            return
+        with sessao() as db:
+            conv = db.get(Conversa, conv_id)
             if conv.modo == MODO_HUMANO or conv.status != "aberta":
                 quem = conv.atendente.nome if conv.atendente else "um humano"
                 evento_sistema(db, conv, f"Resposta do agente descartada: {quem} assumiu a conversa antes.")
@@ -373,6 +404,8 @@ async def executar_agente(conv_id: int) -> None:
 
         if extra:
             await _enviar_automatico(conv_id, dados["jid"], extra)
+        if transferiu:
+            await asyncio.to_thread(recursos.distribuir_fila)
         publicar_conversa(conv_id)
         barramento.publicar("mensagem", {"conversa_id": conv_id})
 
@@ -487,11 +520,13 @@ def enviar_para_fila(db: Session, conv: Conversa, usuario: Usuario, motivo: str 
     auditar(db, usuario, "conversa_para_fila", "conversa", conv.id)
 
 
-def resolver(db: Session, conv: Conversa, usuario: Usuario) -> None:
-    conv.status, conv.resolvida_em, conv.resolvida_por_id, conv.nao_lidas = "resolvida", agora(), usuario.id, 0
+def resolver(db: Session, conv: Conversa, usuario: Usuario | None, motivo: str | None = None) -> None:
+    conv.status, conv.resolvida_em, conv.nao_lidas = "resolvida", agora(), 0
+    conv.resolvida_por_id = usuario.id if usuario else None
     cancelar_agendamento(conv.id)
-    evento_sistema(db, conv, f"✅ Conversa resolvida por {usuario.nome}.", usuario)
-    auditar(db, usuario, "conversa_resolvida", "conversa", conv.id)
+    quem = usuario.nome if usuario else "Sistema"
+    evento_sistema(db, conv, f"✅ Conversa resolvida por {quem}" + (f" ({motivo})." if motivo else "."), usuario)
+    auditar(db, usuario, "conversa_resolvida", "conversa", conv.id, motivo=motivo)
 
 
 def reabrir(db: Session, conv: Conversa, usuario: Usuario | None) -> None:
@@ -556,6 +591,7 @@ async def rotina_periodica() -> None:
                 retomar.append(conv.id)
     if mudou:
         barramento.publicar("agente_status", {"ativo": estado.ativo, "motivo": estado.motivo})
+    await recursos.rotina()
     for cid in retomar:
         publicar_conversa(cid)
         with sessao() as db:

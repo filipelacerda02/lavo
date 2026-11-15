@@ -3,6 +3,9 @@
 <div class="conteudo" x-data="configuracoes()" x-init="iniciar()">
   <div class="abas">
     <button :class="aba === 'agente' ? 'ativo' : ''" @click="aba = 'agente'">🤖 Agente e horários</button>
+    <button :class="aba === 'atendimento' ? 'ativo' : ''" @click="aba = 'atendimento'">🎧 Atendimento, SLA e CSAT</button>
+    <button :class="aba === 'equipes' ? 'ativo' : ''" @click="aba = 'equipes'">🏢 Equipes</button>
+    <button :class="aba === 'campos' ? 'ativo' : ''" @click="aba = 'campos'">🧩 Campos</button>
     {% if usuario.papel == 'admin' %}<button :class="aba === 'usuarios' ? 'ativo' : ''" @click="aba = 'usuarios'">👥 Colaboradores</button>{% endif %}
     <button :class="aba === 'respostas' ? 'ativo' : ''" @click="aba = 'respostas'">⚡ Respostas rápidas</button>
     <button :class="aba === 'etiquetas' ? 'ativo' : ''" @click="aba = 'etiquetas'">🏷️ Etiquetas</button>
@@ -92,21 +95,109 @@
     </template>
   </div>
 
+  <!-- ================= atendimento ================= -->
+  <div x-show="aba === 'atendimento'" class="grade grade-2" x-cloak>
+    <template x-if="ag">
+      <div class="cartao coluna" style="gap:14px">
+        <h2>Distribuição e encerramento</h2>
+        <label class="check"><input type="checkbox" x-model="ag.config.distribuicao_automatica"> Distribuir a fila automaticamente</label>
+        <div class="fraco">A conversa vai para o colaborador <b>online</b> (com o CRM aberto) que tem menos conversas, respeitando a equipe da conversa e o limite de cada um. Em caso de empate, vai para quem recebeu há mais tempo (rodízio).</div>
+        <label>Encerrar conversas em que o cliente não responde há (horas, 0 = nunca)
+          <input type="number" min="0" x-model.number="ag.config.resolver_inativas_h"></label>
+        <label class="check"><input type="checkbox" x-model="ag.config.triagem_ia"> ✨ Triagem por IA nas conversas novas (assunto e prioridade)</label>
+        <label class="check"><input type="checkbox" x-model="ag.config.criar_negocio_novo_contato"> Criar negócio no funil para cada contato novo do WhatsApp</label>
+        <h2 style="margin-top:6px">SLA por prioridade</h2>
+        <table class="tabela">
+          <thead><tr><th>Prioridade</th><th>Espera na fila (min)</th><th>Resolução (h)</th></tr></thead>
+          <tbody><template x-for="p in ['urgente', 'alta', 'media', 'baixa']" :key="p">
+            <tr><td x-text="ROTULO_PRIORIDADE[p]"></td>
+              <td><input type="number" min="1" x-model.number="ag.config.sla[p].fila_min"></td>
+              <td><input type="number" min="1" x-model.number="ag.config.sla[p].resolucao_h"></td></tr>
+          </template></tbody>
+        </table>
+        <button class="btn primario" style="align-self:flex-start" @click="salvarAtendimento()">Salvar</button>
+      </div>
+    </template>
+    <template x-if="ag">
+      <div class="cartao coluna" style="gap:14px">
+        <h2>Pesquisa de satisfação (CSAT)</h2>
+        <label class="check"><input type="checkbox" x-model="ag.config.csat_ativo"> Enviar pesquisa ao resolver a conversa</label>
+        <label class="check"><input type="checkbox" x-model="ag.config.csat_conversas_agente"> Também quando só o agente atendeu</label>
+        <label>Pergunta <textarea rows="3" x-model="ag.config.csat_mensagem"></textarea></label>
+        <label>Agradecimento <textarea rows="2" x-model="ag.config.csat_agradecimento"></textarea></label>
+        <div class="fraco">O cliente responde com um número de 1 a 5 (pode escrever um comentário depois). A resposta vale por 24 horas. Notas 1 e 2 geram um alerta para a equipe.</div>
+        <button class="btn primario" style="align-self:flex-start" @click="salvarAtendimento()">Salvar</button>
+      </div>
+    </template>
+  </div>
+
+  <!-- ================= equipes ================= -->
+  <div x-show="aba === 'equipes'" class="grade grade-2" x-cloak>
+    <div class="cartao">
+      <h2>Equipes</h2>
+      <p class="fraco">Conversas podem ser direcionadas a uma equipe (Comercial, Suporte, Financeiro…). A distribuição automática só entrega a membros da equipe. Os membros são definidos na aba Colaboradores.</p>
+      <template x-for="e in equipes" :key="e.id">
+        <div class="linha entre" style="border-bottom:1px solid var(--borda); padding:8px 0">
+          <span><span class="etiqueta" :style="'background:' + e.cor" x-text="e.nome"></span>
+            <span class="fraco" x-text="e.membros.map(m => m.nome).join(', ') || 'sem membros'"></span></span>
+          <button class="btn pequeno perigo" @click="apagar('/api/equipes/' + e.id)">Excluir</button>
+        </div>
+      </template>
+    </div>
+    <form class="cartao coluna" @submit.prevent="criar('/api/equipes', novaEquipe, () => novaEquipe = {nome:'', cor:'#1baf7a'})">
+      <h2>Nova equipe</h2>
+      <div class="linha"><label style="flex:1">Nome <input x-model="novaEquipe.nome" required></label>
+        <label>Cor <input type="color" x-model="novaEquipe.cor" style="width:60px; padding:2px"></label></div>
+      <button class="btn primario" style="align-self:flex-start">Adicionar</button>
+    </form>
+  </div>
+
+  <!-- ================= campos personalizados ================= -->
+  <div x-show="aba === 'campos'" class="grade grade-2" x-cloak>
+    <div class="cartao">
+      <h2>Campos personalizados de contato</h2>
+      <template x-for="c in campos" :key="c.id">
+        <div class="linha entre" style="border-bottom:1px solid var(--borda); padding:8px 0">
+          <span><b x-text="c.rotulo"></b> <span class="fraco" x-text="c.chave + ' · ' + c.tipo + (c.opcoes.length ? ' (' + c.opcoes.join(', ') + ')' : '')"></span></span>
+          <button class="btn pequeno perigo" @click="apagar('/api/campos/' + c.id)">Excluir</button>
+        </div>
+      </template>
+      <div class="fraco" x-show="!campos.length">Nenhum campo. Ex.: Bairro, Plano de interesse, Data de aniversário.</div>
+    </div>
+    <form class="cartao coluna" @submit.prevent="criarCampo()">
+      <h2>Novo campo</h2>
+      <label>Nome do campo <input x-model="novoCampo.rotulo" required @input="novoCampo.chave = novoCampo.rotulo.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')"></label>
+      <label>Chave (usada no CSV) <input x-model="novoCampo.chave" required pattern="[a-z0-9_]+"></label>
+      <label>Tipo <select x-model="novoCampo.tipo"><option value="texto">Texto</option><option value="numero">Número</option><option value="data">Data</option><option value="opcao">Lista de opções</option></select></label>
+      <label x-show="novoCampo.tipo === 'opcao'">Opções (separadas por vírgula) <input x-model="novoCampo.opcoes_texto"></label>
+      <button class="btn primario" style="align-self:flex-start">Adicionar</button>
+    </form>
+  </div>
+
   <!-- ================= usuários ================= -->
   {% if usuario.papel == 'admin' %}
-  <div x-show="aba === 'usuarios'" class="grade grade-2" x-cloak>
+  <div x-show="aba === 'usuarios'" class="coluna" style="gap:16px" x-cloak>
     <div class="cartao tabela-rolagem">
       <h2>Colaboradores</h2>
       <p class="fraco">Cada mensagem enviada pela plataforma fica registrada com o nome de quem estava logado.</p>
       <table class="tabela">
-        <thead><tr><th>Nome</th><th>Papel</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Nome</th><th>Papel</th><th>Equipes</th><th>Limite</th><th>Status</th><th></th></tr></thead>
         <tbody><template x-for="u in usuarios" :key="u.id">
           <tr>
             <td><div class="linha"><span class="avatar" :style="'background:' + u.cor" x-text="fmt.iniciais(u.nome)"></span>
               <span><b x-text="u.nome"></b><br><span class="fraco" x-text="u.email"></span></span></div></td>
-            <td><select :value="u.papel" @change="editarUsuario(u, {papel: $event.target.value})">
+            <td><select style="min-width:130px" :value="u.papel" @change="editarUsuario(u, {papel: $event.target.value})">
               <option value="atendente">Atendente</option><option value="supervisor">Supervisor</option><option value="admin">Administrador</option></select></td>
-            <td><span class="selo" :class="u.ativo ? 'ok' : 'neutro'" x-text="u.ativo ? 'ativo' : 'inativo'"></span></td>
+            <td><div class="coluna" style="gap:2px"><template x-for="e in equipes" :key="e.id">
+              <label class="check" style="font-size:12px"><input type="checkbox" :checked="u.equipes.some(x => x.id === e.id)"
+                @change="editarUsuario(u, {equipe_ids: $event.target.checked ? [...u.equipes.map(x => x.id), e.id] : u.equipes.map(x => x.id).filter(x => x !== e.id)})">
+                <span x-text="e.nome"></span></label></template>
+              <span class="fraco" x-show="!equipes.length">—</span></div></td>
+            <td><input type="number" min="1" style="width:64px" :value="u.max_conversas" title="Conversas simultâneas na distribuição automática"
+                       @change="editarUsuario(u, {max_conversas: Number($event.target.value)})"></td>
+            <td><span class="selo" :class="u.ativo ? 'ok' : 'neutro'" x-text="u.ativo ? 'ativo' : 'inativo'"></span>
+              <div class="fraco"><span class="ponto" :class="u.disponivel ? 'on' : (u.status === 'ausente' ? 'aus' : 'off')"></span>
+                <span x-text="u.disponivel ? 'online' : (u.conectado ? u.status : 'offline')"></span></div></td>
             <td style="white-space:nowrap">
               <button class="btn pequeno" @click="editarUsuario(u, {ativo: !u.ativo})" x-text="u.ativo ? 'Desativar' : 'Ativar'"></button>
               <button class="btn pequeno" @click="redefinirSenha(u)">Senha</button>
@@ -115,7 +206,7 @@
         </template></tbody>
       </table>
     </div>
-    <form class="cartao coluna" @submit.prevent="criarUsuario()">
+    <form class="cartao coluna" style="max-width:560px" @submit.prevent="criarUsuario()">
       <h2>Novo colaborador</h2>
       <label>Nome <input x-model="novoUsuario.nome" required></label>
       <label>E-mail (login) <input type="email" x-model="novoUsuario.email" required></label>
@@ -180,6 +271,11 @@
           <input type="number" x-model.number="e.ordem" @change="salvarEtapa(e)" style="width:70px" title="ordem">
           <button class="btn pequeno perigo" @click="apagar('/api/funil/etapas/' + e.id)">✕</button>
         </div>
+        <div class="linha" style="padding:0 0 10px 52px; border-bottom:1px solid var(--borda)">
+          <label style="width:130px">Alerta de parado (dias)<input type="number" min="0" x-model.number="e.dias_parado" @change="salvarEtapa(e)"></label>
+          <label style="flex:1">Tarefa automática ao entrar<input x-model="e.tarefa_automatica" placeholder="ex.: Enviar proposta" @change="salvarEtapa(e)"></label>
+          <label style="width:110px">Prazo (dias)<input type="number" min="0" x-model.number="e.tarefa_prazo_dias" @change="salvarEtapa(e)"></label>
+        </div>
       </template>
     </div>
     <form class="cartao coluna" @submit.prevent="criar('/api/funil/etapas', novaEtapa, () => novaEtapa = {nome:'', cor:'#2a78d6'})">
@@ -198,11 +294,14 @@ function configuracoes() {
     nova: { descricao: '', inicio: '', fim: '', agente_ativo: 'nao' },
     novoUsuario: { nome: '', email: '', senha: '', papel: 'atendente', cor: '#eb6834' },
     novaResposta: { atalho: '', texto: '' }, novaEtiqueta: { nome: '', cor: '#6250d6' }, novaEtapa: { nome: '', cor: '#2a78d6' },
+    equipes: [], campos: [], novaEquipe: { nome: '', cor: '#1baf7a' }, novoCampo: { rotulo: '', chave: '', tipo: 'texto', opcoes_texto: '' },
     async iniciar() { await this.carregar() },
     async carregar() {
-      const pedidos = [api('/api/agente/config'), api('/api/respostas-rapidas'), api('/api/etiquetas'), api('/api/funil')]
+      const pedidos = [api('/api/agente/config'), api('/api/respostas-rapidas'), api('/api/etiquetas'), api('/api/funil'),
+        api('/api/equipes'), api('/api/campos')]
       if (USUARIO.papel === 'admin') pedidos.push(api('/api/usuarios'))
-      const [ag, respostas, etiquetas, funil, usuarios] = await Promise.all(pedidos)
+      const [ag, respostas, etiquetas, funil, equipes, campos, usuarios] = await Promise.all(pedidos)
+      this.equipes = equipes; this.campos = campos
       this.ag = ag; this.horarios = ag.horarios.map((h) => ({ ...h })); this.respostas = respostas
       this.etiquetas = etiquetas; this.etapas = funil.etapas; this.usuarios = usuarios || []
     },
@@ -252,7 +351,25 @@ function configuracoes() {
     },
     async criar(url, corpo, limpar) { await tentar(() => api(url, { method: 'POST', corpo }), 'Salvo'); limpar(); this.carregar() },
     async apagar(url) { if (!confirm('Excluir?')) return; await tentar(() => api(url, { method: 'DELETE' })); this.carregar() },
-    async salvarEtapa(e) { await tentar(() => api('/api/funil/etapas/' + e.id, { method: 'PATCH', corpo: { nome: e.nome, cor: e.cor, ordem: e.ordem } })) },
+    async salvarEtapa(e) {
+      await tentar(() => api('/api/funil/etapas/' + e.id, { method: 'PATCH', corpo: { nome: e.nome, cor: e.cor, ordem: e.ordem,
+        dias_parado: e.dias_parado || 0, tarefa_automatica: e.tarefa_automatica || '', tarefa_prazo_dias: e.tarefa_prazo_dias || 0 } }), 'Etapa salva')
+    },
+    async salvarAtendimento() {
+      const c = this.ag.config
+      await tentar(() => api('/api/agente/config', { method: 'PUT', corpo: {
+        distribuicao_automatica: !!c.distribuicao_automatica, resolver_inativas_h: c.resolver_inativas_h || 0, triagem_ia: !!c.triagem_ia,
+        criar_negocio_novo_contato: !!c.criar_negocio_novo_contato, sla: c.sla, csat_ativo: !!c.csat_ativo,
+        csat_conversas_agente: !!c.csat_conversas_agente, csat_mensagem: c.csat_mensagem || '', csat_agradecimento: c.csat_agradecimento || '' } }), 'Configuração salva')
+      this.carregar()
+    },
+    async criarCampo() {
+      const n = this.novoCampo
+      await tentar(() => api('/api/campos', { method: 'POST', corpo: { chave: n.chave, rotulo: n.rotulo, tipo: n.tipo,
+        opcoes: n.tipo === 'opcao' ? n.opcoes_texto.split(',').map(x => x.trim()).filter(Boolean) : null } }), 'Campo criado')
+      this.novoCampo = { rotulo: '', chave: '', tipo: 'texto', opcoes_texto: '' }
+      this.carregar()
+    },
   }
 }
 </script>

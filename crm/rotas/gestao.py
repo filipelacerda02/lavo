@@ -15,6 +15,7 @@ from .. import serializar as s
 from ..db import obter_db
 from ..eventos import barramento
 from ..modelos import EtapaFunil, Negocio, RespostaRapida, Tarefa, Usuario, agora
+from ..recursos import aplicar_regra_etapa, negocio_parado
 from .base import gestor, usuario_logado
 
 rotas = APIRouter(prefix="/api", tags=["gestão"])
@@ -25,6 +26,9 @@ class DadosEtapa(BaseModel):
     nome: str = Field(min_length=1, max_length=60)
     cor: str = "#2a78d6"
     ordem: int | None = None
+    dias_parado: int | None = Field(None, ge=0, le=365)
+    tarefa_automatica: str | None = Field(None, max_length=200)
+    tarefa_prazo_dias: int | None = Field(None, ge=0, le=90)
 
 
 class DadosNegocio(BaseModel):
@@ -37,20 +41,31 @@ class DadosNegocio(BaseModel):
     previsao_fechamento: str | None = None
     observacoes: str | None = None
     ordem: int | None = None
+    motivo_perda: str | None = Field(None, max_length=200)
+
+
+def _etapa_json(e: EtapaFunil) -> dict:
+    return {"id": e.id, "nome": e.nome, "cor": e.cor, "ordem": e.ordem, "dias_parado": e.dias_parado,
+            "tarefa_automatica": e.tarefa_automatica, "tarefa_prazo_dias": e.tarefa_prazo_dias}
+
+
+def _negocio_json(n: Negocio, etapas: dict[int, EtapaFunil]) -> dict:
+    return {**s.negocio(n), "parado_dias": negocio_parado(n, etapas.get(n.etapa_id))}
 
 
 @rotas.get("/funil")
 def funil(u: Usuario = Depends(usuario_logado), db: Session = Depends(obter_db)):
-    etapas = db.scalars(select(EtapaFunil).order_by(EtapaFunil.ordem, EtapaFunil.id))
+    etapas = list(db.scalars(select(EtapaFunil).order_by(EtapaFunil.ordem, EtapaFunil.id)))
+    por_id = {e.id: e for e in etapas}
     negocios = db.scalars(select(Negocio).order_by(Negocio.ordem, Negocio.id))
-    return {"etapas": [{"id": e.id, "nome": e.nome, "cor": e.cor, "ordem": e.ordem} for e in etapas],
-            "negocios": [s.negocio(n) for n in negocios]}
+    return {"etapas": [_etapa_json(e) for e in etapas], "negocios": [_negocio_json(n, por_id) for n in negocios]}
 
 
 @rotas.post("/funil/etapas")
 def criar_etapa(d: DadosEtapa, u: Usuario = Depends(gestor), db: Session = Depends(obter_db)):
     ordem = d.ordem if d.ordem is not None else (db.scalar(select(func.max(EtapaFunil.ordem))) or 0) + 1
-    e = EtapaFunil(nome=d.nome, cor=d.cor, ordem=ordem)
+    e = EtapaFunil(nome=d.nome, cor=d.cor, ordem=ordem, dias_parado=d.dias_parado or 0,
+                   tarefa_automatica=d.tarefa_automatica or None, tarefa_prazo_dias=d.tarefa_prazo_dias or 1)
     db.add(e)
     db.commit()
     return {"id": e.id}
@@ -60,8 +75,11 @@ def criar_etapa(d: DadosEtapa, u: Usuario = Depends(gestor), db: Session = Depen
 def editar_etapa(etapa_id: int, d: DadosEtapa, u: Usuario = Depends(gestor), db: Session = Depends(obter_db)):
     e = db.get(EtapaFunil, etapa_id) or _404()
     e.nome, e.cor = d.nome, d.cor
-    if d.ordem is not None:
-        e.ordem = d.ordem
+    for campo in ("ordem", "dias_parado", "tarefa_prazo_dias"):
+        if getattr(d, campo) is not None:
+            setattr(e, campo, getattr(d, campo))
+    if "tarefa_automatica" in d.model_fields_set:
+        e.tarefa_automatica = (d.tarefa_automatica or "").strip() or None
     db.commit()
     return {"ok": True}
 
@@ -85,9 +103,10 @@ def criar_negocio(d: DadosNegocio, u: Usuario = Depends(usuario_logado), db: Ses
         raise HTTPException(400, "Crie uma etapa do funil primeiro.")
     n = Negocio(titulo=d.titulo, contato_id=d.contato_id, etapa_id=etapa_id, valor=d.valor or 0,
                 responsavel_id=d.responsavel_id or u.id, previsao_fechamento=d.previsao_fechamento,
-                observacoes=d.observacoes or "")
+                observacoes=d.observacoes or "", etapa_desde=agora())
     db.add(n)
     db.flush()
+    aplicar_regra_etapa(db, n, db.get(EtapaFunil, etapa_id))
     at.auditar(db, u, "negocio_criado", "negocio", n.id)
     db.commit()
     barramento.publicar("funil", {"id": n.id})
@@ -99,13 +118,20 @@ def editar_negocio(negocio_id: int, d: DadosNegocio, u: Usuario = Depends(usuari
                    db: Session = Depends(obter_db)):
     n = db.get(Negocio, negocio_id) or _404()
     alteracoes = d.model_dump(exclude_unset=True)
+    if alteracoes.get("status") == "perdido" and not (alteracoes.get("motivo_perda") or n.motivo_perda):
+        raise HTTPException(400, "Informe o motivo da perda.")
+    mudou_etapa = "etapa_id" in alteracoes and alteracoes["etapa_id"] != n.etapa_id
     for k, v in alteracoes.items():
         setattr(n, k, v)
+    if mudou_etapa:
+        n.etapa_desde = agora()
+        etapa = db.get(EtapaFunil, n.etapa_id) or _404()
+        aplicar_regra_etapa(db, n, etapa)
     at.auditar(db, u, "negocio_editado", "negocio", n.id, **{k: v for k, v in alteracoes.items()
                                                               if k in ("etapa_id", "status", "valor")})
     db.commit()
     barramento.publicar("funil", {"id": n.id})
-    return s.negocio(n)
+    return _negocio_json(n, {e.id: e for e in db.scalars(select(EtapaFunil))})
 
 
 @rotas.delete("/negocios/{negocio_id}")

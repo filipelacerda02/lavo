@@ -19,7 +19,26 @@ PADROES: dict[str, Any] = {
         "e vai falar com você assim que possível."
     ),
     "mensagem_transferencia": "",         # opcional: texto extra quando o agente transfere
+    # ----- atendimento humano
+    "distribuicao_automatica": True,      # fila -> colaborador online com menos conversas (rodízio)
+    "sla": {                              # prazos por prioridade: espera na fila (min) e resolução (h)
+        "urgente": {"fila_min": 5, "resolucao_h": 4},
+        "alta": {"fila_min": 15, "resolucao_h": 8},
+        "media": {"fila_min": 30, "resolucao_h": 24},
+        "baixa": {"fila_min": 120, "resolucao_h": 72},
+    },
+    "resolver_inativas_h": 24,            # resolve conversas em que o cliente não responde há N h (0 = nunca)
+    # ----- pesquisa de satisfação (CSAT)
+    "csat_ativo": True,
+    "csat_conversas_agente": True,        # também pergunta quando só o agente atendeu
+    "csat_mensagem": "Antes de ir: de 1 a 5, que nota você dá para o nosso atendimento? Responda só com o número. 🙂",
+    "csat_agradecimento": "Obrigado pela avaliação! 💙",
+    # ----- IA e funil
+    "triagem_ia": True,                   # classifica prioridade/assunto das conversas novas
+    "criar_negocio_novo_contato": False,  # contato novo do WhatsApp vira negócio na 1ª etapa do funil
 }
+
+PRIORIDADES = ("baixa", "media", "alta", "urgente")
 
 
 def ler_config(db: Session) -> dict[str, Any]:

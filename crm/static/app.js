@@ -54,7 +54,7 @@ window.tentar = async function tentar(fn, sucesso) {
   let fonte
   const abrir = () => {
     fonte = new EventSource('/api/eventos')
-    for (const tipo of ['conversa', 'mensagem', 'contato', 'tarefa', 'funil', 'agente_status', 'whatsapp']) {
+    for (const tipo of ['conversa', 'mensagem', 'contato', 'tarefa', 'funil', 'agente_status', 'whatsapp', 'notificacao', 'equipe']) {
       fonte.addEventListener(tipo, (e) => {
         window.dispatchEvent(new CustomEvent('lavo:' + tipo, { detail: JSON.parse(e.data || 'null') }))
       })
@@ -141,3 +141,45 @@ window.sair = async function sair() {
   await api('/api/logout', { method: 'POST' })
   location.href = '/login'
 }
+
+// ---------- notificações (navegador + som), como nos CRMs de atendimento
+window.notificacoes = {
+  ativas() { return 'Notification' in window && Notification.permission === 'granted' },
+  async ativar() {
+    if (!('Notification' in window)) return avisar('Este navegador não suporta notificações.', true)
+    const r = await Notification.requestPermission()
+    avisar(r === 'granted' ? 'Notificações ativadas' : 'Notificações bloqueadas no navegador', r !== 'granted')
+  },
+  bip() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)()
+      const o = ctx.createOscillator(); const g = ctx.createGain()
+      o.frequency.value = 880; g.gain.value = 0.06
+      o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 0.15)
+    } catch (e) { /* sem áudio */ }
+  },
+}
+window.addEventListener('lavo:notificacao', (e) => {
+  const n = e.detail || {}
+  if (!window.USUARIO) return
+  if (n.usuario_id && n.usuario_id !== USUARIO.id) return
+  // "fila" vai para quem está disponível; o resto é direcionado
+  if (n.tipo === 'fila' && window.MEU_STATUS && window.MEU_STATUS !== 'online') return
+  const abrir = () => { if (n.conversa_id) location.href = '/conversas?c=' + n.conversa_id }
+  notificacoes.bip()
+  if (notificacoes.ativas() && document.hidden) {
+    const notif = new Notification('Lavo CRM', { body: n.texto, tag: 'conv-' + (n.conversa_id || '') })
+    notif.onclick = () => { window.focus(); abrir() }
+  } else if (!(location.pathname === '/conversas' && n.tipo === 'mensagem')) {
+    avisar('🔔 ' + n.texto)
+  }
+})
+
+window.fmt.prazo = function prazo(iso) {
+  if (!iso) return ''
+  const s = Math.round((new Date(iso).getTime() - Date.now()) / 1000)
+  const abs = Math.abs(s)
+  const t = abs < 3600 ? `${Math.max(1, Math.round(abs / 60))} min` : abs < 86400 ? `${Math.round(abs / 3600)} h` : `${Math.round(abs / 86400)} d`
+  return s >= 0 ? `vence em ${t}` : `estourou há ${t}`
+}
+window.ROTULO_PRIORIDADE = { baixa: 'Baixa', media: 'Média', alta: 'Alta', urgente: 'Urgente' }

@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from .. import atendimento as at
 from .. import serializar as s
 from ..db import obter_db
-from ..modelos import Contato, Conversa, Etiqueta, Negocio, Tarefa, Usuario, contato_etiquetas
+from ..modelos import CampoPersonalizado, Contato, Conversa, Etiqueta, Negocio, Tarefa, Usuario, contato_etiquetas
 from .base import admin, gestor, usuario_logado
 
 rotas = APIRouter(prefix="/api", tags=["contatos"])
@@ -32,6 +32,14 @@ class DadosContato(BaseModel):
     agente_bloqueado: bool | None = None
     responsavel_id: int | None = None
     etiqueta_ids: list[int] | None = None
+    campos_extras: dict[str, str | float | None] | None = None
+
+
+class DadosCampo(BaseModel):
+    chave: str = Field(min_length=1, max_length=40, pattern=r"^[a-z0-9_]+$")
+    rotulo: str = Field(min_length=1, max_length=80)
+    tipo: str = Field("texto", pattern="^(texto|numero|data|opcao)$")
+    opcoes: list[str] | None = None
 
 
 class DadosEtiqueta(BaseModel):
@@ -56,6 +64,10 @@ def _aplicar(db: Session, c: Contato, dados: DadosContato) -> None:
     campos = dados.model_dump(exclude_unset=True)
     if "telefone" in campos:
         c.telefone = _telefone(campos.pop("telefone"))  # o jid real chega na primeira mensagem
+    extras = campos.pop("campos_extras", None)
+    if extras is not None:
+        validos = {cp.chave for cp in db.scalars(select(CampoPersonalizado))}
+        c.campos_extras = {**(c.campos_extras or {}), **{k: v for k, v in extras.items() if k in validos}}
     ids = campos.pop("etiqueta_ids", None)
     if ids is not None:
         c.etiquetas = list(db.scalars(select(Etiqueta).where(Etiqueta.id.in_(ids))))
@@ -108,10 +120,12 @@ def criar(dados: DadosContato, u: Usuario = Depends(usuario_logado), db: Session
 def exportar(u: Usuario = Depends(gestor), db: Session = Depends(obter_db)):
     saida = io.StringIO()
     w = csv.writer(saida)
-    w.writerow(["nome", "telefone", "email", "empresa", "origem", "etiquetas", "observacoes", "criado_em"])
+    extras = [cp.chave for cp in db.scalars(select(CampoPersonalizado).order_by(CampoPersonalizado.ordem))]
+    w.writerow(["nome", "telefone", "email", "empresa", "origem", "etiquetas", "observacoes", "criado_em", *extras])
     for c in db.scalars(select(Contato).order_by(Contato.id)).unique():
         w.writerow([c.nome, c.telefone or "", c.email or "", c.empresa or "", c.origem,
-                    ";".join(e.nome for e in c.etiquetas), c.observacoes, s.iso(c.criado_em)])
+                    ";".join(e.nome for e in c.etiquetas), c.observacoes, s.iso(c.criado_em),
+                    *[(c.campos_extras or {}).get(k, "") for k in extras]])
     at.auditar(db, u, "contatos_exportados")
     db.commit()
     return StreamingResponse(iter([saida.getvalue()]), media_type="text/csv",
@@ -124,6 +138,7 @@ async def importar(arquivo: UploadFile = File(...), u: Usuario = Depends(gestor)
     conteudo = (await arquivo.read()).decode("utf-8-sig", errors="replace")
     criados = atualizados = ignorados = 0
     etiquetas = {e.nome.lower(): e for e in db.scalars(select(Etiqueta))}
+    chaves_extras = {cp.chave for cp in db.scalars(select(CampoPersonalizado))}
     for linha in csv.DictReader(io.StringIO(conteudo)):
         linha = {(k or "").strip().lower(): (v or "").strip() for k, v in linha.items()}
         tel = _telefone(linha.get("telefone"))
@@ -140,6 +155,9 @@ async def importar(arquivo: UploadFile = File(...), u: Usuario = Depends(gestor)
         for campo in ("nome", "email", "empresa", "observacoes"):
             if linha.get(campo):
                 setattr(c, campo, linha[campo])
+        extras = {k: v for k, v in linha.items() if k in chaves_extras and v}
+        if extras:
+            c.campos_extras = {**(c.campos_extras or {}), **extras}
         for nome in filter(None, (linha.get("etiquetas") or "").split(";")):
             e = etiquetas.get(nome.strip().lower())
             if not e:
@@ -198,6 +216,36 @@ async def iniciar(contato_id: int, dados: Mensagem, u: Usuario = Depends(usuario
         db.rollback()
         raise HTTPException(e.status, str(e)) from e
     return {"conversa_id": conv.id}
+
+
+# ---------------------------------------------------------------- campos personalizados
+@rotas.get("/campos")
+def campos(u: Usuario = Depends(usuario_logado), db: Session = Depends(obter_db)):
+    return [{"id": c.id, "chave": c.chave, "rotulo": c.rotulo, "tipo": c.tipo, "opcoes": c.opcoes or []}
+            for c in db.scalars(select(CampoPersonalizado).order_by(CampoPersonalizado.ordem, CampoPersonalizado.id))]
+
+
+@rotas.post("/campos")
+def criar_campo(d: DadosCampo, u: Usuario = Depends(gestor), db: Session = Depends(obter_db)):
+    ordem = (db.scalar(select(func.max(CampoPersonalizado.ordem))) or 0) + 1
+    c = CampoPersonalizado(chave=d.chave, rotulo=d.rotulo, tipo=d.tipo, opcoes=d.opcoes if d.tipo == "opcao" else None,
+                           ordem=ordem)
+    db.add(c)
+    try:
+        db.commit()
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(409, "Já existe um campo com esta chave.") from e
+    return {"id": c.id}
+
+
+@rotas.delete("/campos/{campo_id}")
+def excluir_campo(campo_id: int, u: Usuario = Depends(gestor), db: Session = Depends(obter_db)):
+    c = db.get(CampoPersonalizado, campo_id)
+    if c:
+        db.delete(c)
+        db.commit()
+    return {"ok": True}
 
 
 # ---------------------------------------------------------------- etiquetas

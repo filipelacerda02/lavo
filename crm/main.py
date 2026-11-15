@@ -19,10 +19,11 @@ from sqlalchemy import func, select
 
 from . import atendimento
 from .config import WHATSAPP_SIMULADO
-from .db import Base, motor, sessao
+from .db import Base, migrar_colunas, motor, sessao
 from .eventos import barramento
 from .modelos import EtapaFunil, Etiqueta, HorarioAgente, RespostaRapida, Usuario
-from .rotas import administracao, auth, contatos, conversas, gestao
+from .modelos import agora
+from .rotas import administracao, auth, contatos, conversas, gestao, ia
 from .rotas.base import usuario_opcional
 
 log = logging.getLogger("crm")
@@ -31,6 +32,9 @@ PASTA = Path(__file__).parent
 
 def inicializar_banco() -> None:
     Base.metadata.create_all(motor)
+    novas = migrar_colunas()
+    if novas:
+        log.info("colunas novas no banco: %s", ", ".join(novas))
     with sessao() as db:
         if not db.scalar(select(func.count(EtapaFunil.id))):
             for i, (nome, cor) in enumerate([("Novo lead", "#2a78d6"), ("Qualificado", "#1baf7a"),
@@ -83,7 +87,7 @@ def _aquecer() -> None:
 app = FastAPI(title="Lavo CRM", lifespan=ciclo_de_vida)
 app.mount("/static", StaticFiles(directory=PASTA / "static"), name="static")
 templates = Jinja2Templates(directory=PASTA / "templates")
-for modulo in (auth, conversas, contatos, gestao, administracao):
+for modulo in (auth, ia, conversas, contatos, gestao, administracao):
     app.include_router(modulo.rotas)
 
 
@@ -92,14 +96,23 @@ async def eventos(request: Request, u: Usuario | None = Depends(usuario_opcional
     if u is None:
         return HTMLResponse(status_code=401)
     fila = barramento.assinar()
+    usuario_id = u.id
+
+    def sinal() -> None:  # presença: tela aberta = colaborador conectado
+        with sessao() as db:
+            usuario = db.get(Usuario, usuario_id)
+            if usuario:
+                usuario.ultimo_sinal = agora()
 
     async def fluxo():
         try:
+            sinal()
             yield "event: pronto\ndata: {}\n\n"
             while not await request.is_disconnected():
                 try:
                     yield await asyncio.wait_for(fila.get(), timeout=20)
                 except asyncio.TimeoutError:
+                    sinal()
                     yield ": ping\n\n"  # mantém a conexão viva
         finally:
             barramento.cancelar(fila)

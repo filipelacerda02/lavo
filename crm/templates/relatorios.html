@@ -15,6 +15,33 @@
         <div class="cartao"><div class="fraco">Com participação humana</div><div class="numero-grande" x-text="r.com_humano"></div></div>
         <div class="cartao"><div class="fraco">1ª resposta (média)</div><div class="numero-grande" x-text="fmt.duracao(r.tempo_primeira_resposta_s)"></div></div>
         <div class="cartao"><div class="fraco">Custo do agente</div><div class="numero-grande" x-text="'US$ ' + r.custo_agente_usd.toFixed(2)"></div></div>
+        <div class="cartao"><div class="fraco">Satisfação (CSAT)</div>
+          <div class="numero-grande" x-text="r.csat.media !== null ? r.csat.media.toFixed(1) + ' / 5' : '—'"></div>
+          <div class="fraco" x-text="r.csat.respostas + ' de ' + r.csat.solicitadas + ' responderam' + (r.csat.satisfeitos_pct !== null ? ' · ' + r.csat.satisfeitos_pct + '% satisfeitos (4–5)' : '')"></div></div>
+        <div class="cartao"><div class="fraco">Resolvidas dentro do SLA</div>
+          <div class="numero-grande" x-text="r.sla.resolvidas_no_prazo_pct !== null ? r.sla.resolvidas_no_prazo_pct + '%' : '—'"></div>
+          <div class="fraco" x-text="r.sla.estouradas_agora + ' conversa(s) abertas com SLA estourado'"></div></div>
+      </div>
+
+      <div class="grade grade-2">
+        <div class="cartao">
+          <h2>Notas da pesquisa de satisfação</h2>
+          <template x-for="n in ['5', '4', '3', '2', '1']" :key="n">
+            <div class="linha" style="flex-wrap:nowrap; margin-bottom:6px">
+              <span style="width:70px" class="estrelas" x-text="'★'.repeat(Number(n))"></span>
+              <div style="flex:1; background:var(--superficie-2); border-radius:4px">
+                <div class="barra-h" :style="'width:' + (r.csat.respostas ? 100 * r.csat.distribuicao[n] / r.csat.respostas : 0) + '%'"></div></div>
+              <span style="width:32px; text-align:right" x-text="r.csat.distribuicao[n]"></span>
+            </div>
+          </template>
+          <div class="vazio" x-show="!r.csat.respostas" style="padding:12px">Nenhuma avaliação no período.</div>
+        </div>
+        <div class="cartao tabela-rolagem">
+          <h2>Satisfação por quem atendeu</h2>
+          <table class="tabela"><thead><tr><th>Quem</th><th>Média</th><th>Avaliações</th></tr></thead>
+            <tbody><template x-for="u in r.csat.por_usuario" :key="u.nome"><tr><td x-text="u.nome"></td><td x-text="u.media.toFixed(1)"></td><td x-text="u.respostas"></td></tr></template></tbody></table>
+          <div class="vazio" x-show="!r.csat.por_usuario.length" style="padding:12px">Sem dados.</div>
+        </div>
       </div>
 
       <div class="cartao">

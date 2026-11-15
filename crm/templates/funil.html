@@ -5,6 +5,7 @@
     <div class="linha">
       <label class="check"><input type="checkbox" x-model="mostrarFechados"> Mostrar ganhos/perdidos</label>
       <span class="fraco" x-text="'Em aberto: ' + fmt.dinheiro(totalAberto())"></span>
+      <span class="selo fila" x-show="negocios.some(n => n.parado_dias)" x-text="negocios.filter(n => n.parado_dias).length + ' parado(s)'"></span>
     </div>
     <button class="btn primario" @click="editar(null)">+ Novo negócio</button>
   </div>
@@ -23,7 +24,9 @@
                 <b x-text="fmt.dinheiro(n.valor)"></b>
                 <span class="avatar" x-show="n.responsavel" :style="'background:' + (n.responsavel ? n.responsavel.cor : '')" :title="n.responsavel ? n.responsavel.nome : ''" x-text="n.responsavel ? fmt.iniciais(n.responsavel.nome) : ''"></span>
               </div>
-              <span class="selo ok" x-show="n.status === 'ganho'">ganho</span><span class="selo perigo" x-show="n.status === 'perdido'">perdido</span>
+              <span class="selo ok" x-show="n.status === 'ganho'">ganho</span>
+              <span class="selo perigo" x-show="n.status === 'perdido'" :title="n.motivo_perda || ''" x-text="'perdido' + (n.motivo_perda ? ': ' + n.motivo_perda : '')"></span>
+              <span class="selo fila" x-show="n.parado_dias" x-text="'⚠ parado há ' + n.parado_dias + ' dias'"></span>
             </div>
           </template>
         </div>
@@ -49,6 +52,9 @@
             <label style="flex:1">Responsável <select x-model.number="form.responsavel_id"><template x-for="u in usuarios" :key="u.id"><option :value="u.id" x-text="u.nome"></option></template></select></label>
           </div>
           <label>Status <select x-model="form.status"><option value="aberto">Aberto</option><option value="ganho">Ganho</option><option value="perdido">Perdido</option></select></label>
+          <label x-show="form.status === 'perdido'">Motivo da perda
+            <input list="motivos-perda" x-model="form.motivo_perda" placeholder="Preço, concorrente, sem resposta…">
+            <datalist id="motivos-perda"><option value="Preço"></option><option value="Escolheu concorrente"></option><option value="Sem resposta"></option><option value="Fora da área de atendimento"></option><option value="Sem necessidade agora"></option></datalist></label>
           <label>Observações <textarea rows="3" x-model="form.observacoes"></textarea></label>
         </div>
       </template>
@@ -93,7 +99,7 @@ function funil() {
       const f = this.form
       const m = (f.contato_busca || '').match(/#(\d+)$/)
       const corpo = { titulo: f.titulo, valor: f.valor || 0, etapa_id: f.etapa_id, responsavel_id: f.responsavel_id, status: f.status,
-        observacoes: f.observacoes || '', previsao_fechamento: f.previsao_fechamento || null, contato_id: m ? Number(m[1]) : (f.contato_busca ? f.contato_id : null) }
+        observacoes: f.observacoes || '', motivo_perda: f.status === 'perdido' ? (f.motivo_perda || null) : null, previsao_fechamento: f.previsao_fechamento || null, contato_id: m ? Number(m[1]) : (f.contato_busca ? f.contato_id : null) }
       await tentar(() => f.id ? api('/api/negocios/' + f.id, { method: 'PATCH', corpo }) : api('/api/negocios', { method: 'POST', corpo }), 'Negócio salvo')
       this.form = null
       this.carregar()

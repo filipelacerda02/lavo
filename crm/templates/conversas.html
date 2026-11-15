@@ -7,6 +7,12 @@
   <section class="coluna-lista">
     <div class="lista-filtros">
       <input type="search" placeholder="Buscar nome, telefone, e-mail…" x-model.debounce.300ms="busca" @input="carregarLista()">
+      <div class="linha" style="flex-wrap:nowrap">
+        <select x-model="equipeFiltro" @change="carregarLista()"><option value="">Equipe</option>
+          <template x-for="e in equipes" :key="e.id"><option :value="e.id" x-text="e.nome"></option></template></select>
+        <select x-model="prioridadeFiltro" @change="carregarLista()"><option value="">Prioridade</option>
+          <option value="urgente">Urgente</option><option value="alta">Alta</option><option value="media">Média</option><option value="baixa">Baixa</option></select>
+      </div>
       <div class="chips">
         <template x-for="f in filtros" :key="f.id">
           <button class="chip" :class="filtro === f.id ? 'ativo' : ''" @click="filtro = f.id; carregarLista()">
@@ -25,6 +31,9 @@
           <div class="previa" x-text="previa(c)"></div>
           <div class="linha" style="margin-top:6px">
             <span class="selo" :class="c.responsavel.tipo" x-text="rotuloResponsavel(c.responsavel)"></span>
+            <span class="selo" :class="c.prioridade" x-show="['alta','urgente'].includes(c.prioridade)" x-text="ROTULO_PRIORIDADE[c.prioridade]"></span>
+            <span class="etiqueta" x-show="c.equipe" :style="'background:' + (c.equipe ? c.equipe.cor : '')" x-text="c.equipe ? c.equipe.nome : ''"></span>
+            <span class="selo" x-show="slaDestaque(c)" :class="slaDestaque(c) && slaDestaque(c).estourado ? 'sla-estourado' : 'sla-ok'" x-text="slaDestaque(c) ? '⏱ ' + slaDestaque(c).texto : ''"></span>
             <template x-for="e in c.contato.etiquetas" :key="e.id"><span class="etiqueta" :style="'background:' + e.cor" x-text="e.nome"></span></template>
             <span style="margin-left:auto" class="nao-lidas" x-show="c.nao_lidas > 0" x-text="c.nao_lidas"></span>
           </div>
@@ -47,6 +56,10 @@
             <div style="font-weight:700" x-text="atual.conversa.contato.nome"></div>
             <div class="fraco" x-text="fmt.telefone(atual.conversa.contato.telefone)"></div>
           </div>
+          <select style="width:auto" :value="atual.conversa.prioridade" @change="editarConversa({prioridade: $event.target.value})" title="Prioridade (define o SLA)">
+            <option value="baixa">⬇ Baixa</option><option value="media">• Média</option><option value="alta">⬆ Alta</option><option value="urgente">🔥 Urgente</option></select>
+          <select style="width:auto" :value="atual.conversa.equipe ? atual.conversa.equipe.id : ''" @change="editarConversa({equipe_id: $event.target.value ? Number($event.target.value) : null})" title="Equipe">
+            <option value="">Sem equipe</option><template x-for="e in equipes" :key="e.id"><option :value="e.id" x-text="e.nome" :selected="atual.conversa.equipe && atual.conversa.equipe.id === e.id"></option></template></select>
           <template x-if="atual.conversa.status === 'aberta'">
             <div class="linha">
               <button class="btn humano" x-show="!souAtendente()" @click="acao('assumir')">👤 Assumir</button>
@@ -73,6 +86,15 @@
           </template>
           <template x-if="atual.conversa.status === 'aberta' && atual.conversa.modo === 'fila'">
             <span>⏳ Aguardando atendente<span x-show="atual.conversa.motivo_fila" x-text="' — ' + atual.conversa.motivo_fila"></span></span>
+          </template>
+          <template x-if="atual.conversa.sla && atual.conversa.sla.fila">
+            <span class="selo" :class="atual.conversa.sla.fila.estourado ? 'sla-estourado' : 'sla-ok'" x-text="'⏱ Fila: ' + fmt.prazo(atual.conversa.sla.fila.vence_em)"></span>
+          </template>
+          <template x-if="atual.conversa.sla && atual.conversa.sla.resolucao">
+            <span class="selo" :class="atual.conversa.sla.resolucao.estourado ? 'sla-estourado' : 'sla-ok'" x-text="'⏱ Resolução: ' + fmt.prazo(atual.conversa.sla.resolucao.vence_em)"></span>
+          </template>
+          <template x-if="atual.conversa.csat">
+            <span class="selo neutro" x-text="atual.conversa.csat.status === 'respondida' ? 'Avaliação: ' + '★'.repeat(atual.conversa.csat.nota) + '☆'.repeat(5 - atual.conversa.csat.nota) : 'Pesquisa de satisfação: ' + atual.conversa.csat.status"></span>
           </template>
         </div>
 
@@ -115,6 +137,15 @@
         </div>
 
         <div class="compositor" :class="modoNota ? 'nota-ativa' : ''">
+          <div class="agendadas" x-show="atual.agendadas && atual.agendadas.length">
+            <template x-for="a in atual.agendadas" :key="a.id">
+              <div class="linha entre" style="flex-wrap:nowrap">
+                <span>⏰ <b x-text="fmt.dataHora(a.enviar_em)"></b> · <span x-text="a.texto"></span>
+                  <span class="selo perigo" x-show="a.status === 'erro'" :title="a.erro">erro</span></span>
+                <button class="btn pequeno perigo" x-show="a.status === 'pendente'" @click="cancelarAgendada(a.id)">Cancelar</button>
+              </div>
+            </template>
+          </div>
           <div class="sugestoes" x-show="sugestoes.length" x-cloak>
             <template x-for="r in sugestoes" :key="r.id">
               <button @click="texto = r.texto; sugestoes = []; $refs.campo.focus()"><b x-text="'/' + r.atalho"></b> <span class="muted" x-text="r.texto"></span></button>
@@ -123,8 +154,17 @@
           <textarea x-ref="campo" x-model="texto" rows="2"
                     :placeholder="modoNota ? 'Nota interna (o cliente não vê)…' : 'Escreva uma resposta… (/ para respostas rápidas, Enter envia, Shift+Enter quebra linha)'"
                     @input="filtrarSugestoes()" @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); enviar() }"></textarea>
+          <div class="linha" x-show="agendando" x-cloak>
+            <input type="datetime-local" x-model="agendarPara" style="width:auto">
+            <button class="btn" @click="agendar()" :disabled="!texto.trim() || !agendarPara">Agendar envio</button>
+            <button class="btn" @click="agendando = false">Cancelar</button>
+          </div>
           <div class="linha entre">
-            <label class="check"><input type="checkbox" x-model="modoNota"> 📝 Nota interna</label>
+            <div class="ferramentas">
+              <label class="check"><input type="checkbox" x-model="modoNota"> 📝 Nota</label>
+              <button class="btn pequeno agente" @click="sugerir()" :disabled="sugerindo" x-text="sugerindo ? '✨ Escrevendo…' : '✨ Sugerir resposta'"></button>
+              <button class="btn pequeno" @click="agendando = !agendando" x-show="!modoNota">⏰ Agendar</button>
+            </div>
             <div class="linha">
               <span class="fraco" x-show="!modoNota && !souAtendente() && atual.conversa.status === 'aberta'">Enviar faz você assumir a conversa</span>
               <button class="btn primario" @click="enviar()" :disabled="!texto.trim() || enviando" x-text="modoNota ? 'Salvar nota' : 'Enviar como ' + USUARIO.nome"></button>
@@ -151,6 +191,28 @@
               <span x-text="contato.contato.cliente_externo_id || 'não vinculado'" :class="contato.contato.cliente_externo_id ? 'selo ok' : 'fraco'"></span></div>
             <label class="check"><input type="checkbox" x-model="contato.contato.agente_bloqueado" @change="salvarContato({agente_bloqueado: contato.contato.agente_bloqueado})"> Só humanos atendem este contato</label>
           </div>
+        </div>
+        <div x-show="campos.length">
+          <h3>Campos personalizados</h3>
+          <div class="coluna">
+            <template x-for="cp in campos" :key="cp.id">
+              <label><span x-text="cp.rotulo"></span>
+                <template x-if="cp.tipo === 'opcao'">
+                  <select :value="(contato.contato.campos_extras || {})[cp.chave] || ''" @change="salvarCampo(cp.chave, $event.target.value)">
+                    <option value="">—</option><template x-for="o in cp.opcoes" :key="o"><option :value="o" x-text="o" :selected="(contato.contato.campos_extras || {})[cp.chave] === o"></option></template></select>
+                </template>
+                <template x-if="cp.tipo !== 'opcao'">
+                  <input :type="{numero: 'number', data: 'date'}[cp.tipo] || 'text'" :value="(contato.contato.campos_extras || {})[cp.chave] || ''" @change="salvarCampo(cp.chave, $event.target.value)">
+                </template>
+              </label>
+            </template>
+          </div>
+        </div>
+        <div>
+          <div class="linha entre"><h3>Resumo por IA</h3>
+            <button class="btn pequeno agente" @click="resumir()" :disabled="resumindo" x-text="resumindo ? 'Resumindo…' : (atual && atual.conversa.resumo_ia ? 'Atualizar' : '✨ Resumir')"></button></div>
+          <div class="resumo-ia" x-show="atual && atual.conversa.resumo_ia" x-text="atual ? atual.conversa.resumo_ia : ''"></div>
+          <div class="fraco" x-show="atual && atual.conversa.categoria" x-text="atual && atual.conversa.categoria ? 'Assunto (triagem IA): ' + atual.conversa.categoria.replaceAll('_', ' ') : ''"></div>
         </div>
         <div>
           <h3>Etiquetas</h3>
@@ -190,12 +252,20 @@
   <div class="modal-fundo" x-show="modalTransferir" x-cloak @click.self="modalTransferir = false">
     <div class="modal">
       <h2>Transferir atendimento</h2>
+      <h3>Para um colaborador</h3>
       <div class="coluna">
         <template x-for="u in usuarios.filter(u => u.ativo)" :key="u.id">
           <button class="btn" style="justify-content:flex-start" @click="transferir(u.id)">
+            <span class="ponto" :class="u.disponivel ? 'on' : (u.status === 'ausente' ? 'aus' : 'off')"></span>
             <span class="avatar" :style="'background:' + u.cor" x-text="fmt.iniciais(u.nome)"></span>
-            <span x-text="u.nome"></span><span class="fraco" x-text="u.papel"></span>
+            <span x-text="u.nome"></span><span class="fraco" x-text="u.papel + ' · ' + u.conversas_abertas + ' em atendimento'"></span>
           </button>
+        </template>
+      </div>
+      <h3 style="margin-top:14px" x-show="equipes.length">Para a fila de uma equipe</h3>
+      <div class="linha">
+        <template x-for="e in equipes" :key="e.id">
+          <button class="btn" @click="transferirEquipe(e.id)"><span class="ponto" :style="'background:' + e.cor"></span><span x-text="e.nome"></span></button>
         </template>
       </div>
       <div class="acoes"><button class="btn" @click="modalTransferir = false">Cancelar</button></div>
@@ -209,7 +279,8 @@ function inbox() {
   return {
     filtro: 'abertas', busca: '', conversas: [], contagem: {}, atual: null, contato: null,
     texto: '', modoNota: false, enviando: false, respostas: [], sugestoes: [], usuarios: [], etiquetas: [],
-    modalTransferir: false,
+    modalTransferir: false, equipes: [], campos: [], equipeFiltro: '', prioridadeFiltro: '',
+    sugerindo: false, resumindo: false, agendando: false, agendarPara: '',
     filtros: [],
     async iniciar() {
       const qtd = (k) => () => (this.contagem[k] ?? null)
@@ -221,8 +292,9 @@ function inbox() {
         { id: 'humano', nome: '👤 Humanos', qtd: qtd('humano') },
         { id: 'resolvidas', nome: 'Resolvidas', qtd: () => null },
       ]
-      ;[this.respostas, this.usuarios, this.etiquetas] = await Promise.all([
-        api('/api/respostas-rapidas'), api('/api/usuarios'), api('/api/etiquetas')])
+      ;[this.respostas, this.usuarios, this.etiquetas, this.equipes, this.campos] = await Promise.all([
+        api('/api/respostas-rapidas'), api('/api/usuarios'), api('/api/etiquetas'), api('/api/equipes'), api('/api/campos')])
+      window.addEventListener('lavo:equipe', async () => { this.usuarios = await api('/api/usuarios') })
       await this.carregarLista()
       const c = new URLSearchParams(location.search).get('c')
       if (c) this.abrir(Number(c))
@@ -242,6 +314,8 @@ function inbox() {
     },
     async carregarLista() {
       const p = new URLSearchParams({ filtro: this.filtro, busca: this.busca })
+      if (this.equipeFiltro) p.set('equipe_id', this.equipeFiltro)
+      if (this.prioridadeFiltro) p.set('prioridade', this.prioridadeFiltro)
       const r = await api('/api/conversas?' + p)
       this.conversas = r.conversas
       this.contagem = r.contagem
@@ -302,8 +376,51 @@ function inbox() {
       await this.recarregarAtual()
       this.carregarLista()
     },
+    slaDestaque(c) {
+      if (!c.sla) return null
+      const s = c.sla.fila || (c.sla.resolucao && c.sla.resolucao.estourado ? c.sla.resolucao : null)
+      return s ? { estourado: s.estourado, texto: fmt.prazo(s.vence_em) } : null
+    },
+    async editarConversa(dados) {
+      await tentar(() => api('/api/conversas/' + this.atual.conversa.id, { method: 'PATCH', corpo: dados }))
+      await this.recarregarAtual(); this.carregarLista()
+    },
+    async transferirEquipe(equipeId) {
+      await tentar(() => api(`/api/conversas/${this.atual.conversa.id}/transferir`, { method: 'POST', corpo: { equipe_id: equipeId } }), 'Enviada para a fila da equipe')
+      this.modalTransferir = false
+      await this.recarregarAtual()
+    },
+    async sugerir() {
+      this.sugerindo = true
+      try {
+        const r = await tentar(() => api(`/api/conversas/${this.atual.conversa.id}/ia/sugerir`, { method: 'POST' }))
+        this.texto = r.texto; this.modoNota = false
+        this.$nextTick(() => this.$refs.campo && this.$refs.campo.focus())
+        avisar('Sugestão pronta: revise antes de enviar')
+      } finally { this.sugerindo = false }
+    },
+    async resumir() {
+      this.resumindo = true
+      try { await tentar(() => api(`/api/conversas/${this.atual.conversa.id}/ia/resumo`, { method: 'POST' })); await this.recarregarAtual() }
+      finally { this.resumindo = false }
+    },
+    async agendar() {
+      await tentar(() => api(`/api/conversas/${this.atual.conversa.id}/agendadas`, { method: 'POST',
+        corpo: { texto: this.texto, enviar_em: new Date(this.agendarPara).toISOString() } }), 'Mensagem agendada')
+      this.texto = ''; this.agendando = false; this.agendarPara = ''
+      await this.recarregarAtual()
+    },
+    async cancelarAgendada(id) {
+      await tentar(() => api('/api/conversas/agendadas/' + id, { method: 'DELETE' }), 'Agendamento cancelado')
+      await this.recarregarAtual()
+    },
+    async salvarCampo(chave, valor) {
+      const c = await tentar(() => api('/api/contatos/' + this.contato.contato.id, { method: 'PATCH', corpo: { campos_extras: { [chave]: valor || null } } }), 'Campo salvo')
+      this.contato.contato = c
+    },
     async transferir(usuarioId) {
       await tentar(() => api(`/api/conversas/${this.atual.conversa.id}/transferir`, { method: 'POST', corpo: { usuario_id: usuarioId } }), 'Conversa transferida')
+      this.usuarios = await api('/api/usuarios')
       this.modalTransferir = false
       await this.recarregarAtual()
     },

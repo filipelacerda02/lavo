@@ -226,3 +226,17 @@ label.check { flex-direction: row; align-items: center; gap: 8px; font-weight: 5
   .inbox:not(.com-chat) > .coluna-chat { display: none; }
   .msg { max-width: 92%; }
 }
+
+/* ---------- recursos de atendimento */
+.status-select { margin-top: 10px; background: #ffffff10; color: #fff; border-color: #ffffff22; padding: 5px 8px; font-size: 13px; }
+.status-select option { color: #111; }
+.selo.urgente { background: var(--perigo); color: #fff; }
+.selo.alta { background: var(--perigo-fundo); color: var(--perigo); }
+.selo.sla-ok { background: var(--superficie-2); color: var(--texto-2); border: 1px solid var(--borda); }
+.selo.sla-estourado { background: var(--perigo); color: #fff; }
+.compositor .ferramentas { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.agendadas { background: var(--superficie-2); border: 1px dashed var(--borda); border-radius: 8px; padding: 6px 10px; font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
+.resumo-ia { background: var(--agente-fundo); border-radius: 8px; padding: 10px; font-size: 13px; white-space: pre-wrap; }
+.estrelas { color: #eda100; letter-spacing: 1px; }
+.ponto.on { background: var(--ok); } .ponto.aus { background: var(--fila); } .ponto.off { background: var(--texto-3); }
+.barra-h { height: 8px; border-radius: 4px; background: var(--agente); }

@@ -39,7 +39,8 @@ def cliente():
     with TestClient(app) as c:
         r = c.post("/api/setup", json={"nome": "Admin", "email": "admin@lavo.com", "senha": "senha-forte-1"}, headers=H)
         assert r.status_code == 200, r.text
-        r = c.put("/api/agente/config", json={"espera_agrupar_s": 0, "agente_modo": "ligado"}, headers=H)
+        r = c.put("/api/agente/config", json={"espera_agrupar_s": 0, "agente_modo": "ligado", "triagem_ia": False, "csat_ativo": False,
+                                                     "distribuicao_automatica": False}, headers=H)
         assert r.status_code == 200, r.text
         r = c.post("/api/usuarios", json={"nome": "Maria Atendente", "email": "maria@lavo.com", "senha": "senha-maria-1",
                                           "papel": "atendente", "cor": "#eb6834"}, headers=H)
@@ -304,3 +305,152 @@ def test_seguranca(cliente):
     assert cliente.get("/api/conversas").status_code == 401
     assert cliente.post("/api/login", json={"email": "admin@lavo.com", "senha": "errada"}, headers=H).status_code == 401
     entrar(cliente, "admin@lavo.com", "senha-forte-1")
+
+
+# ================================================================ recursos de CRM de mercado
+import asyncio  # noqa: E402
+from datetime import timedelta  # noqa: E402
+
+from crm import recursos  # noqa: E402
+from crm.modelos import Conversa as ConvM, MensagemAgendada, Negocio, Tarefa, agora as agora_utc  # noqa: E402
+from lavo.saida_estruturada import Triagem  # noqa: E402
+
+
+def _cfg(c, **kw):
+    r = c.put("/api/agente/config", json=kw, headers=H)
+    assert r.status_code == 200, r.text
+
+
+def test_distribuicao_automatica(cliente, rag):
+    roteiro(rag=rag)
+    _cfg(cliente, distribuicao_automatica=True)
+    try:
+        assert cliente.put("/api/eu/status", json={"status": "offline"}, headers=H).status_code == 200  # admin fora
+        entrar(cliente, "maria@lavo.com", "senha-maria-1")  # login = online
+        cliente.put("/api/eu/status", json={"status": "online"}, headers=H)
+        entrar(cliente, "admin@lavo.com", "senha-forte-1")
+        cliente.put("/api/eu/status", json={"status": "offline"}, headers=H)
+        cliente.post("/api/contatos", json={"nome": "Fila Teste", "telefone": "11912340000", "agente_bloqueado": True}, headers=H)
+        conv_id = simular(cliente, "5511912340000", "Preciso de ajuda")
+        assert conversa(conv_id)[:2] == ("humano", "Maria Atendente")
+        assert any("Distribuída automaticamente para Maria" in m[2] for m in mensagens(conv_id))
+        # devolver à fila não devolve para quem soltou
+        entrar(cliente, "maria@lavo.com", "senha-maria-1")
+        cliente.post(f"/api/conversas/{conv_id}/fila", headers=H)
+        assert conversa(conv_id)[0] == "fila"
+    finally:
+        entrar(cliente, "admin@lavo.com", "senha-forte-1")
+        _cfg(cliente, distribuicao_automatica=False)
+
+
+def test_transferir_para_equipe_e_prioridade(cliente, rag):
+    roteiro(rag=rag)
+    eq = cliente.post("/api/equipes", json={"nome": "Financeiro"}, headers=H).json()["id"]
+    cliente.post("/api/contatos", json={"nome": "Equipe Teste", "telefone": "11912350000", "agente_bloqueado": True}, headers=H)
+    conv_id = simular(cliente, "5511912350000", "Cobrança errada")
+    assert cliente.post(f"/api/conversas/{conv_id}/transferir", json={"equipe_id": eq}, headers=H).status_code == 200
+    assert cliente.patch(f"/api/conversas/{conv_id}", json={"prioridade": "urgente"}, headers=H).status_code == 200
+    det = cliente.get(f"/api/conversas/{conv_id}").json()["conversa"]
+    assert det["equipe"]["nome"] == "Financeiro" and det["prioridade"] == "urgente" and det["modo"] == "fila"
+    assert det["sla"]["fila"]["vence_em"]
+    fila = cliente.get(f"/api/conversas?filtro=fila&equipe_id={eq}").json()["conversas"]
+    assert [c["id"] for c in fila] == [conv_id]
+
+
+def test_sla_estourado():
+    cfg = {"sla": {"media": {"fila_min": 30, "resolucao_h": 24}}}
+    c = ConvM(status="aberta", modo="fila", prioridade="media", modo_desde=agora_utc() - timedelta(minutes=40),
+              criada_em=agora_utc() - timedelta(minutes=40))
+    info = recursos.sla_da_conversa(c, cfg)
+    assert info["fila"]["estourado"] and not info["resolucao"]["estourado"]
+
+
+def test_csat_apos_resolver(cliente, rag):
+    roteiro(([texto("Olá! Prazo de 3 dias úteis.")], "end_turn"), rag=rag)
+    _cfg(cliente, csat_ativo=True)
+    try:
+        conv_id = simular(cliente, "5511912360000", "Qual o prazo?", "Nina")
+        assert esperar(lambda: autores(conv_id, "agente"))
+        assert cliente.post(f"/api/conversas/{conv_id}/resolver", headers=H).status_code == 200
+        assert any("de 1 a 5" in m[2] for m in autores(conv_id, "sistema"))
+        assert simular(cliente, "5511912360000", "5, adorei!") == conv_id  # não abre conversa nova
+        with sessao() as db:
+            cv = db.get(ConvM, conv_id)
+            assert (cv.csat_status, cv.csat_nota, cv.csat_comentario, cv.status) == ("respondida", 5, "adorei!", "resolvida")
+        r = cliente.get("/api/relatorios/resumo?dias=7").json()
+        assert r["csat"]["media"] == 5 and r["csat"]["respostas"] == 1
+    finally:
+        _cfg(cliente, csat_ativo=False)
+
+
+def test_mensagem_agendada(cliente, rag):
+    roteiro(rag=rag)
+    cliente.post("/api/contatos", json={"nome": "Agenda", "telefone": "11912370000", "agente_bloqueado": True}, headers=H)
+    conv_id = simular(cliente, "5511912370000", "Me lembra amanhã?")
+    quando = (agora_utc() + timedelta(seconds=1)).isoformat()
+    r = cliente.post(f"/api/conversas/{conv_id}/agendadas", json={"texto": "Bom dia! Passando para lembrar 🙂", "enviar_em": quando}, headers=H)
+    assert r.status_code == 200, r.text
+    assert cliente.post(f"/api/conversas/{conv_id}/agendadas", json={"texto": "x", "enviar_em": "2020-01-01T00:00:00Z"}, headers=H).status_code == 400
+    time.sleep(1.2)
+    assert asyncio.run(recursos.enviar_agendadas()) == 1
+    enviadas = [m for m in autores(conv_id, "humano") if "lembrar" in m[2]]
+    assert enviadas and enviadas[0][3] == "Admin"
+    with sessao() as db:
+        assert db.get(MensagemAgendada, r.json()["id"]).status == "enviada"
+
+
+def test_resolver_inativas(cliente, rag):
+    roteiro(([texto("Posso ajudar em algo mais?")], "end_turn"), rag=rag)
+    conv_id = simular(cliente, "5511912380000", "Oi", "Leo")
+    assert esperar(lambda: autores(conv_id, "agente"))
+    with sessao() as db:
+        db.get(ConvM, conv_id).ultima_mensagem_em = agora_utc() - timedelta(hours=30)
+    assert conv_id in asyncio.run(recursos.resolver_inativas())
+    assert conversa(conv_id)[2] == "resolvida"
+
+
+def test_triagem_ia(cliente, rag):
+    falso = roteiro(Triagem(categoria="dano_ou_extravio", sentimento="negativo", urgencia="alta", precisa_humano=True,
+                            pedido_id=None, resumo="Peça danificada"), rag=rag)
+    cliente.post("/api/contatos", json={"nome": "Triagem", "telefone": "11912390000", "agente_bloqueado": True}, headers=H)
+    conv_id = simular(cliente, "5511912390000", "Estragaram meu vestido!!")
+    recursos.triagem_ia(conv_id, "Estragaram meu vestido!!")
+    with sessao() as db:
+        cv = db.get(ConvM, conv_id)
+        assert (cv.categoria, cv.prioridade) == ("dano_ou_extravio", "urgente")
+    assert falso.chamadas
+
+
+def test_funil_regras(cliente):
+    etapas = cliente.get("/api/funil").json()["etapas"]
+    alvo = etapas[1]
+    assert cliente.patch(f"/api/funil/etapas/{alvo['id']}", headers=H, json={
+        "nome": alvo["nome"], "cor": alvo["cor"], "dias_parado": 2, "tarefa_automatica": "Ligar para qualificar",
+        "tarefa_prazo_dias": 1}).status_code == 200
+    n = cliente.post("/api/negocios", json={"titulo": "Regra teste", "etapa_id": etapas[0]["id"]}, headers=H).json()
+    cliente.patch(f"/api/negocios/{n['id']}", json={"etapa_id": alvo["id"]}, headers=H)
+    with sessao() as db:
+        assert db.query(Tarefa).filter(Tarefa.titulo == "Ligar para qualificar — Regra teste").count() == 1
+        db.get(Negocio, n["id"]).etapa_desde = agora_utc() - timedelta(days=3)
+    negocio = next(x for x in cliente.get("/api/funil").json()["negocios"] if x["id"] == n["id"])
+    assert negocio["parado_dias"] == 3
+    assert cliente.patch(f"/api/negocios/{n['id']}", json={"status": "perdido"}, headers=H).status_code == 400
+    assert cliente.patch(f"/api/negocios/{n['id']}", json={"status": "perdido", "motivo_perda": "Preço"}, headers=H).status_code == 200
+
+
+def test_campos_personalizados(cliente):
+    assert cliente.post("/api/campos", json={"chave": "bairro", "rotulo": "Bairro"}, headers=H).status_code == 200
+    c = cliente.post("/api/contatos", json={"nome": "Com campo", "telefone": "11912400000"}, headers=H).json()
+    r = cliente.patch(f"/api/contatos/{c['id']}", json={"campos_extras": {"bairro": "Pinheiros", "invalido": "x"}}, headers=H)
+    assert r.json()["campos_extras"] == {"bairro": "Pinheiros"}
+    assert "Pinheiros" in cliente.get("/api/contatos/exportar.csv").text
+
+
+def test_ia_sugerir_resposta(cliente, rag):
+    from crm.rotas.ia import Sugestao
+
+    roteiro(Sugestao(texto="Oi! O prazo é de 3 dias úteis."), rag=rag)
+    cliente.post("/api/contatos", json={"nome": "IA", "telefone": "11912410000", "agente_bloqueado": True}, headers=H)
+    conv_id = simular(cliente, "5511912410000", "Qual o prazo do lavar e passar?")
+    r = cliente.post(f"/api/conversas/{conv_id}/ia/sugerir", headers=H)
+    assert r.status_code == 200 and "3 dias" in r.json()["texto"]

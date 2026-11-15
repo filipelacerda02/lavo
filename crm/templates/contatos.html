@@ -64,6 +64,17 @@
             <select x-model.number="form.responsavel_id"><option :value="null">—</option>
               <template x-for="u in usuarios" :key="u.id"><option :value="u.id" x-text="u.nome"></option></template></select></label>
           <label>Observações <textarea rows="3" x-model="form.observacoes"></textarea></label>
+          <template x-for="cp in campos" :key="cp.id">
+            <label><span x-text="cp.rotulo"></span>
+              <template x-if="cp.tipo === 'opcao'">
+                <select x-model="form.campos_extras[cp.chave]"><option value="">—</option>
+                  <template x-for="o in cp.opcoes" :key="o"><option :value="o" x-text="o"></option></template></select>
+              </template>
+              <template x-if="cp.tipo !== 'opcao'">
+                <input :type="{numero: 'number', data: 'date'}[cp.tipo] || 'text'" x-model="form.campos_extras[cp.chave]">
+              </template>
+            </label>
+          </template>
           <div><div class="fraco" style="margin-bottom:4px">Etiquetas</div>
             <div class="linha"><template x-for="e in etiquetas" :key="e.id">
               <label class="check" style="font-size:13px"><input type="checkbox" :value="e.id" x-model.number="form.etiqueta_ids"> <span class="etiqueta" :style="'background:' + e.cor" x-text="e.nome"></span></label>
@@ -83,9 +94,9 @@
 <script>
 function contatos() {
   return {
-    lista: [], total: 0, pagina: 1, busca: '', etiqueta: '', etiquetas: [], usuarios: [], form: null,
+    lista: [], total: 0, pagina: 1, busca: '', etiqueta: '', etiquetas: [], usuarios: [], form: null, campos: [],
     async iniciar() {
-      ;[this.etiquetas, this.usuarios] = await Promise.all([api('/api/etiquetas'), api('/api/usuarios')])
+      ;[this.etiquetas, this.usuarios, this.campos] = await Promise.all([api('/api/etiquetas'), api('/api/usuarios'), api('/api/campos')])
       this.carregar()
       window.addEventListener('lavo:contato', () => this.carregar())
     },
@@ -96,13 +107,14 @@ function contatos() {
       this.lista = r.contatos; this.total = r.total
     },
     editar(c) {
-      this.form = c ? { ...c, etiqueta_ids: c.etiquetas.map((e) => e.id) }
-        : { nome: '', telefone: '', email: '', empresa: '', observacoes: '', responsavel_id: null, etiqueta_ids: [], agente_bloqueado: false }
+      this.form = c ? { ...c, etiqueta_ids: c.etiquetas.map((e) => e.id), campos_extras: { ...(c.campos_extras || {}) } }
+        : { nome: '', telefone: '', email: '', empresa: '', observacoes: '', responsavel_id: null, etiqueta_ids: [], agente_bloqueado: false, campos_extras: {} }
     },
     async salvar() {
       const f = this.form
       const corpo = { nome: f.nome, telefone: f.telefone, email: f.email || null, empresa: f.empresa || null, observacoes: f.observacoes || '',
-        responsavel_id: f.responsavel_id || null, etiqueta_ids: f.etiqueta_ids, agente_bloqueado: !!f.agente_bloqueado }
+        responsavel_id: f.responsavel_id || null, etiqueta_ids: f.etiqueta_ids, agente_bloqueado: !!f.agente_bloqueado,
+        campos_extras: f.campos_extras }
       await tentar(() => f.id ? api('/api/contatos/' + f.id, { method: 'PATCH', corpo }) : api('/api/contatos', { method: 'POST', corpo }), 'Contato salvo')
       this.form = null
       this.carregar()

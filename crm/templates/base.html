@@ -26,10 +26,18 @@
     <a href="/configuracoes" class="{{ 'ativo' if pagina == 'configuracoes' }}">⚙️ Configurações</a>
     <a href="/auditoria" class="{{ 'ativo' if pagina == 'auditoria' }}">🧾 Auditoria</a>
     {% endif %}
-    <div class="rodape">
+    <div class="rodape" x-data="{status: '{{ usuario.status or 'offline' }}', notif: notificacoes.ativas()}"
+         x-init="window.MEU_STATUS = status">
       <div class="linha"><span class="avatar" style="background: {{ usuario.cor }}">{{ usuario.nome[:1] | upper }}</span>
         <div><div style="color:#fff">{{ usuario.nome }}</div><div class="fraco">{{ usuario.papel }}</div></div></div>
-      <button class="btn pequeno" style="margin-top:10px" onclick="sair()">Sair</button>
+      <select class="status-select" x-model="status" title="Online: recebe conversas da distribuição automática"
+              @change="tentar(() => api('/api/eu/status', {method: 'PUT', corpo: {status}})).then(() => window.MEU_STATUS = status)">
+        <option value="online">🟢 Online</option><option value="ausente">🟡 Ausente</option><option value="offline">⚫ Offline</option>
+      </select>
+      <div class="linha" style="margin-top:8px">
+        <button class="btn pequeno" x-show="!notif" @click="notificacoes.ativar().then(() => notif = notificacoes.ativas())">🔔 Ativar avisos</button>
+        <button class="btn pequeno" onclick="sair()">Sair</button>
+      </div>
     </div>
   </nav>
   <main class="principal">

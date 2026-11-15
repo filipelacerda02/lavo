@@ -63,6 +63,45 @@ class Usuario(Base):
     criado_em: Mapped[datetime] = mapped_column(DataHora(), default=agora)
     ultimo_acesso: Mapped[datetime | None] = mapped_column(DataHora(), nullable=True)
     versao_sessao: Mapped[int] = mapped_column(Integer, default=1)  # muda => derruba sessões
+    # Presença: online (recebe distribuição automática) | ausente | offline
+    status: Mapped[str] = mapped_column(String(10), default="offline", server_default="offline")
+    ultimo_sinal: Mapped[datetime | None] = mapped_column(DataHora(), nullable=True)  # tela aberta
+    max_conversas: Mapped[int] = mapped_column(Integer, default=6, server_default="6")
+    ultima_atribuicao: Mapped[datetime | None] = mapped_column(DataHora(), nullable=True)  # rodízio
+
+    equipes: Mapped[list["Equipe"]] = relationship(secondary="usuario_equipes", lazy="selectin",
+                                                   back_populates="membros")
+
+
+usuario_equipes = Table(
+    "usuario_equipes",
+    Base.metadata,
+    Column("usuario_id", ForeignKey("usuarios.id", ondelete="CASCADE"), primary_key=True),
+    Column("equipe_id", ForeignKey("equipes.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
+class Equipe(Base):
+    """Departamento/fila (ex.: Comercial, Suporte, Financeiro)."""
+
+    __tablename__ = "equipes"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    nome: Mapped[str] = mapped_column(String(60), unique=True)
+    cor: Mapped[str] = mapped_column(String(9), default="#1baf7a")
+    membros: Mapped[list[Usuario]] = relationship(secondary=usuario_equipes, lazy="selectin",
+                                                  back_populates="equipes")
+
+
+class CampoPersonalizado(Base):
+    """Campo extra de contato definido pela empresa (ex.: Bairro, Plano de interesse)."""
+
+    __tablename__ = "campos_personalizados"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    chave: Mapped[str] = mapped_column(String(40), unique=True)
+    rotulo: Mapped[str] = mapped_column(String(80))
+    tipo: Mapped[str] = mapped_column(String(10), default="texto")  # texto | numero | data | opcao
+    opcoes: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    ordem: Mapped[int] = mapped_column(Integer, default=0)
 
 
 contato_etiquetas = Table(
@@ -94,6 +133,7 @@ class Contato(Base):
     cliente_externo_id: Mapped[str | None] = mapped_column(String(60), nullable=True)
     agente_bloqueado: Mapped[bool] = mapped_column(Boolean, default=False)  # só humanos atendem
     responsavel_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"), nullable=True)
+    campos_extras: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # valores dos CampoPersonalizado
     criado_em: Mapped[datetime] = mapped_column(DataHora(), default=agora)
     atualizado_em: Mapped[datetime] = mapped_column(DataHora(), default=agora, onupdate=agora)
     ultima_interacao: Mapped[datetime | None] = mapped_column(DataHora(), nullable=True)
@@ -125,9 +165,20 @@ class Conversa(Base):
     primeira_resposta_em: Mapped[datetime | None] = mapped_column(DataHora(), nullable=True)
     resolvida_em: Mapped[datetime | None] = mapped_column(DataHora(), nullable=True)
     resolvida_por_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"), nullable=True)
+    # baixa | media | alta | urgente — define os prazos de SLA
+    prioridade: Mapped[str] = mapped_column(String(10), default="media", server_default="media")
+    equipe_id: Mapped[int | None] = mapped_column(ForeignKey("equipes.id", ondelete="SET NULL"), nullable=True)
+    categoria: Mapped[str | None] = mapped_column(String(30), nullable=True)  # triagem por IA
+    resumo_ia: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Pesquisa de satisfação: None | aguardando | respondida | expirada
+    csat_status: Mapped[str | None] = mapped_column(String(12), nullable=True)
+    csat_nota: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    csat_comentario: Mapped[str | None] = mapped_column(Text, nullable=True)
+    csat_solicitado_em: Mapped[datetime | None] = mapped_column(DataHora(), nullable=True)
 
     contato: Mapped[Contato] = relationship(lazy="joined")
     atendente: Mapped[Usuario | None] = relationship(foreign_keys=[atendente_id], lazy="joined")
+    equipe: Mapped[Equipe | None] = relationship(lazy="joined")
 
 
 class Mensagem(Base):
@@ -160,6 +211,9 @@ class EtapaFunil(Base):
     nome: Mapped[str] = mapped_column(String(60))
     ordem: Mapped[int] = mapped_column(Integer, default=0)
     cor: Mapped[str] = mapped_column(String(9), default="#2a78d6")
+    dias_parado: Mapped[int] = mapped_column(Integer, default=0, server_default="0")  # 0 = não alerta
+    tarefa_automatica: Mapped[str | None] = mapped_column(String(200), nullable=True)  # criada ao entrar
+    tarefa_prazo_dias: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
 
 
 class Negocio(Base):
@@ -173,7 +227,9 @@ class Negocio(Base):
     status: Mapped[str] = mapped_column(String(10), default="aberto")  # aberto | ganho | perdido
     previsao_fechamento: Mapped[str | None] = mapped_column(String(10), nullable=True)  # AAAA-MM-DD
     observacoes: Mapped[str] = mapped_column(Text, default="")
+    motivo_perda: Mapped[str | None] = mapped_column(String(200), nullable=True)
     ordem: Mapped[int] = mapped_column(Integer, default=0)
+    etapa_desde: Mapped[datetime | None] = mapped_column(DataHora(), nullable=True)
     criado_em: Mapped[datetime] = mapped_column(DataHora(), default=agora)
     atualizado_em: Mapped[datetime] = mapped_column(DataHora(), default=agora, onupdate=agora)
 
@@ -199,6 +255,22 @@ class Tarefa(Base):
 
     contato: Mapped[Contato | None] = relationship(lazy="joined")
     responsavel: Mapped[Usuario | None] = relationship(foreign_keys=[responsavel_id], lazy="joined")
+
+
+class MensagemAgendada(Base):
+    """Follow-up que um colaborador programa para sair numa data/hora."""
+
+    __tablename__ = "mensagens_agendadas"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    conversa_id: Mapped[int] = mapped_column(ForeignKey("conversas.id", ondelete="CASCADE"), index=True)
+    texto: Mapped[str] = mapped_column(Text)
+    enviar_em: Mapped[datetime] = mapped_column(DataHora(), index=True)
+    criada_por_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id"))
+    status: Mapped[str] = mapped_column(String(10), default="pendente")  # pendente|enviada|cancelada|erro
+    erro: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    criada_em: Mapped[datetime] = mapped_column(DataHora(), default=agora)
+
+    criada_por: Mapped[Usuario] = relationship(lazy="joined")
 
 
 class RespostaRapida(Base):
@@ -249,7 +321,7 @@ class Auditoria(Base):
 
 
 __all__ = [
-    "Auditoria", "Configuracao", "Contato", "Conversa", "Etiqueta", "EtapaFunil", "ExcecaoAgente",
-    "HorarioAgente", "Mensagem", "Negocio", "RespostaRapida", "Tarefa", "Usuario", "UniqueConstraint",
+    "Auditoria", "CampoPersonalizado", "Configuracao", "Contato", "Conversa", "Equipe", "Etiqueta", "EtapaFunil",
+    "ExcecaoAgente", "HorarioAgente", "Mensagem", "MensagemAgendada", "Negocio", "RespostaRapida", "Tarefa", "Usuario", "UniqueConstraint",
     "MODO_AGENTE", "MODO_FILA", "MODO_HUMANO", "PAPEIS", "agora",
 ]

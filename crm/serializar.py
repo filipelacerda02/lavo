@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from .modelos import Contato, Conversa, Mensagem, Negocio, Tarefa, Usuario
+from datetime import timedelta
+
+from .modelos import Contato, Conversa, Mensagem, MensagemAgendada, Negocio, Tarefa, Usuario, agora
 
 
 def iso(d: Any) -> str | None:
@@ -14,8 +16,11 @@ def iso(d: Any) -> str | None:
 def usuario(u: Usuario | None) -> dict[str, Any] | None:
     if not u:
         return None
+    conectado = bool(u.ultimo_sinal and agora() - u.ultimo_sinal < timedelta(minutes=2))
     return {"id": u.id, "nome": u.nome, "email": u.email, "papel": u.papel, "ativo": u.ativo, "cor": u.cor,
-            "ultimo_acesso": iso(u.ultimo_acesso)}
+            "ultimo_acesso": iso(u.ultimo_acesso), "status": u.status or "offline", "conectado": conectado,
+            "disponivel": conectado and u.status == "online", "max_conversas": u.max_conversas,
+            "equipes": [{"id": e.id, "nome": e.nome, "cor": e.cor} for e in u.equipes]}
 
 
 def contato(c: Contato) -> dict[str, Any]:
@@ -27,6 +32,7 @@ def contato(c: Contato) -> dict[str, Any]:
         "etiquetas": [{"id": e.id, "nome": e.nome, "cor": e.cor} for e in c.etiquetas],
         "criado_em": iso(c.criado_em), "ultima_interacao": iso(c.ultima_interacao),
         "tem_whatsapp": bool(c.whatsapp_jid or c.telefone),
+        "campos_extras": c.campos_extras or {},
     }
 
 
@@ -52,7 +58,8 @@ def mensagem(m: Mensagem, nome_agente: str, c: Contato | None = None) -> dict[st
     }
 
 
-def conversa(cv: Conversa, ultima: Mensagem | None = None, nome_agente: str = "Agente") -> dict[str, Any]:
+def conversa(cv: Conversa, ultima: Mensagem | None = None, nome_agente: str = "Agente",
+             cfg: dict[str, Any] | None = None) -> dict[str, Any]:
     if cv.status == "resolvida":
         responsavel = {"tipo": "resolvida", "nome": "Resolvida"}
     elif cv.modo == "agente":
@@ -68,7 +75,22 @@ def conversa(cv: Conversa, ultima: Mensagem | None = None, nome_agente: str = "A
         "contato": contato(cv.contato), "criada_em": iso(cv.criada_em), "ultima_mensagem_em": iso(cv.ultima_mensagem_em),
         "modo_desde": iso(cv.modo_desde),
         "ultima_mensagem": mensagem(ultima, nome_agente, cv.contato) if ultima else None,
+        "prioridade": cv.prioridade or "media", "categoria": cv.categoria, "resumo_ia": cv.resumo_ia,
+        "equipe": {"id": cv.equipe.id, "nome": cv.equipe.nome, "cor": cv.equipe.cor} if cv.equipe else None,
+        "csat": {"status": cv.csat_status, "nota": cv.csat_nota, "comentario": cv.csat_comentario} if cv.csat_status else None,
+        "sla": _sla(cv, cfg) if cfg else None,
     }
+
+
+def _sla(cv: Conversa, cfg: dict[str, Any]) -> dict[str, Any]:
+    from .recursos import sla_da_conversa
+
+    return sla_da_conversa(cv, cfg)
+
+
+def agendada(a: MensagemAgendada) -> dict[str, Any]:
+    return {"id": a.id, "conversa_id": a.conversa_id, "texto": a.texto, "enviar_em": iso(a.enviar_em),
+            "status": a.status, "erro": a.erro, "criada_por": a.criada_por.nome if a.criada_por else None}
 
 
 def negocio(n: Negocio) -> dict[str, Any]:
@@ -76,7 +98,8 @@ def negocio(n: Negocio) -> dict[str, Any]:
             "contato_nome": (n.contato.nome or n.contato.telefone) if n.contato else None,
             "etapa_id": n.etapa_id, "valor": n.valor, "responsavel": usuario(n.responsavel),
             "responsavel_id": n.responsavel_id, "status": n.status, "previsao_fechamento": n.previsao_fechamento,
-            "observacoes": n.observacoes, "ordem": n.ordem, "atualizado_em": iso(n.atualizado_em)}
+            "observacoes": n.observacoes, "ordem": n.ordem, "atualizado_em": iso(n.atualizado_em),
+            "motivo_perda": n.motivo_perda, "etapa_desde": iso(n.etapa_desde)}
 
 
 def tarefa(t: Tarefa) -> dict[str, Any]:

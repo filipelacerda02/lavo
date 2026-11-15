@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hmac
 import re
 from datetime import datetime, timedelta
@@ -24,13 +25,15 @@ from ..modelos import (
     PAPEIS,
     Auditoria,
     Conversa,
+    Equipe,
     ExcecaoAgente,
     HorarioAgente,
     Mensagem,
     Usuario,
     agora,
 )
-from ..preferencias import PADROES, ler_config, salvar_config
+from ..preferencias import PADROES, PRIORIDADES, ler_config, salvar_config
+from ..recursos import distribuir_fila, sla_da_conversa
 from ..seguranca import gerar_hash
 from .base import admin, gestor, usuario_logado
 
@@ -53,11 +56,25 @@ class EdicaoUsuario(BaseModel):
     ativo: bool | None = None
     cor: str | None = None
     senha: str | None = Field(None, min_length=8)
+    max_conversas: int | None = Field(None, ge=1, le=100)
+    equipe_ids: list[int] | None = None
+
+
+class Status(BaseModel):
+    status: str = Field(pattern="^(online|ausente|offline)$")
+
+
+class DadosEquipe(BaseModel):
+    nome: str = Field(min_length=1, max_length=60)
+    cor: str = "#1baf7a"
 
 
 @rotas.get("/usuarios")
 def usuarios(u: Usuario = Depends(usuario_logado), db: Session = Depends(obter_db)):
-    return [s.usuario(x) for x in db.scalars(select(Usuario).order_by(Usuario.nome))]
+    carga = dict(db.execute(select(Conversa.atendente_id, func.count()).where(
+        Conversa.status == "aberta", Conversa.modo == "humano").group_by(Conversa.atendente_id)).all())
+    return [{**s.usuario(x), "conversas_abertas": carga.get(x.id, 0)}
+            for x in db.scalars(select(Usuario).order_by(Usuario.nome))]
 
 
 @rotas.post("/usuarios")
@@ -86,7 +103,9 @@ def editar_usuario(usuario_id: int, d: EdicaoUsuario, u: Usuario = Depends(admin
         raise HTTPException(400, "Papel inválido.")
     if alvo.id == u.id and (d.ativo is False or (d.papel and d.papel != "admin")):
         raise HTTPException(400, "Você não pode desativar nem rebaixar a si mesmo.")
-    for campo in ("nome", "papel", "ativo", "cor"):
+    if d.equipe_ids is not None:
+        alvo.equipes = list(db.scalars(select(Equipe).where(Equipe.id.in_(d.equipe_ids))))
+    for campo in ("nome", "papel", "ativo", "cor", "max_conversas"):
         valor = getattr(d, campo)
         if valor is not None:
             setattr(alvo, campo, valor)
@@ -99,6 +118,49 @@ def editar_usuario(usuario_id: int, d: EdicaoUsuario, u: Usuario = Depends(admin
     return s.usuario(alvo)
 
 
+@rotas.put("/eu/status")
+async def mudar_status(d: Status, u: Usuario = Depends(usuario_logado), db: Session = Depends(obter_db)):
+    """Online: recebe conversas da distribuição automática. Ausente/offline: não recebe."""
+    u = db.merge(u)
+    u.status, u.ultimo_sinal = d.status, agora()
+    at.auditar(db, u, "status_alterado", "usuario", u.id, status=d.status)
+    db.commit()
+    barramento.publicar("equipe", {"usuario_id": u.id})
+    if d.status == "online":
+        await asyncio.to_thread(distribuir_fila)
+    return s.usuario(u)
+
+
+@rotas.get("/equipes")
+def equipes(u: Usuario = Depends(usuario_logado), db: Session = Depends(obter_db)):
+    return [{"id": e.id, "nome": e.nome, "cor": e.cor, "membros": [{"id": m.id, "nome": m.nome} for m in e.membros]}
+            for e in db.scalars(select(Equipe).order_by(Equipe.nome))]
+
+
+@rotas.post("/equipes")
+def criar_equipe(d: DadosEquipe, u: Usuario = Depends(gestor), db: Session = Depends(obter_db)):
+    e = Equipe(nome=d.nome.strip(), cor=d.cor)
+    db.add(e)
+    try:
+        db.flush()
+    except IntegrityError as erro:
+        db.rollback()
+        raise HTTPException(409, "Equipe já existe.") from erro
+    at.auditar(db, u, "equipe_criada", "equipe", e.id, nome=e.nome)
+    db.commit()
+    return {"id": e.id}
+
+
+@rotas.delete("/equipes/{equipe_id}")
+def excluir_equipe(equipe_id: int, u: Usuario = Depends(gestor), db: Session = Depends(obter_db)):
+    e = db.get(Equipe, equipe_id)
+    if e:
+        at.auditar(db, u, "equipe_excluida", "equipe", e.id, nome=e.nome)
+        db.delete(e)
+        db.commit()
+    return {"ok": True}
+
+
 # ---------------------------------------------------------------- agente: estado e programação
 class ConfigAgente(BaseModel):
     agente_modo: str | None = Field(None, pattern="^(automatico|ligado|desligado)$")
@@ -108,6 +170,15 @@ class ConfigAgente(BaseModel):
     devolver_ao_agente_min: int | None = Field(None, ge=0, le=10080)
     mensagem_fora_horario: str | None = Field(None, max_length=1000)
     mensagem_transferencia: str | None = Field(None, max_length=1000)
+    distribuicao_automatica: bool | None = None
+    sla: dict[str, dict[str, int]] | None = None
+    resolver_inativas_h: int | None = Field(None, ge=0, le=720)
+    csat_ativo: bool | None = None
+    csat_conversas_agente: bool | None = None
+    csat_mensagem: str | None = Field(None, max_length=1000)
+    csat_agradecimento: str | None = Field(None, max_length=500)
+    triagem_ia: bool | None = None
+    criar_negocio_novo_contato: bool | None = None
 
 
 class Horario(BaseModel):
@@ -153,6 +224,11 @@ def agente_config(u: Usuario = Depends(usuario_logado), db: Session = Depends(ob
 @rotas.put("/agente/config")
 def salvar_agente_config(d: ConfigAgente, u: Usuario = Depends(gestor), db: Session = Depends(obter_db)):
     alteracoes = d.model_dump(exclude_unset=True, exclude_none=True)
+    if "sla" in alteracoes:
+        sla = alteracoes["sla"]
+        if set(sla) != set(PRIORIDADES) or any(set(v) != {"fila_min", "resolucao_h"} or min(v.values()) < 1
+                                               for v in sla.values()):
+            raise HTTPException(400, "SLA inválido: informe fila_min e resolucao_h (>= 1) para cada prioridade.")
     if "fuso_horario" in alteracoes:
         try:
             ZoneInfo(alteracoes["fuso_horario"])
@@ -302,8 +378,36 @@ def resumo(dias: int = 7, u: Usuario = Depends(usuario_logado), db: Session = De
             por_usuario.setdefault(nome, {"nome": nome, "mensagens": 0, "conversas": set(), "resolvidas": 0})
             por_usuario[nome]["resolvidas"] += 1
 
+    cfg = ler_config(db)
+    resolvidas_periodo = list(db.scalars(select(Conversa).where(Conversa.resolvida_em >= inicio)))
+    no_prazo = [sla_da_conversa(c, cfg).get("resolvida_no_prazo") for c in resolvidas_periodo]
+    abertas = list(db.scalars(select(Conversa).where(Conversa.status == "aberta")))
+    estouradas = sum(1 for c in abertas if any(v.get("estourado") for k, v in sla_da_conversa(c, cfg).items()
+                                               if isinstance(v, dict)))
+    avaliadas = [c for c in db.scalars(select(Conversa).where(Conversa.csat_status == "respondida",
+                                                              Conversa.csat_solicitado_em >= inicio))]
+    notas = [c.csat_nota for c in avaliadas]
+    csat_por_usuario: dict[str, list[int]] = {}
+    for c in avaliadas:
+        quem = db.get(Usuario, c.resolvida_por_id).nome if c.resolvida_por_id else (
+            c.atendente.nome if c.atendente else "Agente / sistema")
+        csat_por_usuario.setdefault(quem, []).append(c.csat_nota)
+    solicitadas = db.scalar(select(func.count()).where(Conversa.csat_solicitado_em >= inicio)) or 0
     return {
         "dias": dias,
+        "csat": {
+            "media": round(sum(notas) / len(notas), 2) if notas else None,
+            "respostas": len(notas), "solicitadas": solicitadas,
+            "satisfeitos_pct": round(100 * sum(1 for n in notas if n >= 4) / len(notas)) if notas else None,
+            "distribuicao": {str(n): notas.count(n) for n in range(1, 6)},
+            "por_usuario": sorted(({"nome": k, "media": round(sum(v) / len(v), 2), "respostas": len(v)}
+                                   for k, v in csat_por_usuario.items()), key=lambda x: -x["respostas"]),
+        },
+        "sla": {
+            "resolvidas_no_prazo_pct": round(100 * sum(1 for x in no_prazo if x) / len(no_prazo)) if no_prazo else None,
+            "resolvidas": len(no_prazo),
+            "estouradas_agora": estouradas,
+        },
         "conversas_novas": len(convs),
         "conversas_resolvidas": len(resolvidas),
         # atendidas só pelo agente: o agente respondeu e nenhum humano precisou entrar

@@ -167,6 +167,29 @@ Sistema de atendimento em volta do agente. As mensagens chegam pelo WhatsApp, o 
   - *administrador*: o que o supervisor faz, mais colaboradores.
   - Senhas com scrypt, sessão em cookie assinado (HttpOnly), proteção CSRF e limite de tentativas de login.
 
+## Funções inspiradas em CRMs de mercado
+
+Comparando com HubSpot, Pipedrive, RD Station CRM, Kommo, Chatwoot e plataformas brasileiras de atendimento (Digisac, Huggy, Octadesk), o CRM ganhou:
+
+| Função | Inspiração | Onde |
+|---|---|---|
+| **Equipes/departamentos** e transferência para a fila de uma equipe | Digisac, Chatwoot | Configurações › Equipes; botão Transferir |
+| **Status do colaborador** (🟢 online / 🟡 ausente / ⚫ offline) e **limite de conversas simultâneas** | Chatwoot, Digisac | menu lateral; Configurações › Colaboradores |
+| **Distribuição automática da fila** (rodízio para quem está online e com a tela aberta, respeitando a equipe e o limite; não devolve a conversa a quem acabou de soltá-la) | Digisac, Huggy, Chatwoot | Configurações › Atendimento |
+| **Prioridade** (baixa → urgente) e **SLA** de espera na fila e de resolução, com contagem regressiva e alerta de estouro | Chatwoot, HubSpot | cabeçalho da conversa, lista e painel |
+| **Pesquisa de satisfação (CSAT 1–5)** automática ao resolver, com a nota e o comentário registrados a partir da resposta no WhatsApp; nota baixa gera alerta | Digisac, Chatwoot | Configurações › Atendimento; Relatórios |
+| **Encerramento automático** de conversas em que o cliente parou de responder | Chatwoot, Octadesk | Configurações › Atendimento |
+| **Mensagens agendadas** (follow-up em data e hora definidas, enviadas em nome de quem agendou) | Kommo, Digisac | botão ⏰ Agendar na conversa |
+| **IA para a equipe:** ✨ sugerir resposta (com base nos documentos oficiais) e ✨ resumo da conversa | Chatwoot Captain, Kommo | conversa |
+| **Triagem automática por IA** das conversas novas: assunto e aumento de prioridade | Chatwoot Captain | Configurações › Atendimento |
+| **Campos personalizados** de contato (texto, número, data, lista), incluídos no CSV | Pipedrive, HubSpot | Configurações › Campos |
+| **Negócio parado** ("rotting") por etapa, **motivo de perda** obrigatório e **tarefa automática** ao entrar numa etapa | Pipedrive, RD Station | Configurações › Etapas do funil; Funil |
+| **Lead automático no funil** para cada contato novo do WhatsApp | Kommo | Configurações › Atendimento |
+| **Notificações** no navegador e sinal sonoro (fila nova, conversa atribuída a você, mensagem nas suas conversas, avaliação baixa) | todos | botão "Ativar avisos" |
+| Relatórios de **CSAT** (média, distribuição, por atendente) e de **SLA** (% resolvidas no prazo, estouradas agora) | Chatwoot, HubSpot | Relatórios e Painel |
+
+Ficaram de fora de propósito: **disparos em massa** e **modelos de mensagem/carrossel**. Com uma conexão não oficial (QR code), envio em massa é o caminho mais rápido para o número ser bloqueado. Esses recursos fazem sentido com a API oficial do WhatsApp Business, que tem modelos aprovados pela Meta.
+
 ## Como rodar
 
 **1. Teste rápido, sem WhatsApp (modo simulado):**
@@ -235,4 +258,11 @@ agente chama transferir_para_humano       → ⏳ fila
 pytest
 ```
 
-São 42 testes, sem rede. Os 13 do CRM cobrem o fluxo agente → humano assume → devolve ao agente, a transferência pelo agente, a resposta descartada quando um humano assume, o celular da empresa, a programação e as exceções, a rotina que desliga o agente, o CRM básico e as permissões.
+São 52 testes, sem rede. Os 23 do CRM cobrem:
+
+- o fluxo agente → humano assume → devolve ao agente, a transferência pelo agente, a resposta descartada quando um humano assume e o celular da empresa;
+- a programação do agente, as exceções e a rotina que desliga o agente;
+- distribuição automática, equipes, SLA, CSAT, mensagens agendadas, encerramento por inatividade, triagem por IA, regras do funil, campos personalizados e sugestão de resposta;
+- o CRM básico e as permissões.
+
+Bancos criados antes desta versão recebem as colunas novas automaticamente ao iniciar.
