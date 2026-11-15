@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<div class="conteudo" x-data="tarefas()" x-init="iniciar()">
+  <div class="linha entre" style="margin-bottom:12px">
+    <div class="chips">
+      <template x-for="f in filtros" :key="f[0]">
+        <button class="chip" :class="filtro === f[0] ? 'ativo' : ''" @click="filtro = f[0]; carregar()" x-text="f[1]"></button>
+      </template>
+    </div>
+    <button class="btn primario" @click="editar(null)">+ Nova tarefa</button>
+  </div>
+  <div class="cartao tabela-rolagem" style="padding:0">
+    <table class="tabela">
+      <thead><tr><th></th><th>Tarefa</th><th>Contato</th><th>Responsável</th><th>Prioridade</th><th>Vencimento</th><th></th></tr></thead>
+      <tbody>
+        <template x-for="t in lista" :key="t.id">
+          <tr>
+            <td style="width:30px"><input type="checkbox" :checked="t.concluida" @change="alternar(t)"></td>
+            <td><b x-text="t.titulo" :style="t.concluida ? 'text-decoration:line-through;opacity:.6' : ''"></b>
+              <span class="selo agente" x-show="t.origem === 'agente'" style="font-size:10px">🤖 criada pelo agente</span>
+              <div class="fraco" x-text="t.descricao" style="max-width:420px; white-space:pre-wrap"></div></td>
+            <td><a x-show="t.conversa_id" :href="'/conversas?c=' + t.conversa_id" x-text="t.contato_nome || 'conversa'"></a>
+              <span x-show="!t.conversa_id" x-text="t.contato_nome || '—'"></span></td>
+            <td x-text="t.responsavel ? t.responsavel.nome : 'sem responsável'"></td>
+            <td><span class="selo" :class="{alta:'perigo', media:'fila', baixa:'neutro'}[t.prioridade]" x-text="t.prioridade"></span></td>
+            <td><span x-text="fmt.dataHora(t.vencimento) || '—'"></span>
+              <span class="selo perigo" x-show="!t.concluida && t.vencimento && new Date(t.vencimento) < new Date()">atrasada</span></td>
+            <td style="text-align:right"><button class="btn pequeno" @click="editar(t)">Editar</button></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+    <div class="vazio" x-show="!lista.length">Nenhuma tarefa.</div>
+  </div>
+
+  <div class="modal-fundo" x-show="form" x-cloak @click.self="form = null">
+    <form class="modal coluna" @submit.prevent="salvar()" x-show="form">
+      <h2 x-text="form && form.id ? 'Editar tarefa' : 'Nova tarefa'"></h2>
+      <template x-if="form">
+        <div class="coluna">
+          <label>Título <input x-model="form.titulo" required></label>
+          <label>Descrição <textarea rows="3" x-model="form.descricao"></textarea></label>
+          <div class="linha">
+            <label style="flex:1">Responsável <select x-model.number="form.responsavel_id"><option :value="null">sem responsável</option>
+              <template x-for="u in usuarios" :key="u.id"><option :value="u.id" x-text="u.nome"></option></template></select></label>
+            <label style="flex:1">Prioridade <select x-model="form.prioridade"><option value="baixa">baixa</option><option value="media">média</option><option value="alta">alta</option></select></label>
+          </div>
+          <label>Vencimento <input type="datetime-local" x-model="form.vencimento_local"></label>
+        </div>
+      </template>
+      <div class="acoes">
+        <button type="button" class="btn perigo" x-show="form && form.id" @click="excluir()">Excluir</button>
+        <span style="flex:1"></span>
+        <button type="button" class="btn" @click="form = null">Cancelar</button>
+        <button class="btn primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+function tarefas() {
+  const local = (iso) => { if (!iso) return ''; const d = new Date(iso); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16) }
+  return {
+    filtro: 'pendentes', lista: [], usuarios: [], form: null,
+    filtros: [['pendentes', 'Pendentes'], ['minhas', 'Minhas'], ['atrasadas', 'Atrasadas'], ['sem_responsavel', 'Sem responsável'], ['concluidas', 'Concluídas']],
+    async iniciar() {
+      this.usuarios = await api('/api/usuarios')
+      this.carregar()
+      window.addEventListener('lavo:tarefa', () => this.carregar())
+    },
+    async carregar() { this.lista = await api('/api/tarefas?filtro=' + this.filtro) },
+    async alternar(t) { await tentar(() => api('/api/tarefas/' + t.id, { method: 'PATCH', corpo: { concluida: !t.concluida } })); this.carregar() },
+    editar(t) {
+      this.form = t ? { ...t, vencimento_local: local(t.vencimento) } : { titulo: '', descricao: '', responsavel_id: USUARIO.id, prioridade: 'media', vencimento_local: '' }
+    },
+    async salvar() {
+      const f = this.form
+      const corpo = { titulo: f.titulo, descricao: f.descricao || '', responsavel_id: f.responsavel_id || null, prioridade: f.prioridade,
+        vencimento: f.vencimento_local ? new Date(f.vencimento_local).toISOString() : null }
+      await tentar(() => f.id ? api('/api/tarefas/' + f.id, { method: 'PATCH', corpo }) : api('/api/tarefas', { method: 'POST', corpo }), 'Tarefa salva')
+      this.form = null
+      this.carregar()
+    },
+    async excluir() {
+      if (!confirm('Excluir esta tarefa?')) return
+      await tentar(() => api('/api/tarefas/' + this.form.id, { method: 'DELETE' }))
+      this.form = null
+      this.carregar()
+    },
+  }
+}
+</script>
+{% endblock %}

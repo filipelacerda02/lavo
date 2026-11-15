@@ -6,6 +6,11 @@ O exemplo é o atendimento da **Lavo**, uma lavanderia por assinatura **fictíci
 
 Ele usa o Claude (Anthropic SDK para Python), o ChromaDB como banco vetorial e o FastAPI no servidor.
 
+O projeto tem duas partes:
+
+1. **O agente** (`lavo/`): as 13 peças do vídeo, descritas logo abaixo.
+2. **O CRM com WhatsApp** (`crm/` + `whatsapp-gateway/`): o sistema de atendimento construído em volta do agente, onde o agente e a equipe humana atendem juntos. Veja [CRM com WhatsApp](#crm-com-whatsapp).
+
 ## As peças, onde estão e como funcionam
 
 | # | Peça (problema → solução) | Onde | Como foi feito |
@@ -112,3 +117,122 @@ Para experimentar, alguns exemplos com a cliente `cli_ana`:
 - **Dados:** `Loja` lê e grava um JSON. Troque pelos seus serviços ou banco de dados reais, mantendo a regra de que cada ferramenta só acessa o cliente logado.
 - **Embeddings:** o modo `hash` não entende sinônimos. Use Voyage ou um modelo local.
 - **Observabilidade:** os traces são JSONL locais. Se você já usa OpenTelemetry, Langfuse ou similar, envie os mesmos spans para lá.
+
+---
+
+# CRM com WhatsApp
+
+Sistema de atendimento em volta do agente. As mensagens chegam pelo WhatsApp, o agente responde sozinho e a equipe pode assumir qualquer conversa a qualquer momento. **Cada mensagem mostra quem respondeu:** 🤖 o agente, 👤 o colaborador (pelo login dele na plataforma) ou 📱 o celular da empresa (quando alguém responde direto pelo aparelho).
+
+## Peças
+
+| Pasta | O que é |
+|---|---|
+| `whatsapp-gateway/` | Serviço Node com o [Baileys](https://github.com/WhiskeySockets/Baileys). Conecta como "WhatsApp Web" (por QR code), envia mensagens e repassa tudo que chega para o CRM via webhook |
+| `crm/` | O CRM (FastAPI + SQLite/Postgres + telas com Alpine.js), que usa o agente de `lavo/` |
+
+## Funcionalidades
+
+- **WhatsApp dentro do sistema:** tela com o QR code para conectar o número e caixa de entrada com todas as conversas em tempo real. Grupos e status são ignorados, e mídia aparece como anexo.
+- **Agente × humano, sempre visível:**
+  - cada conversa mostra quem está no comando: 🤖 agente, 👤 colaborador (com nome), ⏳ fila ou ✅ resolvida;
+  - cada mensagem traz o autor, com o nome e o papel do colaborador logado;
+  - os eventos ficam registrados na linha do tempo ("Maria assumiu o atendimento", "devolveu ao agente", "transferiu para João"…).
+- **Transferência agente ↔ humano:**
+  - quem responde pela plataforma assume a conversa, e o agente pausa nela;
+  - "Devolver ao agente" faz o agente retomar, sabendo o que o humano conversou;
+  - o próprio agente transfere para a fila (`transferir_para_humano`) quando o cliente pede uma pessoa ou o caso exige;
+  - mensagem enviada pelo celular da empresa também pausa o agente;
+  - se um humano assume enquanto o agente está pensando, a resposta do agente é descartada.
+- **Ativação programada do agente** (Configurações › Agente):
+  - modos *programado*, *sempre ligado* ou *desligado*;
+  - grade semanal com várias faixas por dia (inclusive passando da meia-noite) e atalhos "24h", "só fora do expediente" e "só no expediente";
+  - **exceções** com data e hora (feriados, plantões, campanhas), que valem por cima da grade;
+  - quando o agente desliga, as conversas dele vão para a fila; quando liga, ele assume a fila que ninguém pegou;
+  - mensagem automática para quem escreve com o agente desligado;
+  - opção de devolver ao agente conversas humanas paradas há X minutos;
+  - por contato: "só humanos atendem".
+- **CRM:**
+  - contatos com etiquetas, responsável, observações e importação/exportação CSV; o vínculo com o cadastro de clientes é feito pelo telefone ou pelo próprio agente (e-mail + CPF);
+  - funil de vendas em kanban (arrastar e soltar), com etapas configuráveis;
+  - tarefas com responsável, prazo e prioridade, incluindo as criadas pelo agente;
+  - respostas rápidas (`/atalho`), notas internas e transferência entre colaboradores.
+- **Gestão:**
+  - painel com a fila e as tarefas;
+  - relatórios: conversas atendidas só pelo agente × com humanos, mensagens por dia, tempo de primeira resposta, custo do agente e desempenho por colaborador;
+  - auditoria de todas as ações (quem assumiu, quem mudou a programação, logins…).
+- **Usuários e permissões:**
+  - *atendente*: conversas, contatos, funil e tarefas;
+  - *supervisor*: o que o atendente faz, mais programação do agente, importação e auditoria;
+  - *administrador*: o que o supervisor faz, mais colaboradores.
+  - Senhas com scrypt, sessão em cookie assinado (HttpOnly), proteção CSRF e limite de tentativas de login.
+
+## Como rodar
+
+**1. Teste rápido, sem WhatsApp (modo simulado):**
+
+```bash
+pip install -r requirements.txt
+```
+
+```bash
+uvicorn crm.main:app --reload
+```
+
+Abra http://localhost:8000. O primeiro acesso cria o administrador. Na tela **WhatsApp** há um simulador para "receber" mensagens como se fosse um cliente. Para o agente responder, preencha `ANTHROPIC_API_KEY` no `.env`.
+
+**2. Com WhatsApp de verdade.** Gere um token:
+
+```bash
+python3 -c "import secrets;print(secrets.token_hex(24))"
+```
+
+Coloque o token em `WHATSAPP_GATEWAY_TOKEN` no `.env` e defina `WHATSAPP_GATEWAY_URL=http://localhost:3001`. Depois, num terminal, instale o gateway:
+
+```bash
+cd whatsapp-gateway && npm install
+```
+
+E suba o gateway com o mesmo token:
+
+```bash
+GATEWAY_TOKEN=seu-token CRM_WEBHOOK_URL=http://localhost:8000/api/whatsapp/webhook npm start
+```
+
+Em outro terminal, suba o CRM:
+
+```bash
+uvicorn crm.main:app
+```
+
+No CRM, abra **WhatsApp › Gerar QR code** e escaneie pelo celular da empresa (WhatsApp › Dispositivos conectados › Conectar um dispositivo).
+
+**3. Com Docker:**
+
+```bash
+docker compose up -d
+```
+
+> ⚠️ **Sobre o WhatsApp via QR code:** o Baileys é uma biblioteca **não oficial**. Automatizar o WhatsApp assim vai contra os termos de uso do WhatsApp, e o número pode ser **bloqueado**, principalmente com envio em massa ou para quem nunca falou com a empresa. Use um número dedicado e responda só a quem procurou vocês. Para operação crítica, a alternativa oficial é a **WhatsApp Business Cloud API** (Meta): nesse caso só o `whatsapp-gateway/` muda; o CRM conversa com ele pela mesma interface (`/status`, `/enviar` e webhook).
+
+## Como o CRM decide quem responde
+
+```
+mensagem chega ──► conversa aberta do contato?
+                     ├─ modo 🤖 agente  → espera alguns segundos (junta mensagens) → agente responde
+                     ├─ modo 👤 humano  → só aparece para a equipe (o agente não responde)
+                     └─ modo ⏳ fila    → aguarda alguém assumir (o agente retoma se a fila era "agente desligado" e ele ligou)
+nova conversa ─► agente ligado (programação) e contato não bloqueado? → 🤖 agente : ⏳ fila (+ aviso automático)
+colaborador responde / clica "Assumir"   → 👤 humano (atendente = usuário logado)
+"Devolver ao agente"                      → 🤖 agente (recebe o resumo do que o humano conversou)
+agente chama transferir_para_humano       → ⏳ fila
+"Resolver"                                → a próxima mensagem do contato abre uma conversa nova
+```
+
+## Testes
+
+```bash
+pytest
+```
+
+São 42 testes, sem rede. Os 13 do CRM cobrem o fluxo agente → humano assume → devolve ao agente, a transferência pelo agente, a resposta descartada quando um humano assume, o celular da empresa, a programação e as exceções, a rotina que desliga o agente, o CRM básico e as permissões.

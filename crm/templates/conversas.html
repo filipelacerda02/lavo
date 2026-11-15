@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<div class="conteudo cheio">
+<div class="inbox" :class="atual ? 'com-chat' : ''" x-data="inbox()" x-init="iniciar()">
+
+  <!-- ===== lista ===== -->
+  <section class="coluna-lista">
+    <div class="lista-filtros">
+      <input type="search" placeholder="Buscar nome, telefone, e-mail…" x-model.debounce.300ms="busca" @input="carregarLista()">
+      <div class="chips">
+        <template x-for="f in filtros" :key="f.id">
+          <button class="chip" :class="filtro === f.id ? 'ativo' : ''" @click="filtro = f.id; carregarLista()">
+            <span x-text="f.nome"></span><span x-show="f.qtd() !== null" x-text="' ' + f.qtd()"></span>
+          </button>
+        </template>
+      </div>
+    </div>
+    <div class="lista-conversas">
+      <template x-for="c in conversas" :key="c.id">
+        <button class="item-conversa" :class="atual && atual.conversa.id === c.id ? 'ativo' : ''" @click="abrir(c.id)">
+          <div class="linha entre" style="flex-wrap:nowrap">
+            <span class="nome" x-text="c.contato.nome"></span>
+            <span class="fraco" x-text="fmt.relativo(c.ultima_mensagem_em)"></span>
+          </div>
+          <div class="previa" x-text="previa(c)"></div>
+          <div class="linha" style="margin-top:6px">
+            <span class="selo" :class="c.responsavel.tipo" x-text="rotuloResponsavel(c.responsavel)"></span>
+            <template x-for="e in c.contato.etiquetas" :key="e.id"><span class="etiqueta" :style="'background:' + e.cor" x-text="e.nome"></span></template>
+            <span style="margin-left:auto" class="nao-lidas" x-show="c.nao_lidas > 0" x-text="c.nao_lidas"></span>
+          </div>
+        </button>
+      </template>
+      <div class="vazio" x-show="!conversas.length">Nenhuma conversa aqui.</div>
+    </div>
+  </section>
+
+  <!-- ===== chat ===== -->
+  <section class="coluna-chat">
+    <template x-if="!atual">
+      <div class="vazio" style="margin:auto">Selecione uma conversa.<br><span class="fraco">Mensagens do WhatsApp aparecem aqui em tempo real.</span></div>
+    </template>
+    <template x-if="atual">
+      <div style="display:flex; flex-direction:column; height:100%; min-height:0">
+        <div class="chat-topo">
+          <button class="btn icone" @click="atual = null" title="Voltar">←</button>
+          <div class="chat-titulo">
+            <div style="font-weight:700" x-text="atual.conversa.contato.nome"></div>
+            <div class="fraco" x-text="fmt.telefone(atual.conversa.contato.telefone)"></div>
+          </div>
+          <template x-if="atual.conversa.status === 'aberta'">
+            <div class="linha">
+              <button class="btn humano" x-show="!souAtendente()" @click="acao('assumir')">👤 Assumir</button>
+              <button class="btn agente" x-show="atual.conversa.modo !== 'agente' && !atual.conversa.contato.agente_bloqueado" @click="acao('devolver-agente')">🤖 Devolver ao agente</button>
+              <button class="btn" @click="modalTransferir = true">↪️ Transferir</button>
+              <button class="btn" x-show="atual.conversa.modo !== 'fila'" @click="acao('fila')">⏳ Fila</button>
+              <button class="btn primario" @click="acao('resolver')">✅ Resolver</button>
+            </div>
+          </template>
+          <template x-if="atual.conversa.status !== 'aberta'">
+            <button class="btn" @click="acao('reabrir')">🔄 Reabrir</button>
+          </template>
+        </div>
+
+        <div class="faixa-responsavel" :class="atual.conversa.responsavel.tipo">
+          <template x-if="atual.conversa.status === 'resolvida'"><span>✅ Conversa resolvida.</span></template>
+          <template x-if="atual.conversa.status === 'aberta' && atual.conversa.modo === 'agente'">
+            <span>🤖 <b x-text="atual.conversa.responsavel.nome"></b> está atendendo. Se você responder, assume a conversa e o agente pausa.</span>
+          </template>
+          <template x-if="atual.conversa.status === 'aberta' && atual.conversa.modo === 'humano'">
+            <span>👤 Atendimento humano: <b x-text="atual.conversa.responsavel.nome"></b>
+              <span x-show="souAtendente()">(você)</span>
+              <span class="fraco" x-text="'desde ' + fmt.hora(atual.conversa.modo_desde)"></span></span>
+          </template>
+          <template x-if="atual.conversa.status === 'aberta' && atual.conversa.modo === 'fila'">
+            <span>⏳ Aguardando atendente<span x-show="atual.conversa.motivo_fila" x-text="' — ' + atual.conversa.motivo_fila"></span></span>
+          </template>
+        </div>
+
+        <div class="mensagens" x-ref="mensagens">
+          <template x-for="m in atual.mensagens" :key="m.id">
+            <div style="display:contents">
+              <template x-if="m.direcao === 'interna' && m.autor.tipo === 'sistema'">
+                <div class="evento"><span x-text="m.texto"></span> <span class="fraco" x-text="'· ' + fmt.hora(m.criada_em)"></span></div>
+              </template>
+              <template x-if="m.direcao === 'interna' && m.autor.tipo !== 'sistema'">
+                <div class="msg nota">
+                  <div class="autor">📝 Nota interna · <span x-text="m.autor.nome"></span></div>
+                  <div class="balao" x-text="m.texto"></div>
+                  <div class="hora" x-text="fmt.hora(m.criada_em)"></div>
+                </div>
+              </template>
+              <template x-if="m.direcao !== 'interna'">
+                <div class="msg" :class="[m.direcao, m.autor.tipo]">
+                  <div class="autor">
+                    <template x-if="m.autor.tipo === 'agente'"><span>🤖 <span x-text="m.autor.nome"></span> · agente de IA</span></template>
+                    <template x-if="m.autor.tipo === 'humano'">
+                      <span class="linha" style="gap:5px">
+                        <span class="avatar" style="width:18px;height:18px;font-size:9px" :style="'background:' + (m.autor.cor || '#52514e')" x-text="m.autor.usuario_id ? fmt.iniciais(m.autor.nome) : '📱'"></span>
+                        <span x-text="m.autor.nome"></span><span x-show="m.autor.usuario_id" class="fraco" x-text="'· ' + (m.autor.papel || 'colaborador')"></span>
+                      </span>
+                    </template>
+                    <template x-if="m.autor.tipo === 'sistema'"><span>⚙️ Mensagem automática</span></template>
+                    <template x-if="m.autor.tipo === 'contato'"><span class="muted" x-text="m.autor.nome"></span></template>
+                  </div>
+                  <div class="balao"><span x-show="m.midia" class="selo neutro" x-text="'📎 ' + m.midia" style="margin-right:6px"></span><span x-text="m.texto"></span></div>
+                  <div class="hora">
+                    <span x-text="fmt.hora(m.criada_em)"></span>
+                    <span x-show="m.status_envio === 'erro'" class="selo perigo" :title="m.erro">falhou ao enviar</span>
+                    <span x-show="m.trace_id && USUARIO.papel !== 'atendente'" class="fraco" x-text="'· $' + m.custo_usd.toFixed(4) + ' · trace ' + m.trace_id"></span>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </template>
+        </div>
+
+        <div class="compositor" :class="modoNota ? 'nota-ativa' : ''">
+          <div class="sugestoes" x-show="sugestoes.length" x-cloak>
+            <template x-for="r in sugestoes" :key="r.id">
+              <button @click="texto = r.texto; sugestoes = []; $refs.campo.focus()"><b x-text="'/' + r.atalho"></b> <span class="muted" x-text="r.texto"></span></button>
+            </template>
+          </div>
+          <textarea x-ref="campo" x-model="texto" rows="2"
+                    :placeholder="modoNota ? 'Nota interna (o cliente não vê)…' : 'Escreva uma resposta… (/ para respostas rápidas, Enter envia, Shift+Enter quebra linha)'"
+                    @input="filtrarSugestoes()" @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); enviar() }"></textarea>
+          <div class="linha entre">
+            <label class="check"><input type="checkbox" x-model="modoNota"> 📝 Nota interna</label>
+            <div class="linha">
+              <span class="fraco" x-show="!modoNota && !souAtendente() && atual.conversa.status === 'aberta'">Enviar faz você assumir a conversa</span>
+              <button class="btn primario" @click="enviar()" :disabled="!texto.trim() || enviando" x-text="modoNota ? 'Salvar nota' : 'Enviar como ' + USUARIO.nome"></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+  </section>
+
+  <!-- ===== painel do contato ===== -->
+  <section class="painel-lateral">
+    <template x-if="contato">
+      <div class="painel-contato">
+        <div>
+          <h3>Contato</h3>
+          <div class="coluna">
+            <label>Nome <input x-model="contato.contato.nome" @change="salvarContato({nome: contato.contato.nome})"></label>
+            <label>E-mail <input x-model="contato.contato.email" @change="salvarContato({email: contato.contato.email})"></label>
+            <label>Empresa <input x-model="contato.contato.empresa" @change="salvarContato({empresa: contato.contato.empresa})"></label>
+            <label>Observações <textarea rows="2" x-model="contato.contato.observacoes" @change="salvarContato({observacoes: contato.contato.observacoes})"></textarea></label>
+            <div class="campo"><span>Telefone</span><span x-text="fmt.telefone(contato.contato.telefone) || '—'"></span></div>
+            <div class="campo"><span>Cadastro de cliente</span>
+              <span x-text="contato.contato.cliente_externo_id || 'não vinculado'" :class="contato.contato.cliente_externo_id ? 'selo ok' : 'fraco'"></span></div>
+            <label class="check"><input type="checkbox" x-model="contato.contato.agente_bloqueado" @change="salvarContato({agente_bloqueado: contato.contato.agente_bloqueado})"> Só humanos atendem este contato</label>
+          </div>
+        </div>
+        <div>
+          <h3>Etiquetas</h3>
+          <div class="linha">
+            <template x-for="e in etiquetas" :key="e.id">
+              <button class="etiqueta" style="border:0; cursor:pointer" :style="'background:' + e.cor + ';opacity:' + (temEtiqueta(e.id) ? 1 : .3)" @click="alternarEtiqueta(e.id)" x-text="e.nome"></button>
+            </template>
+          </div>
+        </div>
+        <div>
+          <div class="linha entre"><h3>Tarefas</h3><button class="btn pequeno" @click="novaTarefa()">+ Tarefa</button></div>
+          <template x-for="t in contato.tarefas" :key="t.id">
+            <label class="check" style="font-size:13px"><input type="checkbox" :checked="t.concluida" @change="concluirTarefa(t)">
+              <span :style="t.concluida ? 'text-decoration:line-through;opacity:.6' : ''"><span x-text="t.titulo"></span>
+                <span class="fraco" x-show="t.vencimento" x-text="' · ' + fmt.dataHora(t.vencimento)"></span></span></label>
+          </template>
+          <div class="fraco" x-show="!contato.tarefas.length">Nenhuma tarefa.</div>
+        </div>
+        <div>
+          <div class="linha entre"><h3>Negócios</h3><button class="btn pequeno" @click="novoNegocio()">+ Negócio</button></div>
+          <template x-for="n in contato.negocios" :key="n.id">
+            <div class="campo"><a href="/funil" x-text="n.titulo"></a><span x-text="fmt.dinheiro(n.valor)"></span></div>
+          </template>
+          <div class="fraco" x-show="!contato.negocios.length">Nenhum negócio.</div>
+        </div>
+        <div x-show="atual && atual.anteriores.length">
+          <h3>Conversas anteriores</h3>
+          <template x-for="a in (atual ? atual.anteriores : [])" :key="a.id">
+            <button class="btn pequeno" style="margin:0 4px 4px 0" @click="abrir(a.id)" x-text="'#' + a.id + ' · ' + fmt.data(a.criada_em)"></button>
+          </template>
+        </div>
+      </div>
+    </template>
+  </section>
+
+  <!-- transferir -->
+  <div class="modal-fundo" x-show="modalTransferir" x-cloak @click.self="modalTransferir = false">
+    <div class="modal">
+      <h2>Transferir atendimento</h2>
+      <div class="coluna">
+        <template x-for="u in usuarios.filter(u => u.ativo)" :key="u.id">
+          <button class="btn" style="justify-content:flex-start" @click="transferir(u.id)">
+            <span class="avatar" :style="'background:' + u.cor" x-text="fmt.iniciais(u.nome)"></span>
+            <span x-text="u.nome"></span><span class="fraco" x-text="u.papel"></span>
+          </button>
+        </template>
+      </div>
+      <div class="acoes"><button class="btn" @click="modalTransferir = false">Cancelar</button></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+function inbox() {
+  return {
+    filtro: 'abertas', busca: '', conversas: [], contagem: {}, atual: null, contato: null,
+    texto: '', modoNota: false, enviando: false, respostas: [], sugestoes: [], usuarios: [], etiquetas: [],
+    modalTransferir: false,
+    filtros: [],
+    async iniciar() {
+      const qtd = (k) => () => (this.contagem[k] ?? null)
+      this.filtros = [
+        { id: 'abertas', nome: 'Abertas', qtd: () => null },
+        { id: 'minhas', nome: 'Minhas', qtd: qtd('minhas') },
+        { id: 'fila', nome: '⏳ Fila', qtd: qtd('fila') },
+        { id: 'agente', nome: '🤖 Agente', qtd: qtd('agente') },
+        { id: 'humano', nome: '👤 Humanos', qtd: qtd('humano') },
+        { id: 'resolvidas', nome: 'Resolvidas', qtd: () => null },
+      ]
+      ;[this.respostas, this.usuarios, this.etiquetas] = await Promise.all([
+        api('/api/respostas-rapidas'), api('/api/usuarios'), api('/api/etiquetas')])
+      await this.carregarLista()
+      const c = new URLSearchParams(location.search).get('c')
+      if (c) this.abrir(Number(c))
+      let t
+      const recarregar = (e) => {
+        clearTimeout(t)
+        t = setTimeout(() => {
+          this.carregarLista()
+          const id = e.detail && (e.detail.conversa_id || e.detail.id)
+          if (this.atual && (!id || id === this.atual.conversa.id)) this.recarregarAtual()
+        }, 250)
+      }
+      window.addEventListener('lavo:conversa', recarregar)
+      window.addEventListener('lavo:mensagem', recarregar)
+      window.addEventListener('lavo:contato', () => this.atual && this.carregarContato())
+      window.addEventListener('lavo:tarefa', () => this.atual && this.carregarContato())
+    },
+    async carregarLista() {
+      const p = new URLSearchParams({ filtro: this.filtro, busca: this.busca })
+      const r = await api('/api/conversas?' + p)
+      this.conversas = r.conversas
+      this.contagem = r.contagem
+    },
+    async abrir(id) {
+      this.atual = await api('/api/conversas/' + id)
+      history.replaceState(null, '', '/conversas?c=' + id)
+      this.rolar()
+      this.carregarContato()
+      if (this.atual.conversa.nao_lidas) api(`/api/conversas/${id}/lida`, { method: 'POST' })
+    },
+    async recarregarAtual() {
+      const caixa = this.$refs.mensagens
+      const noFim = !caixa || caixa.scrollHeight - caixa.scrollTop - caixa.clientHeight < 80
+      this.atual = await api('/api/conversas/' + this.atual.conversa.id)
+      if (noFim) this.rolar()
+      if (this.atual.conversa.nao_lidas) api(`/api/conversas/${this.atual.conversa.id}/lida`, { method: 'POST' })
+    },
+    async carregarContato() {
+      this.contato = await api('/api/contatos/' + this.atual.conversa.contato.id)
+    },
+    rolar() {
+      this.$nextTick(() => { const c = this.$refs.mensagens; if (c) c.scrollTop = c.scrollHeight })
+    },
+    souAtendente() {
+      return this.atual && this.atual.conversa.modo === 'humano' && this.atual.conversa.atendente_id === USUARIO.id
+    },
+    rotuloResponsavel(r) {
+      return { agente: '🤖 ' + r.nome, humano: '👤 ' + r.nome, fila: '⏳ Fila', resolvida: '✅ Resolvida' }[r.tipo]
+    },
+    previa(c) {
+      const m = c.ultima_mensagem
+      if (!m) return ''
+      const quem = { agente: '🤖 ', humano: '👤 ' + m.autor.nome.split(' ')[0] + ': ', sistema: '⚙️ ', contato: '' }[m.autor.tipo]
+      return quem + (m.texto || (m.midia ? '📎 ' + m.midia : ''))
+    },
+    filtrarSugestoes() {
+      const t = this.texto
+      if (!t.startsWith('/') || t.includes(' ')) { this.sugestoes = []; return }
+      const q = t.slice(1).toLowerCase()
+      this.sugestoes = this.respostas.filter((r) => r.atalho.toLowerCase().startsWith(q)).slice(0, 8)
+    },
+    async enviar() {
+      if (!this.texto.trim() || this.enviando) return
+      this.enviando = true
+      const id = this.atual.conversa.id
+      try {
+        await tentar(() => api(`/api/conversas/${id}/${this.modoNota ? 'notas' : 'mensagens'}`, { method: 'POST', corpo: { texto: this.texto } }))
+        this.texto = ''
+        this.modoNota = false
+        await this.recarregarAtual()
+        this.rolar()
+      } finally { this.enviando = false }
+    },
+    async acao(nome) {
+      const id = this.atual.conversa.id
+      await tentar(() => api(`/api/conversas/${id}/${nome}`, { method: 'POST' }))
+      await this.recarregarAtual()
+      this.carregarLista()
+    },
+    async transferir(usuarioId) {
+      await tentar(() => api(`/api/conversas/${this.atual.conversa.id}/transferir`, { method: 'POST', corpo: { usuario_id: usuarioId } }), 'Conversa transferida')
+      this.modalTransferir = false
+      await this.recarregarAtual()
+    },
+    async salvarContato(dados) {
+      await tentar(() => api('/api/contatos/' + this.contato.contato.id, { method: 'PATCH', corpo: dados }), 'Contato salvo')
+      this.carregarLista()
+    },
+    temEtiqueta(id) { return this.contato.contato.etiquetas.some((e) => e.id === id) },
+    async alternarEtiqueta(id) {
+      const ids = this.contato.contato.etiquetas.map((e) => e.id)
+      const novos = ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]
+      const c = await tentar(() => api('/api/contatos/' + this.contato.contato.id, { method: 'PATCH', corpo: { etiqueta_ids: novos } }))
+      this.contato.contato = c
+      this.carregarLista()
+    },
+    async novaTarefa() {
+      const titulo = prompt('Título da tarefa (ex.: Ligar para confirmar coleta):')
+      if (!titulo) return
+      const quando = prompt('Vencimento (AAAA-MM-DD HH:MM), opcional:') || ''
+      const vencimento = quando ? new Date(quando.replace(' ', 'T')).toISOString() : null
+      await tentar(() => api('/api/tarefas', { method: 'POST', corpo: { titulo, vencimento, contato_id: this.contato.contato.id, conversa_id: this.atual.conversa.id } }), 'Tarefa criada')
+      this.carregarContato()
+    },
+    async concluirTarefa(t) {
+      await tentar(() => api('/api/tarefas/' + t.id, { method: 'PATCH', corpo: { concluida: !t.concluida } }))
+      this.carregarContato()
+    },
+    async novoNegocio() {
+      const titulo = prompt('Título do negócio (ex.: Plano Família):')
+      if (!titulo) return
+      const valor = parseFloat((prompt('Valor (R$):') || '0').replace(',', '.')) || 0
+      await tentar(() => api('/api/negocios', { method: 'POST', corpo: { titulo, valor, contato_id: this.contato.contato.id } }), 'Negócio criado')
+      this.carregarContato()
+    },
+  }
+}
+</script>
+{% endblock %}

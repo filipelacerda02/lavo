@@ -135,11 +135,12 @@ class Loja:
 
 
 class Ferramentas:
-    def __init__(self, cliente_id: str, loja: Loja | None = None, rag: Any | None = None) -> None:
+    def __init__(self, cliente_id: str | None, loja: Loja | None = None, rag: Any | None = None) -> None:
+        # cliente_id=None: contato ainda não identificado (ex.: número novo no WhatsApp).
         self.cliente_id = cliente_id
         self.loja = loja or Loja()
         self.rag = rag
-        if cliente_id not in self.loja.ler()["clientes"]:
+        if cliente_id is not None and cliente_id not in self.loja.ler()["clientes"]:
             raise ValueError(f"cliente desconhecido: {cliente_id}")
 
     definicoes = DEFINICOES
@@ -147,14 +148,24 @@ class Ferramentas:
     # ---------------------------------------------------------------- dados do cliente
     @property
     def cliente(self) -> dict[str, Any]:
+        if self.cliente_id is None:
+            raise ErroDeFerramenta(
+                "Cliente não identificado. Peça os dados de identificação ou transfira para um atendente."
+            )
         return self.loja.ler()["clientes"][self.cliente_id]
 
+    def nome_cliente(self, padrao: str = "não identificado") -> str:
+        return self.cliente["nome"] if self.cliente_id else padrao
+
     def dados_pessoais_permitidos(self) -> list[str]:
+        if self.cliente_id is None:
+            return []
         c = self.cliente
         return [c["email"], c["cpf"], c["telefone"]]
 
     def _pedido_do_cliente(self, dados: dict[str, Any], pedido_id: str) -> dict[str, Any]:
         pedido = dados["pedidos"].get(pedido_id.strip().upper())
+        self.cliente  # exige cliente identificado
         # Mesmo erro para "não existe" e "é de outro cliente": não revela nada.
         if not pedido or pedido["cliente_id"] != self.cliente_id:
             raise ErroDeFerramenta(f"Pedido {pedido_id} não encontrado para este cliente.")
@@ -193,6 +204,7 @@ class Ferramentas:
         return {"nome": c["nome"], **c["assinatura"]}
 
     def _t_listar_pedidos(self) -> Any:
+        self.cliente  # exige cliente identificado
         pedidos = [
             {"pedido_id": pid, **{k: v for k, v in p.items() if k != "cliente_id"}}
             for pid, p in self.loja.ler()["pedidos"].items()
@@ -219,6 +231,7 @@ class Ferramentas:
         return self.loja.alterar(alterar)
 
     def _t_agendar_coleta(self, data: str, periodo: str, servico: str, pecas_estimadas: int) -> Any:
+        self.cliente  # exige cliente identificado
         try:
             dia = date.fromisoformat(data)
         except ValueError as e:
@@ -244,6 +257,7 @@ class Ferramentas:
         return self.loja.alterar(alterar)
 
     def _t_alterar_plano(self, novo_plano: str, confirmado_pelo_cliente: bool) -> Any:
+        self.cliente  # exige cliente identificado
         if novo_plano not in PLANOS:
             raise ErroDeFerramenta(f"Plano inexistente. Opções: {', '.join(PLANOS)}.")
         if not confirmado_pelo_cliente:
@@ -262,6 +276,7 @@ class Ferramentas:
         return self.loja.alterar(alterar)
 
     def _t_encerrar_assinatura(self, motivo: str, confirmado_pelo_cliente: bool) -> Any:
+        self.cliente  # exige cliente identificado
         if not confirmado_pelo_cliente:
             raise ErroDeFerramenta(
                 "Ação irreversível: pergunte ao cliente se ele confirma o encerramento antes de chamar de novo."

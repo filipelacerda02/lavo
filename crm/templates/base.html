@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ titulo }} · Lavo CRM</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script>window.USUARIO = {{ {"id": usuario.id, "nome": usuario.nome, "papel": usuario.papel, "cor": usuario.cor} | tojson }}; window.SIMULADO = {{ simulado | tojson }};</script>
+  <script src="/static/app.js"></script>
+  <script defer src="/static/vendor/alpine-3.14.1.min.js"></script>
+</head>
+<body>
+<div class="app">
+  <nav class="lateral" x-data="{fila: 0}" x-init="
+      const f = async () => { try { fila = (await api('/api/conversas?filtro=fila&limite=1')).contagem.fila } catch(e) {} };
+      f(); window.addEventListener('lavo:conversa', f)">
+    <div class="marca"><span>🧺</span> Lavo CRM</div>
+    <a href="/" class="{{ 'ativo' if pagina == '' }}">📊 Painel</a>
+    <a href="/conversas" class="{{ 'ativo' if pagina == 'conversas' }}">💬 Conversas <b class="contador" x-show="fila > 0" x-text="fila" title="Aguardando atendente" x-cloak></b></a>
+    <a href="/contatos" class="{{ 'ativo' if pagina == 'contatos' }}">👥 Contatos</a>
+    <a href="/funil" class="{{ 'ativo' if pagina == 'funil' }}">🗂️ Funil</a>
+    <a href="/tarefas" class="{{ 'ativo' if pagina == 'tarefas' }}">✅ Tarefas</a>
+    <a href="/relatorios" class="{{ 'ativo' if pagina == 'relatorios' }}">📈 Relatórios</a>
+    <a href="/whatsapp" class="{{ 'ativo' if pagina == 'whatsapp' }}">📱 WhatsApp</a>
+    {% if usuario.papel != 'atendente' %}
+    <a href="/configuracoes" class="{{ 'ativo' if pagina == 'configuracoes' }}">⚙️ Configurações</a>
+    <a href="/auditoria" class="{{ 'ativo' if pagina == 'auditoria' }}">🧾 Auditoria</a>
+    {% endif %}
+    <div class="rodape">
+      <div class="linha"><span class="avatar" style="background: {{ usuario.cor }}">{{ usuario.nome[:1] | upper }}</span>
+        <div><div style="color:#fff">{{ usuario.nome }}</div><div class="fraco">{{ usuario.papel }}</div></div></div>
+      <button class="btn pequeno" style="margin-top:10px" onclick="sair()">Sair</button>
+    </div>
+  </nav>
+  <main class="principal">
+    <header class="topo" x-data="barraTopo()" x-init="iniciar()">
+      <h1>{{ titulo }}</h1>
+      <div class="espaco"></div>
+      <a href="{{ '/configuracoes' if usuario.papel != 'atendente' else '#' }}" class="selo" :class="agente && agente.ativo ? 'agente' : 'neutro'"
+         :title="agente ? agente.motivo + (agente.proxima_mudanca ? ' · muda em ' + fmt.dataHora(agente.proxima_mudanca) : '') : ''">
+        <span x-text="agente && agente.ativo ? '🤖 Agente ligado' : '🤖 Agente desligado'"></span>
+        <span class="fraco" x-show="agente && agente.modo === 'automatico'">(programado)</span>
+      </a>
+      <a href="/whatsapp" class="selo" :class="wpp && wpp.estado === 'conectado' ? 'ok' : 'fila'">
+        <span>📱</span><span x-text="wppTexto"></span><span x-show="wpp && wpp.simulado" class="fraco">· simulado</span>
+      </a>
+    </header>
+    {% block conteudo %}{% endblock %}
+  </main>
+</div>
+</body>
+</html>

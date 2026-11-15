@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<div class="conteudo" x-data="contatos()" x-init="iniciar()">
+  <div class="linha entre" style="margin-bottom:16px">
+    <div class="linha" style="flex:1; max-width:640px">
+      <input type="search" placeholder="Buscar nome, telefone, e-mail, empresa…" x-model.debounce.300ms="busca" @input="pagina = 1; carregar()" style="flex:2">
+      <select x-model="etiqueta" @change="pagina = 1; carregar()" style="flex:1">
+        <option value="">Todas as etiquetas</option>
+        <template x-for="e in etiquetas" :key="e.id"><option :value="e.id" x-text="e.nome"></option></template>
+      </select>
+    </div>
+    <div class="linha">
+      {% if usuario.papel != 'atendente' %}
+      <a class="btn" href="/api/contatos/exportar.csv">⬇️ Exportar CSV</a>
+      <label class="btn" style="flex-direction:row; font-size:14px; color:var(--texto)">⬆️ Importar CSV
+        <input type="file" accept=".csv" hidden @change="importar($event)"></label>
+      {% endif %}
+      <button class="btn primario" @click="editar(null)">+ Novo contato</button>
+    </div>
+  </div>
+  <div class="cartao tabela-rolagem" style="padding:0">
+    <table class="tabela">
+      <thead><tr><th>Nome</th><th>Telefone</th><th>E-mail</th><th>Etiquetas</th><th>Responsável</th><th>Última interação</th><th></th></tr></thead>
+      <tbody>
+        <template x-for="c in lista" :key="c.id">
+          <tr>
+            <td><b x-text="c.nome"></b><div class="fraco" x-text="c.empresa || ''"></div>
+              <span class="selo agente" x-show="c.cliente_externo_id" style="font-size:10px">cliente</span>
+              <span class="selo humano" x-show="c.agente_bloqueado" style="font-size:10px">só humanos</span></td>
+            <td x-text="fmt.telefone(c.telefone)"></td>
+            <td x-text="c.email || ''"></td>
+            <td><template x-for="e in c.etiquetas" :key="e.id"><span class="etiqueta" :style="'background:' + e.cor" x-text="e.nome" style="margin-right:3px"></span></template></td>
+            <td x-text="c.responsavel ? c.responsavel.nome : '—'"></td>
+            <td class="fraco" x-text="fmt.dataHora(c.ultima_interacao)"></td>
+            <td style="text-align:right; white-space:nowrap">
+              <button class="btn pequeno" @click="conversar(c)" :disabled="!c.telefone">💬</button>
+              <button class="btn pequeno" @click="editar(c)">Editar</button>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+    <div class="vazio" x-show="!lista.length">Nenhum contato.</div>
+  </div>
+  <div class="linha entre" style="margin-top:12px">
+    <span class="fraco" x-text="total + ' contatos'"></span>
+    <div class="linha">
+      <button class="btn pequeno" :disabled="pagina <= 1" @click="pagina--; carregar()">← Anterior</button>
+      <span class="fraco" x-text="'Página ' + pagina"></span>
+      <button class="btn pequeno" :disabled="pagina * 50 >= total" @click="pagina++; carregar()">Próxima →</button>
+    </div>
+  </div>
+
+  <div class="modal-fundo" x-show="form" x-cloak @click.self="form = null">
+    <form class="modal coluna" @submit.prevent="salvar()" x-show="form">
+      <h2 x-text="form && form.id ? 'Editar contato' : 'Novo contato'"></h2>
+      <template x-if="form">
+        <div class="coluna">
+          <label>Nome <input x-model="form.nome"></label>
+          <label>Telefone (com DDD) <input x-model="form.telefone" placeholder="11 98888-1111"></label>
+          <label>E-mail <input type="email" x-model="form.email"></label>
+          <label>Empresa <input x-model="form.empresa"></label>
+          <label>Responsável
+            <select x-model.number="form.responsavel_id"><option :value="null">—</option>
+              <template x-for="u in usuarios" :key="u.id"><option :value="u.id" x-text="u.nome"></option></template></select></label>
+          <label>Observações <textarea rows="3" x-model="form.observacoes"></textarea></label>
+          <div><div class="fraco" style="margin-bottom:4px">Etiquetas</div>
+            <div class="linha"><template x-for="e in etiquetas" :key="e.id">
+              <label class="check" style="font-size:13px"><input type="checkbox" :value="e.id" x-model.number="form.etiqueta_ids"> <span class="etiqueta" :style="'background:' + e.cor" x-text="e.nome"></span></label>
+            </template></div></div>
+          <label class="check"><input type="checkbox" x-model="form.agente_bloqueado"> Só humanos atendem (o agente não responde este contato)</label>
+        </div>
+      </template>
+      <div class="acoes">
+        {% if usuario.papel == 'admin' %}<button type="button" class="btn perigo" x-show="form && form.id" @click="excluir()">Excluir</button>{% endif %}
+        <span style="flex:1"></span>
+        <button type="button" class="btn" @click="form = null">Cancelar</button>
+        <button class="btn primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+function contatos() {
+  return {
+    lista: [], total: 0, pagina: 1, busca: '', etiqueta: '', etiquetas: [], usuarios: [], form: null,
+    async iniciar() {
+      ;[this.etiquetas, this.usuarios] = await Promise.all([api('/api/etiquetas'), api('/api/usuarios')])
+      this.carregar()
+      window.addEventListener('lavo:contato', () => this.carregar())
+    },
+    async carregar() {
+      const p = new URLSearchParams({ busca: this.busca, pagina: this.pagina })
+      if (this.etiqueta) p.set('etiqueta_id', this.etiqueta)
+      const r = await api('/api/contatos?' + p)
+      this.lista = r.contatos; this.total = r.total
+    },
+    editar(c) {
+      this.form = c ? { ...c, etiqueta_ids: c.etiquetas.map((e) => e.id) }
+        : { nome: '', telefone: '', email: '', empresa: '', observacoes: '', responsavel_id: null, etiqueta_ids: [], agente_bloqueado: false }
+    },
+    async salvar() {
+      const f = this.form
+      const corpo = { nome: f.nome, telefone: f.telefone, email: f.email || null, empresa: f.empresa || null, observacoes: f.observacoes || '',
+        responsavel_id: f.responsavel_id || null, etiqueta_ids: f.etiqueta_ids, agente_bloqueado: !!f.agente_bloqueado }
+      await tentar(() => f.id ? api('/api/contatos/' + f.id, { method: 'PATCH', corpo }) : api('/api/contatos', { method: 'POST', corpo }), 'Contato salvo')
+      this.form = null
+      this.carregar()
+    },
+    async excluir() {
+      if (!confirm('Excluir o contato e todas as conversas dele? Não dá para desfazer.')) return
+      await tentar(() => api('/api/contatos/' + this.form.id, { method: 'DELETE' }), 'Contato excluído')
+      this.form = null
+      this.carregar()
+    },
+    async conversar(c) {
+      const texto = prompt(`Mensagem para ${c.nome} pelo WhatsApp:`)
+      if (!texto) return
+      const r = await tentar(() => api(`/api/contatos/${c.id}/conversa`, { method: 'POST', corpo: { texto } }), 'Mensagem enviada')
+      location.href = '/conversas?c=' + r.conversa_id
+    },
+    async importar(ev) {
+      const arq = ev.target.files[0]
+      if (!arq) return
+      const fd = new FormData(); fd.append('arquivo', arq)
+      const r = await tentar(() => api('/api/contatos/importar', { method: 'POST', corpo: fd }))
+      avisar(`Importação: ${r.criados} criados, ${r.atualizados} atualizados, ${r.ignorados} ignorados`)
+      ev.target.value = ''
+      this.carregar()
+    },
+  }
+}
+</script>
+{% endblock %}

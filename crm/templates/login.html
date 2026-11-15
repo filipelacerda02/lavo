@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ 'Primeiro acesso' if modo == 'setup' else 'Entrar' }} · Lavo CRM</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/app.js"></script>
+  <script defer src="/static/vendor/alpine-3.14.1.min.js"></script>
+  <style>
+    body { display: grid; place-items: center; min-height: 100vh; padding: 16px; }
+    .caixa { width: min(400px, 100%); }
+  </style>
+</head>
+<body>
+<form class="cartao caixa coluna" style="gap:14px; padding:28px" x-data="{nome:'', email:'', senha:'', erro:'', enviando:false}"
+      @submit.prevent="enviando = true; erro = '';
+        api('{{ '/api/setup' if modo == 'setup' else '/api/login' }}', {method:'POST', corpo: {{ '{nome, email, senha}' if modo == 'setup' else '{email, senha}' }} })
+          .then(() => location.href = '/')
+          .catch(e => { erro = e.message; enviando = false })">
+  <div class="marca" style="color:var(--texto); padding:0"><span style="color:#fff">🧺</span> Lavo CRM</div>
+  {% if modo == 'setup' %}
+  <p class="muted" style="margin:0">Primeiro acesso: crie a conta do administrador.</p>
+  <label>Seu nome <input x-model="nome" required minlength="2" autocomplete="name"></label>
+  {% endif %}
+  <label>E-mail <input type="email" x-model="email" required autocomplete="username"></label>
+  <label>Senha <input type="password" x-model="senha" required {{ 'minlength=8' if modo == 'setup' }} autocomplete="{{ 'new-password' if modo == 'setup' else 'current-password' }}"></label>
+  <p class="selo perigo" x-show="erro" x-text="erro" x-cloak style="white-space:normal"></p>
+  <button class="btn primario" :disabled="enviando" style="justify-content:center">{{ 'Criar administrador' if modo == 'setup' else 'Entrar' }}</button>
+</form>
+</body>
+</html>

@@ -1,0 +1,8 @@
+.git
+.env
+.crm
+.vetores
+traces
+**/node_modules
+whatsapp-gateway/sessao
+__pycache__

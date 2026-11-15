@@ -103,21 +103,30 @@ class StreamSeguro:
 
 
 class Agente:
-    def __init__(self, cliente_id: str, llm: LLM | None = None, rag: RAG | None = None,
-                 ferramentas: Ferramentas | None = None, conversa: Conversa | None = None) -> None:
+    def __init__(self, cliente_id: str | None, llm: LLM | None = None, rag: RAG | None = None,
+                 ferramentas: Ferramentas | None = None, conversa: Conversa | None = None,
+                 system: str = SYSTEM, nome_contato: str | None = None,
+                 dados_permitidos: list[str] | None = None) -> None:
+        self.system = system  # canais (ex.: WhatsApp) podem acrescentar regras, sempre fixas
+        self.nome_contato = nome_contato
+        self.dados_permitidos = dados_permitidos or []
         self.llm = llm or LLM()
         self.rag = rag if rag is not None else RAG()
         self.ferramentas = ferramentas or Ferramentas(cliente_id, rag=self.rag)
         self.conversa = conversa or Conversa(cliente_id=cliente_id)
 
-    def responder(self, pergunta: str, ao_receber_texto: Callable[[str], None] | None = None) -> RespostaAgente:
+    def responder(self, pergunta: str, ao_receber_texto: Callable[[str], None] | None = None,
+                  contexto_extra: str | None = None) -> RespostaAgente:
+        """``contexto_extra``: o que aconteceu fora do agente desde a última resposta
+        (ex.: mensagens trocadas com um atendente humano)."""
         with novo_trace("agente.responder", pergunta=pergunta, cliente_id=self.conversa.cliente_id,
                         conversa_id=self.conversa.id) as trace:
-            resposta = self._responder(pergunta, ao_receber_texto, trace.id)
+            resposta = self._responder(pergunta, ao_receber_texto, trace.id, contexto_extra)
             resposta.custo_usd = round(trace.custo_total, 6)
             return resposta
 
-    def _responder(self, pergunta: str, ao_receber_texto: Callable[[str], None] | None, trace_id: str) -> RespostaAgente:
+    def _responder(self, pergunta: str, ao_receber_texto: Callable[[str], None] | None, trace_id: str,
+                   contexto_extra: str | None = None) -> RespostaAgente:
         # 1) Guardrail de entrada
         v = verificar_entrada(pergunta, self.llm)
         if v.bloqueado:
@@ -132,23 +141,28 @@ class Agente:
         # 3) RAG: trechos relevantes vão junto com a pergunta (dados variáveis ficam
         #    no fim do prompt, depois do prefixo em cache)
         trechos = self.rag.buscar(pergunta) if self.rag else []
-        cliente = self.ferramentas.cliente
-        self.conversa.adicionar_usuario([
+        nome = self.ferramentas.nome_cliente(self.nome_contato or "não identificado")
+        blocos = [
             {"type": "text", "text": formatar_contexto(trechos)},
             {"type": "text", "text": f"<contexto>Data de hoje: {date.today().isoformat()}. "
-                                     f"Cliente logado: {cliente['nome']}.</contexto>"},
-            {"type": "text", "text": pergunta},
-        ])
+                                     f"Cliente: {nome}"
+                                     + ("" if self.ferramentas.cliente_id else " (ainda não identificado no cadastro)")
+                                     + ".</contexto>"},
+        ]
+        if contexto_extra:
+            blocos.append({"type": "text", "text": f"<ocorrido_fora_do_assistente>\n{contexto_extra}\n</ocorrido_fora_do_assistente>"})
+        blocos.append({"type": "text", "text": pergunta})
+        self.conversa.adicionar_usuario(blocos)
 
         # 4) Loop do agente
-        stream = StreamSeguro(ao_receber_texto, self.ferramentas.dados_pessoais_permitidos())
+        stream = StreamSeguro(ao_receber_texto, self.ferramentas.dados_pessoais_permitidos() + self.dados_permitidos)
         usadas: list[str] = []
         modelo = None
         passos = 0
         for passos in range(1, config.max_passos_agente + 1):
             with span(f"agente.passo_{passos}", "agente"):
                 r = self.llm.conversar(
-                    system=SYSTEM,
+                    system=self.system,
                     mensagens=self.conversa.mensagens,
                     ferramentas=self.ferramentas.definicoes,
                     ao_receber_texto=stream.receber,

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<div class="conteudo" x-data="funil()" x-init="iniciar()">
+  <div class="linha entre" style="margin-bottom:12px">
+    <div class="linha">
+      <label class="check"><input type="checkbox" x-model="mostrarFechados"> Mostrar ganhos/perdidos</label>
+      <span class="fraco" x-text="'Em aberto: ' + fmt.dinheiro(totalAberto())"></span>
+    </div>
+    <button class="btn primario" @click="editar(null)">+ Novo negócio</button>
+  </div>
+  <div class="kanban">
+    <template x-for="e in etapas" :key="e.id">
+      <div class="kanban-coluna" :class="alvo === e.id ? 'alvo' : ''"
+           @dragover.prevent="alvo = e.id" @dragleave="alvo = null" @drop.prevent="soltar(e.id)">
+        <header><span class="ponto" :style="'background:' + e.cor"></span><span x-text="e.nome"></span>
+          <span class="fraco" style="margin-left:auto" x-text="doEtapa(e.id).length + ' · ' + fmt.dinheiro(doEtapa(e.id).reduce((s, n) => s + n.valor, 0))"></span></header>
+        <div class="cartoes">
+          <template x-for="n in doEtapa(e.id)" :key="n.id">
+            <div class="negocio" :class="n.status" draggable="true" @dragstart="arrastando = n.id" @click="editar(n)">
+              <div style="font-weight:600" x-text="n.titulo"></div>
+              <div class="fraco" x-text="n.contato_nome || 'sem contato'"></div>
+              <div class="linha entre" style="margin-top:6px">
+                <b x-text="fmt.dinheiro(n.valor)"></b>
+                <span class="avatar" x-show="n.responsavel" :style="'background:' + (n.responsavel ? n.responsavel.cor : '')" :title="n.responsavel ? n.responsavel.nome : ''" x-text="n.responsavel ? fmt.iniciais(n.responsavel.nome) : ''"></span>
+              </div>
+              <span class="selo ok" x-show="n.status === 'ganho'">ganho</span><span class="selo perigo" x-show="n.status === 'perdido'">perdido</span>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <div class="modal-fundo" x-show="form" x-cloak @click.self="form = null">
+    <form class="modal coluna" @submit.prevent="salvar()" x-show="form">
+      <h2 x-text="form && form.id ? 'Editar negócio' : 'Novo negócio'"></h2>
+      <template x-if="form">
+        <div class="coluna">
+          <label>Título <input x-model="form.titulo" required></label>
+          <label>Contato
+            <input list="lista-contatos" x-model="form.contato_busca" @input.debounce.300ms="buscarContatos()" placeholder="Digite para buscar">
+            <datalist id="lista-contatos"><template x-for="c in contatosEncontrados" :key="c.id"><option :value="c.nome + ' #' + c.id"></option></template></datalist></label>
+          <div class="linha">
+            <label style="flex:1">Valor (R$) <input type="number" step="0.01" x-model.number="form.valor"></label>
+            <label style="flex:1">Previsão <input type="date" x-model="form.previsao_fechamento"></label>
+          </div>
+          <div class="linha">
+            <label style="flex:1">Etapa <select x-model.number="form.etapa_id"><template x-for="e in etapas" :key="e.id"><option :value="e.id" x-text="e.nome"></option></template></select></label>
+            <label style="flex:1">Responsável <select x-model.number="form.responsavel_id"><template x-for="u in usuarios" :key="u.id"><option :value="u.id" x-text="u.nome"></option></template></select></label>
+          </div>
+          <label>Status <select x-model="form.status"><option value="aberto">Aberto</option><option value="ganho">Ganho</option><option value="perdido">Perdido</option></select></label>
+          <label>Observações <textarea rows="3" x-model="form.observacoes"></textarea></label>
+        </div>
+      </template>
+      <div class="acoes">
+        <button type="button" class="btn perigo" x-show="form && form.id" @click="excluir()">Excluir</button>
+        <span style="flex:1"></span>
+        <button type="button" class="btn" @click="form = null">Cancelar</button>
+        <button class="btn primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+function funil() {
+  return {
+    etapas: [], negocios: [], usuarios: [], form: null, arrastando: null, alvo: null, mostrarFechados: false, contatosEncontrados: [],
+    async iniciar() {
+      this.usuarios = await api('/api/usuarios')
+      await this.carregar()
+      window.addEventListener('lavo:funil', () => this.carregar())
+    },
+    async carregar() { const r = await api('/api/funil'); this.etapas = r.etapas; this.negocios = r.negocios },
+    doEtapa(id) { return this.negocios.filter((n) => n.etapa_id === id && (this.mostrarFechados || n.status === 'aberto')) },
+    totalAberto() { return this.negocios.filter((n) => n.status === 'aberto').reduce((s, n) => s + n.valor, 0) },
+    async soltar(etapaId) {
+      this.alvo = null
+      const n = this.negocios.find((x) => x.id === this.arrastando)
+      if (!n || n.etapa_id === etapaId) return
+      n.etapa_id = etapaId
+      await tentar(() => api('/api/negocios/' + n.id, { method: 'PATCH', corpo: { etapa_id: etapaId } }))
+    },
+    editar(n) {
+      this.form = n ? { ...n, contato_busca: n.contato_nome ? `${n.contato_nome} #${n.contato_id}` : '' }
+        : { titulo: '', valor: 0, etapa_id: this.etapas[0] && this.etapas[0].id, responsavel_id: USUARIO.id, status: 'aberto', observacoes: '', previsao_fechamento: '', contato_busca: '' }
+    },
+    async buscarContatos() {
+      const q = (this.form.contato_busca || '').replace(/#\d+$/, '').trim()
+      if (q.length < 2) return
+      this.contatosEncontrados = (await api('/api/contatos?busca=' + encodeURIComponent(q))).contatos.slice(0, 10)
+    },
+    async salvar() {
+      const f = this.form
+      const m = (f.contato_busca || '').match(/#(\d+)$/)
+      const corpo = { titulo: f.titulo, valor: f.valor || 0, etapa_id: f.etapa_id, responsavel_id: f.responsavel_id, status: f.status,
+        observacoes: f.observacoes || '', previsao_fechamento: f.previsao_fechamento || null, contato_id: m ? Number(m[1]) : (f.contato_busca ? f.contato_id : null) }
+      await tentar(() => f.id ? api('/api/negocios/' + f.id, { method: 'PATCH', corpo }) : api('/api/negocios', { method: 'POST', corpo }), 'Negócio salvo')
+      this.form = null
+      this.carregar()
+    },
+    async excluir() {
+      if (!confirm('Excluir este negócio?')) return
+      await tentar(() => api('/api/negocios/' + this.form.id, { method: 'DELETE' }), 'Negócio excluído')
+      this.form = null
+      this.carregar()
+    },
+  }
+}
+</script>
+{% endblock %}

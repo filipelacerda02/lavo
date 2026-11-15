@@ -7,3 +7,6 @@ __pycache__/
 traces/
 evals/resultados/
 .venv/
+.crm/
+whatsapp-gateway/node_modules/
+whatsapp-gateway/sessao/

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<div class="conteudo" x-data="{lista: [], acao: '', async carregar() { this.lista = await api('/api/auditoria?acao=' + encodeURIComponent(this.acao)) }}" x-init="carregar()">
+  <div class="linha" style="margin-bottom:12px; max-width:420px">
+    <input type="search" placeholder="Filtrar ação (ex.: assumida, agente, login)…" x-model.debounce.300ms="acao" @input="carregar()">
+  </div>
+  <div class="cartao tabela-rolagem" style="padding:0">
+    <table class="tabela">
+      <thead><tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Alvo</th><th>Detalhes</th></tr></thead>
+      <tbody><template x-for="a in lista" :key="a.id">
+        <tr><td class="fraco" x-text="fmt.dataHora(a.criado_em)"></td>
+          <td><span class="selo" :class="a.usuario === 'Sistema' ? 'agente' : 'humano'" x-text="(a.usuario === 'Sistema' ? '⚙️ ' : '👤 ') + a.usuario"></span></td>
+          <td x-text="a.acao"></td>
+          <td class="fraco" x-text="a.entidade ? a.entidade + ' #' + a.entidade_id : ''"></td>
+          <td class="fraco" style="max-width:360px; overflow-wrap:anywhere" x-text="a.detalhes ? JSON.stringify(a.detalhes) : ''"></td></tr>
+      </template></tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

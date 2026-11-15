@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<div class="conteudo" x-data="telaWpp()" x-init="iniciar()">
+  <div class="grade grade-2">
+    <div class="cartao coluna" style="gap:14px; align-items:center; text-align:center">
+      <h2 style="align-self:flex-start">Conexão do WhatsApp</h2>
+      <template x-if="s && s.estado === 'conectado'">
+        <div class="coluna" style="align-items:center">
+          <div style="font-size:56px">✅</div>
+          <div><b>Conectado</b> <span x-show="s.simulado" class="selo fila">modo simulado</span></div>
+          <div class="muted" x-text="(s.nome || '') + ' · ' + fmt.telefone(s.numero || '')"></div>
+          {% if usuario.papel != 'atendente' %}
+          <button class="btn perigo" x-show="!s.simulado" @click="desconectar()">Desconectar este número</button>
+          {% endif %}
+        </div>
+      </template>
+      <template x-if="s && s.estado === 'aguardando_qr' && s.qr">
+        <div class="coluna" style="align-items:center">
+          <img :src="s.qr" alt="QR code do WhatsApp" width="280" height="280" style="border-radius:12px; background:#fff; padding:8px">
+          <ol class="muted" style="text-align:left; margin:0; padding-left:18px">
+            <li>Abra o WhatsApp no celular da empresa</li>
+            <li>Toque em <b>Mais opções ⋮</b> ou <b>Configurações</b> › <b>Dispositivos conectados</b></li>
+            <li>Toque em <b>Conectar um dispositivo</b> e aponte para este código</li>
+          </ol>
+          <div class="fraco">O código se renova sozinho a cada ~20 segundos.</div>
+        </div>
+      </template>
+      <template x-if="s && ['desconectado', 'gateway_offline', 'desconhecido'].includes(s.estado)">
+        <div class="coluna" style="align-items:center">
+          <div style="font-size:56px">📱</div>
+          <div><b x-text="s.estado === 'gateway_offline' ? 'Gateway do WhatsApp fora do ar' : 'WhatsApp desconectado'"></b></div>
+          <div class="fraco" x-text="s.erro || ''"></div>
+          {% if usuario.papel != 'atendente' %}
+          <button class="btn primario" @click="conectar()" x-show="s.estado !== 'gateway_offline'">Gerar QR code</button>
+          {% endif %}
+          <div class="fraco" x-show="s.estado === 'gateway_offline'">Inicie o serviço em <code>whatsapp-gateway/</code> (veja o README).</div>
+        </div>
+      </template>
+      <template x-if="s && s.estado === 'conectando'">
+        <div class="coluna" style="align-items:center"><div style="font-size:56px">⏳</div><b>Conectando…</b><div class="fraco" x-text="s.erro || ''"></div></div>
+      </template>
+    </div>
+
+    <div class="cartao coluna">
+      <h2>WhatsApp dentro do sistema</h2>
+      <p class="muted" style="margin:0">Todas as conversas deste número aparecem em <a href="/conversas">Conversas</a>, em tempo real. Lá você vê quem respondeu cada mensagem: o 🤖 agente de IA, um 👤 colaborador (pelo login) ou o 📱 celular da empresa.</p>
+      <p class="fraco" style="margin:0">Grupos e status são ignorados. Mensagens de áudio, imagem e documento aparecem como anexo (o agente pede para o cliente escrever).</p>
+      <template x-if="s && s.simulado">
+        <div class="coluna" style="border-top:1px solid var(--borda); padding-top:12px">
+          <h2>Simulador (modo simulado)</h2>
+          <p class="fraco" style="margin:0">Sem gateway configurado, nada sai para o WhatsApp. Use isto para testar como se um cliente tivesse mandado mensagem.</p>
+          <label>Telefone do cliente <input x-model="sim.telefone" placeholder="5511988881111"></label>
+          <label>Nome (como aparece no WhatsApp) <input x-model="sim.nome" placeholder="Ana Souza"></label>
+          <label>Mensagem <textarea rows="2" x-model="sim.texto" placeholder="Oi, quero cancelar meu pedido"></textarea></label>
+          {% if usuario.papel != 'atendente' %}
+          <button class="btn primario" style="align-self:flex-start" @click="simular()" :disabled="!sim.telefone || !sim.texto">Receber mensagem</button>
+          {% else %}<div class="fraco">Somente supervisores e administradores usam o simulador.</div>{% endif %}
+        </div>
+      </template>
+    </div>
+  </div>
+</div>
+<script>
+function telaWpp() {
+  return {
+    s: null, sim: { telefone: '5511988881111', nome: 'Ana Souza', texto: '' },
+    async iniciar() {
+      this.s = await api('/api/whatsapp/status')
+      window.addEventListener('lavo:whatsapp', (e) => (this.s = e.detail))
+      setInterval(async () => { if (this.s && this.s.estado !== 'conectado') this.s = await api('/api/whatsapp/status') }, 5000)
+    },
+    async conectar() { this.s = await tentar(() => api('/api/whatsapp/conectar', { method: 'POST' })) },
+    async desconectar() {
+      if (!confirm('Desconectar o WhatsApp? O agente e a equipe param de receber mensagens até conectar de novo.')) return
+      this.s = await tentar(() => api('/api/whatsapp/desconectar', { method: 'POST' }), 'Desconectado')
+    },
+    async simular() {
+      const r = await tentar(() => api('/api/whatsapp/simular', { method: 'POST', corpo: this.sim }), 'Mensagem recebida')
+      this.sim.texto = ''
+      if (r.conversa_id && confirm('Abrir a conversa?')) location.href = '/conversas?c=' + r.conversa_id
+    },
+  }
+}
+</script>
+{% endblock %}

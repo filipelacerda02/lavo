@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<div class="conteudo" x-data="configuracoes()" x-init="iniciar()">
+  <div class="abas">
+    <button :class="aba === 'agente' ? 'ativo' : ''" @click="aba = 'agente'">🤖 Agente e horários</button>
+    {% if usuario.papel == 'admin' %}<button :class="aba === 'usuarios' ? 'ativo' : ''" @click="aba = 'usuarios'">👥 Colaboradores</button>{% endif %}
+    <button :class="aba === 'respostas' ? 'ativo' : ''" @click="aba = 'respostas'">⚡ Respostas rápidas</button>
+    <button :class="aba === 'etiquetas' ? 'ativo' : ''" @click="aba = 'etiquetas'">🏷️ Etiquetas</button>
+    <button :class="aba === 'funil' ? 'ativo' : ''" @click="aba = 'funil'">🗂️ Etapas do funil</button>
+  </div>
+
+  <!-- ================= agente ================= -->
+  <div x-show="aba === 'agente'" class="grade grade-2" x-cloak>
+    <template x-if="ag">
+      <div class="cartao coluna" style="gap:14px">
+        <h2>Ativação do agente</h2>
+        <div class="linha">
+          <span class="selo" :class="ag.estado.ativo ? 'agente' : 'neutro'" x-text="ag.estado.ativo ? '🤖 Ligado agora' : '🤖 Desligado agora'"></span>
+          <span class="muted" x-text="ag.estado.motivo"></span>
+        </div>
+        <div class="fraco" x-show="ag.estado.proxima_mudanca" x-text="'Próxima mudança automática: ' + fmt.dataHora(ag.estado.proxima_mudanca)"></div>
+        <div class="coluna">
+          <label class="check"><input type="radio" value="automatico" x-model="ag.config.agente_modo"> <b>Programado</b> — segue a grade semanal e as exceções</label>
+          <label class="check"><input type="radio" value="ligado" x-model="ag.config.agente_modo"> <b>Sempre ligado</b></label>
+          <label class="check"><input type="radio" value="desligado" x-model="ag.config.agente_modo"> <b>Desligado</b> — só humanos atendem</label>
+        </div>
+        <label>Nome do agente (aparece para a equipe) <input x-model="ag.config.agente_nome"></label>
+        <label>Fuso horário <input x-model="ag.config.fuso_horario" placeholder="America/Sao_Paulo"></label>
+        <label>Esperar antes de responder (segundos) — junta mensagens enviadas em sequência
+          <input type="number" min="0" max="60" x-model.number="ag.config.espera_agrupar_s"></label>
+        <label>Devolver ao agente conversas humanas paradas há (minutos, 0 = nunca)
+          <input type="number" min="0" x-model.number="ag.config.devolver_ao_agente_min"></label>
+        <label>Mensagem automática quando o agente está desligado (vazio = não enviar)
+          <textarea rows="3" x-model="ag.config.mensagem_fora_horario"></textarea></label>
+        <label>Mensagem extra quando o agente transfere para humano (opcional)
+          <textarea rows="2" x-model="ag.config.mensagem_transferencia"></textarea></label>
+        <div class="fraco">Quando a programação desliga o agente, as conversas dele vão para a fila da equipe. Quando liga, ele assume a fila que chegou com ele desligado e que ninguém pegou.</div>
+        <button class="btn primario" style="align-self:flex-start" @click="salvarConfig()">Salvar</button>
+      </div>
+    </template>
+
+    <template x-if="ag">
+      <div class="coluna" style="gap:16px">
+        <div class="cartao coluna" :style="ag.config.agente_modo !== 'automatico' ? 'opacity:.55' : ''">
+          <div class="linha entre"><h2 style="margin:0">Grade semanal (agente LIGADO nestes horários)</h2></div>
+          <div class="linha">
+            <button class="btn pequeno" @click="preset('24h')">24 horas</button>
+            <button class="btn pequeno" @click="preset('fora')">Só fora do expediente</button>
+            <button class="btn pequeno" @click="preset('comercial')">Só no expediente</button>
+          </div>
+          <div class="fraco">Expediente considerado: seg a sex, 9h às 18h. Horário que vira a meia-noite (ex.: 18:00 → 08:59) é aceito.</div>
+          <template x-for="(nome, dia) in ag.dias" :key="dia">
+            <div class="linha" style="align-items:flex-start; border-bottom:1px solid var(--borda); padding:6px 0">
+              <b style="width:72px; padding-top:6px" x-text="nome"></b>
+              <div class="coluna" style="flex:1; gap:4px">
+                <template x-for="(h, i) in horarios.filter(x => x.dia_semana === dia)" :key="dia + '-' + i">
+                  <div class="linha">
+                    <input type="time" x-model="h.inicio" style="width:120px"> <span>até</span> <input type="time" x-model="h.fim" style="width:120px">
+                    <button class="btn pequeno perigo" @click="horarios.splice(horarios.indexOf(h), 1)">✕</button>
+                  </div>
+                </template>
+                <div class="fraco" x-show="!horarios.some(x => x.dia_semana === dia)">desligado o dia todo</div>
+              </div>
+              <button class="btn pequeno" @click="horarios.push({dia_semana: dia, inicio: '09:00', fim: '18:00'})">+ faixa</button>
+            </div>
+          </template>
+          <button class="btn primario" style="align-self:flex-start" @click="salvarHorarios()">Salvar grade</button>
+        </div>
+
+        <div class="cartao coluna">
+          <h2>Exceções programadas</h2>
+          <div class="fraco">Valem por cima da grade: feriados, campanhas, treinamento da equipe, manutenção…</div>
+          <template x-for="x in ag.excecoes" :key="x.id">
+            <div class="linha entre" style="border-bottom:1px solid var(--borda); padding:6px 0">
+              <span><span class="selo" :class="x.agente_ativo ? 'agente' : 'neutro'" x-text="x.agente_ativo ? 'liga' : 'desliga'"></span>
+                <b x-text="x.descricao"></b><br><span class="fraco" x-text="fmt.dataHora(x.inicio) + ' → ' + fmt.dataHora(x.fim)"></span></span>
+              <button class="btn pequeno perigo" @click="excluirExcecao(x.id)">Excluir</button>
+            </div>
+          </template>
+          <div class="coluna" style="border-top:1px solid var(--borda); padding-top:10px">
+            <label>Descrição <input x-model="nova.descricao" placeholder="Feriado de Natal"></label>
+            <div class="linha">
+              <label style="flex:1">Início <input type="datetime-local" x-model="nova.inicio"></label>
+              <label style="flex:1">Fim <input type="datetime-local" x-model="nova.fim"></label>
+            </div>
+            <label>Durante este período o agente fica
+              <select x-model="nova.agente_ativo"><option value="nao">Desligado (só humanos)</option><option value="sim">Ligado</option></select></label>
+            <button class="btn" style="align-self:flex-start" @click="criarExcecao()" :disabled="!nova.descricao || !nova.inicio || !nova.fim">+ Adicionar exceção</button>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- ================= usuários ================= -->
+  {% if usuario.papel == 'admin' %}
+  <div x-show="aba === 'usuarios'" class="grade grade-2" x-cloak>
+    <div class="cartao tabela-rolagem">
+      <h2>Colaboradores</h2>
+      <p class="fraco">Cada mensagem enviada pela plataforma fica registrada com o nome de quem estava logado.</p>
+      <table class="tabela">
+        <thead><tr><th>Nome</th><th>Papel</th><th>Status</th><th></th></tr></thead>
+        <tbody><template x-for="u in usuarios" :key="u.id">
+          <tr>
+            <td><div class="linha"><span class="avatar" :style="'background:' + u.cor" x-text="fmt.iniciais(u.nome)"></span>
+              <span><b x-text="u.nome"></b><br><span class="fraco" x-text="u.email"></span></span></div></td>
+            <td><select :value="u.papel" @change="editarUsuario(u, {papel: $event.target.value})">
+              <option value="atendente">Atendente</option><option value="supervisor">Supervisor</option><option value="admin">Administrador</option></select></td>
+            <td><span class="selo" :class="u.ativo ? 'ok' : 'neutro'" x-text="u.ativo ? 'ativo' : 'inativo'"></span></td>
+            <td style="white-space:nowrap">
+              <button class="btn pequeno" @click="editarUsuario(u, {ativo: !u.ativo})" x-text="u.ativo ? 'Desativar' : 'Ativar'"></button>
+              <button class="btn pequeno" @click="redefinirSenha(u)">Senha</button>
+            </td>
+          </tr>
+        </template></tbody>
+      </table>
+    </div>
+    <form class="cartao coluna" @submit.prevent="criarUsuario()">
+      <h2>Novo colaborador</h2>
+      <label>Nome <input x-model="novoUsuario.nome" required></label>
+      <label>E-mail (login) <input type="email" x-model="novoUsuario.email" required></label>
+      <label>Senha inicial (mín. 8) <input type="password" x-model="novoUsuario.senha" required minlength="8" autocomplete="new-password"></label>
+      <div class="linha">
+        <label style="flex:1">Papel <select x-model="novoUsuario.papel"><option value="atendente">Atendente</option><option value="supervisor">Supervisor</option><option value="admin">Administrador</option></select></label>
+        <label>Cor <input type="color" x-model="novoUsuario.cor" style="width:60px; padding:2px"></label>
+      </div>
+      <div class="fraco">Atendente: conversas, contatos, funil e tarefas. Supervisor: + configurações do agente, importação e auditoria. Administrador: + colaboradores.</div>
+      <button class="btn primario" style="align-self:flex-start">Criar</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- ================= respostas rápidas ================= -->
+  <div x-show="aba === 'respostas'" class="grade grade-2" x-cloak>
+    <div class="cartao">
+      <h2>Respostas rápidas</h2>
+      <p class="fraco">Na conversa, digite <b>/</b> + atalho.</p>
+      <template x-for="r in respostas" :key="r.id">
+        <div class="linha entre" style="border-bottom:1px solid var(--borda); padding:8px 0; flex-wrap:nowrap">
+          <span><b x-text="'/' + r.atalho"></b><br><span class="muted" x-text="r.texto"></span></span>
+          <button class="btn pequeno perigo" @click="apagar('/api/respostas-rapidas/' + r.id)">Excluir</button>
+        </div>
+      </template>
+    </div>
+    <form class="cartao coluna" @submit.prevent="criar('/api/respostas-rapidas', novaResposta, () => novaResposta = {atalho:'', texto:''})">
+      <h2>Nova resposta</h2>
+      <label>Atalho (sem espaços) <input x-model="novaResposta.atalho" required pattern="[A-Za-z0-9_-]+"></label>
+      <label>Texto <textarea rows="4" x-model="novaResposta.texto" required></textarea></label>
+      <button class="btn primario" style="align-self:flex-start">Adicionar</button>
+    </form>
+  </div>
+
+  <!-- ================= etiquetas ================= -->
+  <div x-show="aba === 'etiquetas'" class="grade grade-2" x-cloak>
+    <div class="cartao">
+      <h2>Etiquetas</h2>
+      <template x-for="e in etiquetas" :key="e.id">
+        <div class="linha entre" style="border-bottom:1px solid var(--borda); padding:8px 0">
+          <span class="etiqueta" :style="'background:' + e.cor" x-text="e.nome"></span>
+          <button class="btn pequeno perigo" @click="apagar('/api/etiquetas/' + e.id)">Excluir</button>
+        </div>
+      </template>
+    </div>
+    <form class="cartao coluna" @submit.prevent="criar('/api/etiquetas', novaEtiqueta, () => novaEtiqueta = {nome:'', cor:'#6250d6'})">
+      <h2>Nova etiqueta</h2>
+      <div class="linha"><label style="flex:1">Nome <input x-model="novaEtiqueta.nome" required></label>
+        <label>Cor <input type="color" x-model="novaEtiqueta.cor" style="width:60px; padding:2px"></label></div>
+      <button class="btn primario" style="align-self:flex-start">Adicionar</button>
+    </form>
+  </div>
+
+  <!-- ================= funil ================= -->
+  <div x-show="aba === 'funil'" class="grade grade-2" x-cloak>
+    <div class="cartao">
+      <h2>Etapas do funil</h2>
+      <template x-for="e in etapas" :key="e.id">
+        <div class="linha" style="border-bottom:1px solid var(--borda); padding:8px 0">
+          <input type="color" x-model="e.cor" style="width:44px; padding:2px" @change="salvarEtapa(e)">
+          <input x-model="e.nome" @change="salvarEtapa(e)" style="flex:1">
+          <input type="number" x-model.number="e.ordem" @change="salvarEtapa(e)" style="width:70px" title="ordem">
+          <button class="btn pequeno perigo" @click="apagar('/api/funil/etapas/' + e.id)">✕</button>
+        </div>
+      </template>
+    </div>
+    <form class="cartao coluna" @submit.prevent="criar('/api/funil/etapas', novaEtapa, () => novaEtapa = {nome:'', cor:'#2a78d6'})">
+      <h2>Nova etapa</h2>
+      <div class="linha"><label style="flex:1">Nome <input x-model="novaEtapa.nome" required></label>
+        <label>Cor <input type="color" x-model="novaEtapa.cor" style="width:60px; padding:2px"></label></div>
+      <button class="btn primario" style="align-self:flex-start">Adicionar</button>
+    </form>
+  </div>
+</div>
+
+<script>
+function configuracoes() {
+  return {
+    aba: 'agente', ag: null, horarios: [], usuarios: [], respostas: [], etiquetas: [], etapas: [],
+    nova: { descricao: '', inicio: '', fim: '', agente_ativo: 'nao' },
+    novoUsuario: { nome: '', email: '', senha: '', papel: 'atendente', cor: '#eb6834' },
+    novaResposta: { atalho: '', texto: '' }, novaEtiqueta: { nome: '', cor: '#6250d6' }, novaEtapa: { nome: '', cor: '#2a78d6' },
+    async iniciar() { await this.carregar() },
+    async carregar() {
+      const pedidos = [api('/api/agente/config'), api('/api/respostas-rapidas'), api('/api/etiquetas'), api('/api/funil')]
+      if (USUARIO.papel === 'admin') pedidos.push(api('/api/usuarios'))
+      const [ag, respostas, etiquetas, funil, usuarios] = await Promise.all(pedidos)
+      this.ag = ag; this.horarios = ag.horarios.map((h) => ({ ...h })); this.respostas = respostas
+      this.etiquetas = etiquetas; this.etapas = funil.etapas; this.usuarios = usuarios || []
+    },
+    async salvarConfig() {
+      const c = this.ag.config
+      await tentar(() => api('/api/agente/config', { method: 'PUT', corpo: {
+        agente_modo: c.agente_modo, agente_nome: c.agente_nome, fuso_horario: c.fuso_horario, espera_agrupar_s: c.espera_agrupar_s,
+        devolver_ao_agente_min: c.devolver_ao_agente_min, mensagem_fora_horario: c.mensagem_fora_horario || '',
+        mensagem_transferencia: c.mensagem_transferencia || '' } }), 'Configuração salva')
+      this.carregar()
+    },
+    preset(tipo) {
+      const h = []
+      for (let d = 0; d < 7; d++) {
+        const util = d < 5
+        if (tipo === '24h') h.push({ dia_semana: d, inicio: '00:00', fim: '23:59' })
+        if (tipo === 'comercial' && util) h.push({ dia_semana: d, inicio: '09:00', fim: '17:59' })
+        if (tipo === 'fora') {
+          if (util) { h.push({ dia_semana: d, inicio: '00:00', fim: '08:59' }); h.push({ dia_semana: d, inicio: '18:00', fim: '23:59' }) }
+          else h.push({ dia_semana: d, inicio: '00:00', fim: '23:59' })
+        }
+      }
+      this.horarios = h
+      avisar('Grade preenchida. Clique em "Salvar grade" para aplicar.')
+    },
+    async salvarHorarios() {
+      await tentar(() => api('/api/agente/horarios', { method: 'PUT', corpo: this.horarios.map(({ dia_semana, inicio, fim }) => ({ dia_semana, inicio, fim })) }), 'Grade salva')
+      this.carregar()
+    },
+    async criarExcecao() {
+      await tentar(() => api('/api/agente/excecoes', { method: 'POST', corpo: { ...this.nova, agente_ativo: this.nova.agente_ativo === 'sim' } }), 'Exceção criada')
+      this.nova = { descricao: '', inicio: '', fim: '', agente_ativo: 'nao' }
+      this.carregar()
+    },
+    async excluirExcecao(id) { await tentar(() => api('/api/agente/excecoes/' + id, { method: 'DELETE' })); this.carregar() },
+    async criarUsuario() {
+      await tentar(() => api('/api/usuarios', { method: 'POST', corpo: this.novoUsuario }), 'Colaborador criado')
+      this.novoUsuario = { nome: '', email: '', senha: '', papel: 'atendente', cor: '#eb6834' }
+      this.carregar()
+    },
+    async editarUsuario(u, dados) {
+      try { await tentar(() => api('/api/usuarios/' + u.id, { method: 'PATCH', corpo: dados }), 'Colaborador atualizado') } finally { this.carregar() }
+    },
+    async redefinirSenha(u) {
+      const senha = prompt(`Nova senha para ${u.nome} (mín. 8 caracteres):`)
+      if (senha) await this.editarUsuario(u, { senha })
+    },
+    async criar(url, corpo, limpar) { await tentar(() => api(url, { method: 'POST', corpo }), 'Salvo'); limpar(); this.carregar() },
+    async apagar(url) { if (!confirm('Excluir?')) return; await tentar(() => api(url, { method: 'DELETE' })); this.carregar() },
+    async salvarEtapa(e) { await tentar(() => api('/api/funil/etapas/' + e.id, { method: 'PATCH', corpo: { nome: e.nome, cor: e.cor, ordem: e.ordem } })) },
+  }
+}
+</script>
+{% endblock %}
