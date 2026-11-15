@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% from "_macros.html" import i %}
 {% block conteudo %}
 <div class="conteudo" x-data="telaCampanhas()" x-init="iniciar()">
   <div class="linha entre" style="margin-bottom:12px">
     <p class="muted" style="margin:0; max-width:760px">Envie um <a href="/modelos">modelo aprovado</a> para os contatos com <b>opt-in</b>, filtrando por etiqueta. Quem responder SAIR ou tocar no botão de descadastro sai da lista automaticamente. As respostas caem em <a href="/conversas">Conversas</a> e o agente atende sabendo qual campanha o cliente recebeu.</p>
-    {% if usuario.papel != 'atendente' %}<button class="btn primario" @click="abrirForm()">+ Nova campanha</button>{% endif %}
+    {% if usuario.papel != 'atendente' %}<button class="btn primario" @click="abrirForm()">{{ i('plus', 'p') }} Nova campanha</button>{% endif %}
   </div>
 
   <div class="coluna" style="gap:12px">

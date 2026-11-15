@@ -189,6 +189,18 @@ Comparando com HubSpot, Pipedrive, RD Station CRM, Kommo, Chatwoot e plataformas
 | **Notificações** no navegador e sinal sonoro (fila nova, conversa atribuída a você, mensagem nas suas conversas, avaliação baixa) | todos | botão "Ativar avisos" |
 | Relatórios de **CSAT** (média, distribuição, por atendente) e de **SLA** (% resolvidas no prazo, estouradas agora) | Chatwoot, HubSpot | Relatórios e Painel |
 
+## Visual
+
+A identidade parte do assunto, uma lavanderia. A cor principal é o **anil**, o azul que se usava para alvejar roupa, sobre fundo **linho**. A barra lateral tem uma trama de tecido discreta. Os títulos usam a fonte **Bricolage Grotesque** e a interface usa **Instrument Sans**. As cores do agente (anil vivo) e da equipe (coral "prendedor") foram validadas para daltonismo, no tema claro e no escuro.
+
+- **Painel:** a fila vira um **varal**, com cada conversa esperando pendurada como uma etiqueta colorida pelo prazo (no prazo, perto do limite, estourado). Abaixo ficam os números do momento, que contam até o valor, e o gráfico da semana.
+- **Conversas:** trilho colorido por quem atende, avatares, recibos ✓✓ em ícone e listas animadas.
+- **Funil:** arrastar e soltar suave e confete ao marcar um negócio como ganho.
+- **Login:** tela dividida, com o lado em anil e bolhas de sabão.
+- Tema escuro automático, layout para celular e respeito ao "reduzir movimento" do sistema.
+
+As bibliotecas (Alpine.js, Lucide, AutoAnimate, ApexCharts, SortableJS, CountUp, canvas-confetti e as fontes) estão em `crm/static/vendor/`. A lista com as licenças está em `crm/static/vendor/LEIAME.md`.
+
 ## Recursos da API oficial do WhatsApp
 
 | Recurso | Como funciona |

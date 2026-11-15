@@ -1,99 +1,169 @@
 {% extends "base.html" %}
+{% from "_macros.html" import i %}
+{% block cabeca %}<script src="/static/vendor/apexcharts-8.8.2.min.js"></script>{% endblock %}
 {% block conteudo %}
 <div class="conteudo" x-data="painel()" x-init="iniciar()">
-  <div class="grade grade-4">
-    <div class="cartao"><div class="fraco">⏳ Aguardando atendente</div><div class="numero-grande" x-text="contagem.fila ?? '—'"></div><a href="/conversas" class="fraco">abrir fila →</a></div>
-    <div class="cartao"><div class="fraco">🤖 Com o agente agora</div><div class="numero-grande" x-text="contagem.agente ?? '—'"></div></div>
-    <div class="cartao"><div class="fraco">👤 Com humanos agora</div><div class="numero-grande" x-text="contagem.humano ?? '—'"></div>
-      <div class="fraco" x-text="'sendo ' + (contagem.minhas ?? 0) + ' suas'"></div></div>
-    <div class="cartao"><div class="fraco">Atendidas só pelo agente (hoje)</div>
-      <div class="numero-grande" x-text="hoje ? (hoje.conversas_novas ? Math.round(100 * hoje.sem_humano / hoje.conversas_novas) + '%' : '—') : '—'"></div>
-      <div class="fraco" x-text="hoje ? hoje.conversas_novas + ' conversas novas hoje' : ''"></div></div>
-  </div>
 
-  <div class="grade grade-4" style="margin-top:16px" x-show="semana">
-    <div class="cartao"><div class="fraco">⏱ SLA estourado agora</div><div class="numero-grande" :style="semana && semana.sla.estouradas_agora ? 'color:var(--perigo)' : ''" x-text="semana ? semana.sla.estouradas_agora : '—'"></div></div>
-    <div class="cartao"><div class="fraco">⭐ Satisfação (7 dias)</div><div class="numero-grande" x-text="semana && semana.csat.media !== null ? semana.csat.media.toFixed(1) + ' / 5' : '—'"></div>
-      <div class="fraco" x-text="semana ? semana.csat.respostas + ' avaliações' : ''"></div></div>
-    <div class="cartao" style="grid-column: span 2">
-      <div class="fraco" style="margin-bottom:6px">👥 Equipe agora</div>
-      <div class="linha">
-        <template x-for="u in equipe.filter(u => u.ativo)" :key="u.id">
-          <span class="selo neutro"><span class="ponto" :class="u.disponivel ? 'on' : (u.status === 'ausente' ? 'aus' : 'off')"></span>
-            <span x-text="u.nome.split(' ')[0] + ' · ' + u.conversas_abertas + '/' + u.max_conversas"></span></span>
-        </template>
+  <!-- Varal: cada conversa esperando uma pessoa fica pendurada, colorida pelo prazo -->
+  <section class="varal" aria-label="Fila de atendimento">
+    <div class="varal-cabeca">
+      <div>
+        <div class="total" x-ref="totalFila">0</div>
+        <div class="legenda-varal" x-text="(contagem.fila || 0) === 1 ? 'conversa esperando uma pessoa' : 'conversas esperando uma pessoa'"></div>
+      </div>
+      <div class="linha" style="gap:18px; color:#c5ceff; font-size:13px">
+        <span class="linha" style="gap:6px"><span class="ponto" style="background:#5fd39f"></span>no prazo</span>
+        <span class="linha" style="gap:6px"><span class="ponto" style="background:#ffc857"></span>perto do limite</span>
+        <span class="linha" style="gap:6px"><span class="ponto" style="background:#ff7a6b"></span>prazo estourado</span>
+        <a class="btn pequeno" href="/conversas" style="background:rgba(255,255,255,.12); color:#fff; border-color:rgba(255,255,255,.2)">{{ i('inbox', 'p') }} Abrir a fila</a>
       </div>
     </div>
+    <div class="varal-corda">
+      <svg class="fio" viewBox="0 0 1000 40" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0,6 Q500,38 1000,6" stroke="rgba(255,255,255,.55)" stroke-width="2" fill="none" vector-effect="non-scaling-stroke"/>
+      </svg>
+      <div class="varal-pecas">
+        <template x-for="(c, n) in fila.slice(0, 7)" :key="c.id">
+          <a class="peca" :href="'/conversas?c=' + c.id" :class="estadoPrazo(c) === 'estourado' ? 'estourado' : ''"
+             :style="`--i:${n}; --cor:${corPrazo(c)}; margin-top:${curva(n, Math.min(fila.length, 7))}px`">
+            <span class="tag">
+              <b x-text="c.contato.nome"></b>
+              <small x-text="'esperando há ' + fmt.relativo(c.modo_desde) + (c.equipe ? ', ' + c.equipe.nome : '')"></small>
+              <span class="prazo" x-text="c.sla && c.sla.fila ? fmt.prazo(c.sla.fila.vence_em) : fmt.relativo(c.modo_desde)"></span>
+            </span>
+          </a>
+        </template>
+        <span class="varal-mais" x-show="fila.length > 7" x-text="'+' + (fila.length - 7)"></span>
+      </div>
+      <div class="varal-vazio" x-show="carregado && !fila.length">
+        <div>{{ i('sparkles', 'g') }}<br>Varal vazio: ninguém está esperando.<br><span style="font-size:13px; color:#9fa9dc">O agente está dando conta das conversas.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Números do momento -->
+  <div class="faixa-numeros" style="margin-top:18px">
+    <div><div class="rotulo">{{ i('bot', 'p') }} Com o agente agora</div><div class="numero-grande" x-ref="nAgente">0</div></div>
+    <div><div class="rotulo">{{ i('user-round', 'p') }} Com a equipe agora</div><div class="numero-grande" x-ref="nHumano">0</div>
+      <div class="fraco" x-text="(contagem.minhas || 0) + ' com você'"></div></div>
+    <div><div class="rotulo">{{ i('sparkles', 'p') }} Só o agente atendeu (hoje)</div><div class="numero-grande" x-ref="nSoAgente">0</div>
+      <div class="fraco" x-text="hoje ? hoje.conversas_novas + ' conversas novas' : ''"></div></div>
+    <div><div class="rotulo">{{ i('timer', 'p') }} Prazo estourado</div><div class="numero-grande" x-ref="nSla" :style="semana && semana.sla.estouradas_agora ? 'color:var(--perigo)' : ''">0</div></div>
+    <div><div class="rotulo">{{ i('star', 'p') }} Satisfação (7 dias)</div><div class="numero-grande" x-ref="nCsat">—</div>
+      <div class="fraco" x-text="semana ? semana.csat.respostas + ' avaliações' : ''"></div></div>
   </div>
 
-  <div class="grade grade-2" style="margin-top:16px">
+  <div class="grade" style="grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); margin-top:18px; align-items:start">
     <div class="cartao">
-      <div class="linha entre"><h2>Fila de atendimento</h2><a href="/conversas" class="fraco">ver tudo</a></div>
-      <template x-for="c in fila" :key="c.id">
-        <a class="linha entre" :href="'/conversas?c=' + c.id" style="padding:8px 0; border-bottom:1px solid var(--borda); color:inherit">
-          <span><b x-text="c.contato.nome"></b>
-            <span class="selo" :class="c.prioridade" x-show="['alta','urgente'].includes(c.prioridade)" x-text="ROTULO_PRIORIDADE[c.prioridade]"></span>
-            <span class="selo" x-show="c.sla && c.sla.fila" :class="c.sla && c.sla.fila && c.sla.fila.estourado ? 'sla-estourado' : 'sla-ok'" x-text="c.sla && c.sla.fila ? fmt.prazo(c.sla.fila.vence_em) : ''"></span>
-            <br><span class="fraco" x-text="c.motivo_fila || ''"></span></span>
-          <span class="fraco" x-text="fmt.relativo(c.ultima_mensagem_em)"></span>
-        </a>
-      </template>
-      <div class="vazio" x-show="!fila.length">Fila vazia 🎉</div>
+      <div class="linha entre"><h2 style="margin:0">Quem respondeu nos últimos 7 dias</h2>
+        <div class="legenda"><span><i style="background:var(--agente)"></i>Agente</span><span><i style="background:var(--humano)"></i>Equipe</span></div></div>
+      <div x-ref="grafico" style="min-height:250px; margin-top:6px"></div>
     </div>
-    <div class="cartao">
-      <div class="linha entre"><h2>Minhas tarefas</h2><a href="/tarefas" class="fraco">ver tudo</a></div>
-      <template x-for="t in tarefas" :key="t.id">
-        <label class="check" style="padding:6px 0; border-bottom:1px solid var(--borda)">
-          <input type="checkbox" @change="concluir(t)">
-          <span><span x-text="t.titulo"></span> <span class="fraco" x-text="t.contato_nome ? '· ' + t.contato_nome : ''"></span>
-            <span class="selo perigo" x-show="t.vencimento && new Date(t.vencimento) < new Date()">atrasada</span>
-            <span class="fraco" x-show="t.vencimento" x-text="fmt.dataHora(t.vencimento)"></span></span>
-        </label>
-      </template>
-      <div class="vazio" x-show="!tarefas.length">Nenhuma tarefa pendente.</div>
-    </div>
-    <div class="cartao">
-      <h2>Agente de IA</h2>
-      <template x-if="agente">
-        <div class="coluna">
-          <div><span class="selo" :class="agente.ativo ? 'agente' : 'neutro'" x-text="agente.ativo ? '🤖 Ligado' : '🤖 Desligado'"></span>
-            <span class="muted" x-text="agente.motivo"></span></div>
-          <div class="fraco" x-show="agente.proxima_mudanca" x-text="'Próxima mudança: ' + fmt.dataHora(agente.proxima_mudanca) + (agente.ativo ? ' (desliga)' : ' (liga)')"></div>
-          <div class="fraco" x-text="'Modo: ' + ({automatico:'programado', ligado:'sempre ligado', desligado:'desligado'}[agente.modo])"></div>
-          {% if usuario.papel != 'atendente' %}<a class="btn" href="/configuracoes" style="align-self:flex-start">Programar agente</a>{% endif %}
+
+    <div class="coluna" style="gap:16px">
+      <div class="cartao">
+        <div class="linha entre"><h2 style="margin:0">Minhas tarefas</h2><a href="/tarefas" class="fraco">ver todas</a></div>
+        <div x-anima style="margin-top:8px">
+          <template x-for="t in tarefas" :key="t.id">
+            <label class="check" style="padding:8px 0; border-bottom:1px solid var(--borda); align-items:flex-start">
+              <input type="checkbox" @change="concluir(t)" style="margin-top:3px">
+              <span><span x-text="t.titulo"></span>
+                <span class="selo perigo" x-show="t.vencimento && new Date(t.vencimento) < new Date()" style="margin-left:4px">atrasada</span>
+                <span class="fraco" style="display:block" x-text="[t.contato_nome, fmt.dataHora(t.vencimento)].filter(Boolean).join(', ')"></span></span>
+            </label>
+          </template>
         </div>
-      </template>
-    </div>
-    <div class="cartao">
-      <h2>Hoje</h2>
-      <template x-if="hoje">
-        <div class="coluna">
-          <div class="campo"><span>Mensagens do agente</span><b x-text="hoje.mensagens_agente"></b></div>
-          <div class="campo"><span>Mensagens de humanos</span><b x-text="hoje.mensagens_humanos"></b></div>
-          <div class="campo"><span>Tempo médio da 1ª resposta</span><b x-text="fmt.duracao(hoje.tempo_primeira_resposta_s)"></b></div>
-          <div class="campo"><span>Custo do agente</span><b x-text="'US$ ' + hoje.custo_agente_usd.toFixed(4)"></b></div>
+        <div class="vazio" x-show="carregado && !tarefas.length" style="padding:20px 0">{{ i('square-check') }}Nenhuma tarefa pendente.</div>
+      </div>
+
+      <div class="cartao">
+        <h2>Agente de IA</h2>
+        <template x-if="agente">
+          <div class="coluna">
+            <div class="linha"><span class="selo" :class="agente.ativo ? 'agente' : 'neutro'" x-text="agente.ativo ? 'Ligado' : 'Desligado'"></span>
+              <span class="muted" x-text="agente.motivo"></span></div>
+            <div class="fraco" x-show="agente.proxima_mudanca" x-text="(agente.ativo ? 'Desliga em ' : 'Liga em ') + fmt.dataHora(agente.proxima_mudanca)"></div>
+            {% if usuario.papel != 'atendente' %}<a class="btn pequeno" href="/configuracoes" style="align-self:flex-start">{{ i('calendar', 'p') }} Programar horários</a>{% endif %}
+          </div>
+        </template>
+      </div>
+
+      <div class="cartao">
+        <h2>Equipe agora</h2>
+        <div class="coluna" style="gap:10px">
+          <template x-for="u in equipe.filter(u => u.ativo)" :key="u.id">
+            <div class="linha" style="flex-wrap:nowrap">
+              <span class="avatar" :style="'background:' + u.cor" x-text="fmt.iniciais(u.nome)"></span>
+              <div style="flex:1; min-width:0"><div style="font-weight:600" x-text="u.nome"></div>
+                <div style="height:5px; background:var(--superficie-2); border-radius:3px; margin-top:4px">
+                  <div class="barra-h" style="height:5px; background:var(--humano)" :style="'width:' + Math.min(100, 100 * u.conversas_abertas / (u.max_conversas || 1)) + '%'"></div></div></div>
+              <span class="ponto" :class="u.disponivel ? 'on' : (u.status === 'ausente' ? 'aus' : 'off')" :title="u.disponivel ? 'online' : u.status"></span>
+              <span class="fraco" x-text="u.conversas_abertas + '/' + u.max_conversas"></span>
+            </div>
+          </template>
         </div>
-      </template>
+      </div>
     </div>
   </div>
 </div>
 <script>
 function painel() {
   return {
-    contagem: {}, fila: [], tarefas: [], hoje: null, agente: null, semana: null, equipe: [],
+    contagem: {}, fila: [], tarefas: [], hoje: null, agente: null, semana: null, equipe: [], carregado: false, grafico: null,
     async iniciar() {
       await this.carregar()
       let t
       const f = () => { clearTimeout(t); t = setTimeout(() => this.carregar(), 500) }
       for (const ev of ['conversa', 'mensagem', 'tarefa', 'agente_status', 'equipe']) window.addEventListener('lavo:' + ev, f)
+      setInterval(() => (this.fila = [...this.fila]), 60000) // atualiza os prazos
     },
     async carregar() {
       const [fila, tarefas, hoje, agente, semana, equipe] = await Promise.all([
-        api('/api/conversas?filtro=fila&limite=8'), api('/api/tarefas?filtro=minhas'),
+        api('/api/conversas?filtro=fila&limite=30'), api('/api/tarefas?filtro=minhas'),
         api('/api/relatorios/resumo?dias=1'), api('/api/agente/status'), api('/api/relatorios/resumo?dias=7'), api('/api/usuarios')])
-      this.semana = semana; this.equipe = equipe
-      this.contagem = fila.contagem; this.fila = fila.conversas; this.tarefas = tarefas.slice(0, 8)
-      this.hoje = hoje; this.agente = agente
+      Object.assign(this, { semana, equipe, contagem: fila.contagem, fila: fila.conversas, tarefas: tarefas.slice(0, 6), hoje, agente, carregado: true })
+      contar(this.$refs.totalFila, fila.contagem.fila || 0)
+      contar(this.$refs.nAgente, fila.contagem.agente || 0)
+      contar(this.$refs.nHumano, fila.contagem.humano || 0)
+      contar(this.$refs.nSoAgente, hoje.conversas_novas ? Math.round(100 * hoje.sem_humano / hoje.conversas_novas) : 0, { suffix: '%' })
+      contar(this.$refs.nSla, semana.sla.estouradas_agora || 0)
+      if (semana.csat.media !== null) contar(this.$refs.nCsat, semana.csat.media, { decimalPlaces: 1, suffix: ' / 5' })
+      this.desenharGrafico()
+    },
+    estadoPrazo(c) {
+      if (!c.sla || !c.sla.fila) return 'ok'
+      if (c.sla.fila.estourado) return 'estourado'
+      const total = new Date(c.sla.fila.vence_em) - new Date(c.modo_desde)
+      const resta = new Date(c.sla.fila.vence_em) - Date.now()
+      return resta < total * 0.35 ? 'perto' : 'ok'
+    },
+    corPrazo(c) { return { ok: '#2fa36f', perto: '#d99a00', estourado: '#d9483b' }[this.estadoPrazo(c)] },
+    curva(n, total) { // as peças acompanham o fio que cede no meio
+      if (total <= 1) return 14
+      const x = n / (total - 1)
+      return Math.round(28 * (1 - Math.pow(2 * x - 1, 2)))
+    },
+    desenharGrafico() {
+      if (!window.ApexCharts || !this.semana) return
+      const dias = this.semana.por_dia
+      const css = getComputedStyle(document.documentElement)
+      const cor = (v) => css.getPropertyValue(v).trim()
+      const opcoes = {
+        chart: { type: 'bar', height: 260, stacked: true, toolbar: { show: false }, fontFamily: cor('--fonte'),
+                 animations: { enabled: !matchMedia('(prefers-reduced-motion: reduce)').matches, speed: 500 } },
+        series: [{ name: 'Agente', data: dias.map((d) => d.agente) }, { name: 'Equipe', data: dias.map((d) => d.humano) }],
+        colors: [cor('--agente'), cor('--humano')],
+        plotOptions: { bar: { columnWidth: '38%', borderRadius: 4, borderRadiusApplication: 'end', borderRadiusWhenStacked: 'last' } },
+        stroke: { show: true, width: 2, colors: [cor('--superficie')] },
+        xaxis: { categories: dias.map((d) => d.dia.slice(8, 10) + '/' + d.dia.slice(5, 7)), axisBorder: { show: false }, axisTicks: { show: false },
+                 labels: { style: { colors: cor('--texto-3') } } },
+        yaxis: { labels: { style: { colors: cor('--texto-3') }, formatter: (v) => Math.round(v) } },
+        grid: { borderColor: cor('--borda'), strokeDashArray: 4 },
+        legend: { show: false }, dataLabels: { enabled: false },
+        tooltip: { theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', y: { formatter: (v) => v + ' mensagens' } },
+      }
+      if (this.grafico) this.grafico.updateOptions(opcoes)
+      else { this.grafico = new ApexCharts(this.$refs.grafico, opcoes); this.grafico.render() }
     },
     async concluir(t) {
       await tentar(() => api('/api/tarefas/' + t.id, { method: 'PATCH', corpo: { concluida: true } }), 'Tarefa concluída')

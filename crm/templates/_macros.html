@@ -1,0 +1,4 @@
+{# Ícone do sprite Lucide: {{ i('bot') }} #}
+{% macro i(nome, classe='') -%}
+<svg class="ic {{ classe }}" aria-hidden="true"><use href="/static/vendor/icones.svg#i-{{ nome }}"></use></svg>
+{%- endmacro %}

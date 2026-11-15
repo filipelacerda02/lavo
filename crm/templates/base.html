@@ -1,44 +1,64 @@
+{% from "_macros.html" import i %}
 <!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ titulo }} · Lavo CRM</title>
+  <link rel="stylesheet" href="/static/vendor/fontes.css">
   <link rel="stylesheet" href="/static/app.css">
   <script>window.USUARIO = {{ {"id": usuario.id, "nome": usuario.nome, "papel": usuario.papel, "cor": usuario.cor} | tojson }}; window.SIMULADO = {{ simulado | tojson }};</script>
   <script src="/static/app.js"></script>
+  <script src="/static/vendor/countup-2.10.1.umd.js"></script>
+  {% block cabeca %}{% endblock %}
+  <script type="module">
+    import autoAnimate from '/static/vendor/auto-animate-0.10.2.mjs'
+    window.autoAnimate = autoAnimate
+    // x-anima: listas que entram/saem/reordenam com animação suave
+    document.addEventListener('alpine:init', () => {
+      Alpine.directive('anima', (el) => autoAnimate(el, { duration: 200, easing: 'cubic-bezier(.2,.8,.2,1)' }))
+    })
+  </script>
   <script defer src="/static/vendor/alpine-3.14.1.min.js"></script>
 </head>
 <body>
 <div class="app">
-  <nav class="lateral" x-data="{fila: 0}" x-init="
+  <nav class="lateral" aria-label="Navegação" x-data="{fila: 0}" x-init="
       const f = async () => { try { fila = (await api('/api/conversas?filtro=fila&limite=1')).contagem.fila } catch(e) {} };
       f(); window.addEventListener('lavo:conversa', f)">
-    <div class="marca"><span>🧺</span> Lavo CRM</div>
-    <a href="/" class="{{ 'ativo' if pagina == '' }}">📊 Painel</a>
-    <a href="/conversas" class="{{ 'ativo' if pagina == 'conversas' }}">💬 Conversas <b class="contador" x-show="fila > 0" x-text="fila" title="Aguardando atendente" x-cloak></b></a>
-    <a href="/contatos" class="{{ 'ativo' if pagina == 'contatos' }}">👥 Contatos</a>
-    <a href="/funil" class="{{ 'ativo' if pagina == 'funil' }}">🗂️ Funil</a>
-    <a href="/tarefas" class="{{ 'ativo' if pagina == 'tarefas' }}">✅ Tarefas</a>
-    <a href="/relatorios" class="{{ 'ativo' if pagina == 'relatorios' }}">📈 Relatórios</a>
-    <a href="/campanhas" class="{{ 'ativo' if pagina == 'campanhas' }}">📣 Campanhas</a>
-    <a href="/modelos" class="{{ 'ativo' if pagina == 'modelos' }}">🧾 Modelos</a>
-    <a href="/whatsapp" class="{{ 'ativo' if pagina == 'whatsapp' }}">📱 WhatsApp</a>
+    <div class="marca">
+      <span class="logo">{{ i('shirt', 'g') }}</span>
+      <span><span class="nome">Lavo</span><span class="sub">Central de atendimento</span></span>
+    </div>
+    <div class="grupo-nav">Atendimento</div>
+    <a href="/" class="{{ 'ativo' if pagina == '' }}">{{ i('layout-dashboard') }} Painel</a>
+    <a href="/conversas" class="{{ 'ativo' if pagina == 'conversas' }}">{{ i('messages-square') }} Conversas
+      <b class="contador" x-show="fila > 0" x-text="fila" title="Aguardando atendente" x-cloak></b></a>
+    <a href="/contatos" class="{{ 'ativo' if pagina == 'contatos' }}">{{ i('users') }} Contatos</a>
+    <a href="/tarefas" class="{{ 'ativo' if pagina == 'tarefas' }}">{{ i('list-todo') }} Tarefas</a>
+    <div class="grupo-nav">Vendas</div>
+    <a href="/funil" class="{{ 'ativo' if pagina == 'funil' }}">{{ i('folder-kanban') }} Funil</a>
+    <a href="/campanhas" class="{{ 'ativo' if pagina == 'campanhas' }}">{{ i('megaphone') }} Campanhas</a>
+    <a href="/modelos" class="{{ 'ativo' if pagina == 'modelos' }}">{{ i('file-text') }} Modelos</a>
+    <div class="grupo-nav">Gestão</div>
+    <a href="/relatorios" class="{{ 'ativo' if pagina == 'relatorios' }}">{{ i('chart-column') }} Relatórios</a>
+    <a href="/whatsapp" class="{{ 'ativo' if pagina == 'whatsapp' }}">{{ i('smartphone') }} WhatsApp</a>
     {% if usuario.papel != 'atendente' %}
-    <a href="/configuracoes" class="{{ 'ativo' if pagina == 'configuracoes' }}">⚙️ Configurações</a>
-    <a href="/auditoria" class="{{ 'ativo' if pagina == 'auditoria' }}">🔍 Auditoria</a>
+    <a href="/configuracoes" class="{{ 'ativo' if pagina == 'configuracoes' }}">{{ i('settings') }} Configurações</a>
+    <a href="/auditoria" class="{{ 'ativo' if pagina == 'auditoria' }}">{{ i('shield-check') }} Auditoria</a>
     {% endif %}
     <div class="rodape" x-data="{status: '{{ usuario.status or 'offline' }}', notif: notificacoes.ativas()}"
          x-init="window.MEU_STATUS = status">
-      <div class="linha"><span class="avatar" style="background: {{ usuario.cor }}">{{ usuario.nome[:1] | upper }}</span>
-        <div><div style="color:#fff">{{ usuario.nome }}</div><div class="fraco">{{ usuario.papel }}</div></div></div>
-      <select class="status-select" x-model="status" title="Online: recebe conversas da distribuição automática"
+      <div class="linha" style="flex-wrap:nowrap"><span class="avatar" style="background: {{ usuario.cor }}">{{ usuario.nome[:1] | upper }}</span>
+        <div style="min-width:0"><div style="color:#fff; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ usuario.nome }}</div>
+          <div style="color:#9fa9dc; font-size:12px">{{ {'admin': 'Administrador', 'supervisor': 'Supervisor', 'atendente': 'Atendente'}[usuario.papel] }}</div></div></div>
+      <select class="status-select" x-model="status" aria-label="Seu status" title="Online: recebe conversas da distribuição automática"
               @change="tentar(() => api('/api/eu/status', {method: 'PUT', corpo: {status}})).then(() => window.MEU_STATUS = status)">
         <option value="online">🟢 Online</option><option value="ausente">🟡 Ausente</option><option value="offline">⚫ Offline</option>
       </select>
       <div class="linha" style="margin-top:8px">
-        <button class="btn pequeno" x-show="!notif" @click="notificacoes.ativar().then(() => notif = notificacoes.ativas())">🔔 Ativar avisos</button>
-        <button class="btn pequeno" onclick="sair()">Sair</button>
+        <button class="btn pequeno" x-show="!notif" @click="notificacoes.ativar().then(() => notif = notificacoes.ativas())">{{ i('bell', 'p') }} Avisos</button>
+        <button class="btn pequeno" onclick="sair()">{{ i('log-out', 'p') }} Sair</button>
       </div>
     </div>
   </nav>
@@ -46,13 +66,14 @@
     <header class="topo" x-data="barraTopo()" x-init="iniciar()">
       <h1>{{ titulo }}</h1>
       <div class="espaco"></div>
-      <a href="{{ '/configuracoes' if usuario.papel != 'atendente' else '#' }}" class="selo" :class="agente && agente.ativo ? 'agente' : 'neutro'"
+      <a href="{{ '/configuracoes' if usuario.papel != 'atendente' else '#' }}" class="estado" :class="agente && agente.ativo ? 'ligado' : ''"
          :title="agente ? agente.motivo + (agente.proxima_mudanca ? ' · muda em ' + fmt.dataHora(agente.proxima_mudanca) : '') : ''">
-        <span x-text="agente && agente.ativo ? '🤖 Agente ligado' : '🤖 Agente desligado'"></span>
-        <span class="fraco" x-show="agente && agente.modo === 'automatico'">(programado)</span>
+        <span class="luz"></span>{{ i('bot', 'p') }}
+        <span x-text="agente && agente.ativo ? 'Agente ligado' : 'Agente desligado'"></span>
+        <span class="fraco" x-show="agente && agente.modo === 'automatico'">programado</span>
       </a>
-      <a href="/whatsapp" class="selo" :class="wpp && wpp.estado === 'conectado' ? 'ok' : 'fila'">
-        <span>📱</span><span x-text="wppTexto"></span><span x-show="wpp && wpp.simulado" class="fraco">· simulado</span>
+      <a href="/whatsapp" class="estado" :class="wpp && wpp.estado === 'conectado' ? 'conectado' : 'alerta'">
+        <span class="luz"></span>{{ i('smartphone', 'p') }}<span x-text="wppTexto"></span><span x-show="wpp && wpp.simulado" class="fraco">simulado</span>
       </a>
     </header>
     {% block conteudo %}{% endblock %}

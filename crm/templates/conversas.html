@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import i %}
 {% block conteudo %}
 <div class="conteudo cheio">
 <div class="inbox" :class="atual ? 'com-chat' : ''" x-data="inbox()" x-init="iniciar()">
@@ -6,7 +7,7 @@
   <!-- ===== lista ===== -->
   <section class="coluna-lista">
     <div class="lista-filtros">
-      <input type="search" placeholder="Buscar nome, telefone, e-mail…" x-model.debounce.300ms="busca" @input="carregarLista()">
+      <div class="busca">{{ i('search', 'p') }}<input type="search" placeholder="Buscar nome, telefone ou e-mail" aria-label="Buscar conversas" x-model.debounce.300ms="busca" @input="carregarLista()"></div>
       <div class="linha" style="flex-wrap:nowrap">
         <select x-model="equipeFiltro" @change="carregarLista()"><option value="">Equipe</option>
           <template x-for="e in equipes" :key="e.id"><option :value="e.id" x-text="e.nome"></option></template></select>
@@ -16,21 +17,21 @@
       <div class="chips">
         <template x-for="f in filtros" :key="f.id">
           <button class="chip" :class="filtro === f.id ? 'ativo' : ''" @click="filtro = f.id; carregarLista()">
-            <span x-text="f.nome"></span><span x-show="f.qtd() !== null" x-text="' ' + f.qtd()"></span>
+            <span x-html="f.icone ? icone(f.icone) : ''"></span><span x-text="f.nome"></span><span class="qtd" x-show="f.qtd() !== null" x-text="f.qtd()"></span>
           </button>
         </template>
       </div>
     </div>
-    <div class="lista-conversas">
+    <div class="lista-conversas" x-anima>
       <template x-for="c in conversas" :key="c.id">
-        <button class="item-conversa" :class="atual && atual.conversa.id === c.id ? 'ativo' : ''" @click="abrir(c.id)">
+        <button class="item-conversa" :data-tipo="c.responsavel.tipo" :class="atual && atual.conversa.id === c.id ? 'ativo' : ''" @click="abrir(c.id)">
           <div class="linha entre" style="flex-wrap:nowrap">
             <span class="nome" x-text="c.contato.nome"></span>
             <span class="fraco" x-text="fmt.relativo(c.ultima_mensagem_em)"></span>
           </div>
           <div class="previa" x-text="previa(c)"></div>
           <div class="linha" style="margin-top:6px">
-            <span class="selo" :class="c.responsavel.tipo" x-text="rotuloResponsavel(c.responsavel)"></span>
+            <span class="selo" :class="c.responsavel.tipo"><span x-html="icone({agente: 'bot', humano: 'user-round', fila: 'hourglass', resolvida: 'circle-check'}[c.responsavel.tipo])"></span><span x-text="c.responsavel.tipo === 'fila' ? 'Na fila' : c.responsavel.nome"></span></span>
             <span class="selo" :class="c.prioridade" x-show="['alta','urgente'].includes(c.prioridade)" x-text="ROTULO_PRIORIDADE[c.prioridade]"></span>
             <span class="etiqueta" x-show="c.equipe" :style="'background:' + (c.equipe ? c.equipe.cor : '')" x-text="c.equipe ? c.equipe.nome : ''"></span>
             <span class="selo" x-show="slaDestaque(c)" :class="slaDestaque(c) && slaDestaque(c).estourado ? 'sla-estourado' : 'sla-ok'" x-text="slaDestaque(c) ? '⏱ ' + slaDestaque(c).texto : ''"></span>
@@ -46,15 +47,16 @@
   <!-- ===== chat ===== -->
   <section class="coluna-chat">
     <template x-if="!atual">
-      <div class="vazio" style="margin:auto">Selecione uma conversa.<br><span class="fraco">Mensagens do WhatsApp aparecem aqui em tempo real.</span></div>
+      <div class="vazio" style="margin:auto">{{ i('messages-square') }}Escolha uma conversa à esquerda.<br><span class="fraco">As mensagens do WhatsApp chegam aqui em tempo real.</span></div>
     </template>
     <template x-if="atual">
       <div style="display:flex; flex-direction:column; height:100%; min-height:0">
         <div class="chat-topo">
           <button class="btn icone" @click="atual = null" title="Voltar">←</button>
           <div class="chat-titulo">
-            <div style="font-weight:700" x-text="atual.conversa.contato.nome"></div>
-            <div class="fraco" x-text="fmt.telefone(atual.conversa.contato.telefone)"></div>
+            <span class="avatar" :style="'background:' + corDe(atual.conversa.contato.nome)" x-text="fmt.iniciais(atual.conversa.contato.nome)"></span>
+            <div style="min-width:0"><b x-text="atual.conversa.contato.nome"></b>
+              <div class="fraco" x-text="fmt.telefone(atual.conversa.contato.telefone)"></div></div>
           </div>
           <select style="width:auto" :value="atual.conversa.prioridade" @change="editarConversa({prioridade: $event.target.value})" title="Prioridade (define o SLA)">
             <option value="baixa">⬇ Baixa</option><option value="media">• Média</option><option value="alta">⬆ Alta</option><option value="urgente">🔥 Urgente</option></select>
@@ -62,30 +64,30 @@
             <option value="">Sem equipe</option><template x-for="e in equipes" :key="e.id"><option :value="e.id" x-text="e.nome" :selected="atual.conversa.equipe && atual.conversa.equipe.id === e.id"></option></template></select>
           <template x-if="atual.conversa.status === 'aberta'">
             <div class="linha">
-              <button class="btn humano" x-show="!souAtendente()" @click="acao('assumir')">👤 Assumir</button>
-              <button class="btn agente" x-show="atual.conversa.modo !== 'agente' && !atual.conversa.contato.agente_bloqueado" @click="acao('devolver-agente')">🤖 Devolver ao agente</button>
-              <button class="btn" @click="modalTransferir = true">↪️ Transferir</button>
-              <button class="btn" x-show="atual.conversa.modo !== 'fila'" @click="acao('fila')">⏳ Fila</button>
-              <button class="btn primario" @click="acao('resolver')">✅ Resolver</button>
+              <button class="btn humano" x-show="!souAtendente()" @click="acao('assumir')">{{ i('user-round', 'p') }} Assumir</button>
+              <button class="btn agente" x-show="atual.conversa.modo !== 'agente' && !atual.conversa.contato.agente_bloqueado" @click="acao('devolver-agente')">{{ i('bot', 'p') }} Devolver ao agente</button>
+              <button class="btn" @click="modalTransferir = true">{{ i('arrow-right-left', 'p') }} Transferir</button>
+              <button class="btn" x-show="atual.conversa.modo !== 'fila'" @click="acao('fila')">{{ i('hourglass', 'p') }} Fila</button>
+              <button class="btn primario" @click="acao('resolver')">{{ i('circle-check', 'p') }} Resolver</button>
             </div>
           </template>
           <template x-if="atual.conversa.status !== 'aberta'">
-            <button class="btn" @click="acao('reabrir')">🔄 Reabrir</button>
+            <button class="btn" @click="acao('reabrir')">{{ i('undo-2', 'p') }} Reabrir</button>
           </template>
         </div>
 
         <div class="faixa-responsavel" :class="atual.conversa.responsavel.tipo">
-          <template x-if="atual.conversa.status === 'resolvida'"><span>✅ Conversa resolvida.</span></template>
+          <template x-if="atual.conversa.status === 'resolvida'"><span class="linha" style="gap:6px">{{ i('circle-check', 'p') }} Conversa resolvida.</span></template>
           <template x-if="atual.conversa.status === 'aberta' && atual.conversa.modo === 'agente'">
-            <span>🤖 <b x-text="atual.conversa.responsavel.nome"></b> está atendendo. Se você responder, assume a conversa e o agente pausa.</span>
+            <span>{{ i('bot', 'p') }} <b x-text="atual.conversa.responsavel.nome"></b> está atendendo. Se você responder, assume a conversa e o agente pausa.</span>
           </template>
           <template x-if="atual.conversa.status === 'aberta' && atual.conversa.modo === 'humano'">
-            <span>👤 Atendimento humano: <b x-text="atual.conversa.responsavel.nome"></b>
+            <span>{{ i('user-round', 'p') }} Atendimento humano: <b x-text="atual.conversa.responsavel.nome"></b>
               <span x-show="souAtendente()">(você)</span>
               <span class="fraco" x-text="'desde ' + fmt.hora(atual.conversa.modo_desde)"></span></span>
           </template>
           <template x-if="atual.conversa.status === 'aberta' && atual.conversa.modo === 'fila'">
-            <span>⏳ Aguardando atendente<span x-show="atual.conversa.motivo_fila" x-text="' — ' + atual.conversa.motivo_fila"></span></span>
+            <span>{{ i('hourglass', 'p') }} Aguardando atendente<span x-show="atual.conversa.motivo_fila" x-text="' — ' + atual.conversa.motivo_fila"></span></span>
           </template>
           <template x-if="atual.conversa.sla && atual.conversa.sla.fila">
             <span class="selo" :class="atual.conversa.sla.fila.estourado ? 'sla-estourado' : 'sla-ok'" x-text="'⏱ Fila: ' + fmt.prazo(atual.conversa.sla.fila.vence_em)"></span>
@@ -108,7 +110,7 @@
               </template>
               <template x-if="m.direcao === 'interna' && m.autor.tipo !== 'sistema'">
                 <div class="msg nota">
-                  <div class="autor">📝 Nota interna · <span x-text="m.autor.nome"></span></div>
+                  <div class="autor">{{ i('sticky-note', 'p') }} Nota interna de <span x-text="m.autor.nome"></span></div>
                   <div class="balao" x-text="m.texto"></div>
                   <div class="hora" x-text="fmt.hora(m.criada_em)"></div>
                 </div>
@@ -116,14 +118,14 @@
               <template x-if="m.direcao !== 'interna'">
                 <div class="msg" :class="[m.direcao, m.autor.tipo]">
                   <div class="autor">
-                    <template x-if="m.autor.tipo === 'agente'"><span>🤖 <span x-text="m.autor.nome"></span> · agente de IA</span></template>
+                    <template x-if="m.autor.tipo === 'agente'"><span class="linha" style="gap:5px">{{ i('bot', 'p') }}<span x-text="m.autor.nome"></span><span class="fraco">agente de IA</span></span></template>
                     <template x-if="m.autor.tipo === 'humano'">
                       <span class="linha" style="gap:5px">
                         <span class="avatar" style="width:18px;height:18px;font-size:9px" :style="'background:' + (m.autor.cor || '#52514e')" x-text="m.autor.usuario_id ? fmt.iniciais(m.autor.nome) : '📱'"></span>
                         <span x-text="m.autor.nome"></span><span x-show="m.autor.usuario_id" class="fraco" x-text="'· ' + (m.autor.papel || 'colaborador')"></span>
                       </span>
                     </template>
-                    <template x-if="m.autor.tipo === 'sistema'"><span>⚙️ Mensagem automática</span></template>
+                    <template x-if="m.autor.tipo === 'sistema'"><span class="linha" style="gap:5px">{{ i('zap', 'p') }} Mensagem automática</span></template>
                     <template x-if="m.autor.tipo === 'contato'"><span class="muted" x-text="m.autor.nome"></span></template>
                   </div>
                   <div class="balao">
@@ -138,7 +140,7 @@
                   <div class="hora">
                     <span x-text="fmt.hora(m.criada_em)"></span>
                     <span x-show="m.direcao === 'saida' && m.status_envio !== 'erro'" :title="{enviada: 'Enviada', entregue: 'Entregue', lida: 'Lida'}[m.recibo]"
-                          :style="m.recibo === 'lida' ? 'color:#2a78d6; font-weight:700' : ''" x-text="m.recibo === 'enviada' ? '✓' : '✓✓'"></span>
+                          :class="m.recibo === 'lida' ? 'recibo-lida' : ''" x-html="icone(m.recibo === 'enviada' ? 'check' : 'check-check')"></span>
                     <span x-show="m.status_envio === 'erro'" class="selo perigo" style="white-space:normal" x-text="'falhou: ' + (m.erro || '')"></span>
                     <span x-show="m.trace_id && USUARIO.papel !== 'atendente'" class="fraco" x-text="'· $' + m.custo_usd.toFixed(4) + ' · trace ' + m.trace_id"></span>
                   </div>
@@ -165,7 +167,7 @@
           </div>
           <div class="agendadas" x-show="!atual.conversa.contato.janela_aberta && !modoNota" style="border-style:solid">
             <span>🔒 O cliente não escreve há mais de 24 horas. Pela regra da Meta, para retomar o contato envie um <b>modelo aprovado</b>. Quando ele responder, a janela abre de novo.</span>
-            <button class="btn pequeno primario" style="align-self:flex-start" @click="modalModelo = true">🧾 Enviar modelo</button>
+            <button class="btn pequeno primario" style="align-self:flex-start" @click="modalModelo = true">{{ i('file-text', 'p') }} Enviar modelo</button>
           </div>
           <textarea x-ref="campo" x-model="texto" rows="2" x-show="atual.conversa.contato.janela_aberta || modoNota"
                     :placeholder="modoNota ? 'Nota interna (o cliente não vê)…' : 'Escreva uma resposta… (/ para respostas rápidas, Enter envia, Shift+Enter quebra linha)'"
@@ -185,11 +187,11 @@
           </div>
           <div class="linha entre">
             <div class="ferramentas">
-              <label class="check"><input type="checkbox" x-model="modoNota"> 📝 Nota</label>
-              <button class="btn pequeno agente" @click="sugerir()" :disabled="sugerindo" x-text="sugerindo ? '✨ Escrevendo…' : '✨ Sugerir resposta'"></button>
-              <button class="btn pequeno" @click="agendando = !agendando" x-show="!modoNota">⏰ Agendar</button>
-              <button class="btn pequeno" @click="modalModelo = true" x-show="!modoNota">🧾 Modelo</button>
-              <label class="btn pequeno" x-show="!modoNota && atual.conversa.contato.janela_aberta" style="flex-direction:row; font-size:12px; color:var(--texto)">📎 Anexo
+              <label class="check" style="font-size:13px"><input type="checkbox" x-model="modoNota"> Nota interna</label>
+              <button class="btn pequeno agente" @click="sugerir()" :disabled="sugerindo">{{ i('sparkles', 'p') }}<span x-text="sugerindo ? 'Escrevendo…' : 'Sugerir resposta'"></span></button>
+              <button class="btn pequeno" @click="agendando = !agendando" x-show="!modoNota">{{ i('alarm-clock', 'p') }} Agendar</button>
+              <button class="btn pequeno" @click="modalModelo = true" x-show="!modoNota">{{ i('file-text', 'p') }} Modelo</button>
+              <label class="btn pequeno" x-show="!modoNota && atual.conversa.contato.janela_aberta" style="flex-direction:row; font-size:12.5px; color:var(--texto)">{{ i('paperclip', 'p') }} Anexo
                 <input type="file" hidden @change="enviarAnexo($event)"></label>
             </div>
             <div class="linha">
@@ -206,8 +208,17 @@
   <section class="painel-lateral">
     <template x-if="contato">
       <div class="painel-contato">
+        <div class="cabeca-contato">
+          <span class="avatar" :style="'background:' + corDe(contato.contato.nome)" x-text="fmt.iniciais(contato.contato.nome)"></span>
+          <b x-text="contato.contato.nome"></b>
+          <span class="fraco" x-text="fmt.telefone(contato.contato.telefone)"></span>
+          <div class="linha" style="justify-content:center">
+            <span class="selo ok" x-show="contato.contato.opt_in">{{ i('check', 'p') }} opt-in</span>
+            <span class="selo agente" x-show="contato.contato.cliente_externo_id">{{ i('shirt', 'p') }} cliente</span>
+          </div>
+        </div>
         <div>
-          <h3>Contato</h3>
+          <h3>Dados do contato</h3>
           <div class="coluna">
             <label>Nome <input x-model="contato.contato.nome" @change="salvarContato({nome: contato.contato.nome})"></label>
             <label>E-mail <input x-model="contato.contato.email" @change="salvarContato({email: contato.contato.email})"></label>
@@ -237,7 +248,7 @@
         </div>
         <div>
           <div class="linha entre"><h3>Resumo por IA</h3>
-            <button class="btn pequeno agente" @click="resumir()" :disabled="resumindo" x-text="resumindo ? 'Resumindo…' : (atual && atual.conversa.resumo_ia ? 'Atualizar' : '✨ Resumir')"></button></div>
+            <button class="btn pequeno agente" @click="resumir()" :disabled="resumindo" >{{ i('sparkles', 'p') }}<span x-text="resumindo ? 'Resumindo…' : (atual && atual.conversa.resumo_ia ? 'Atualizar' : 'Resumir')"></span></button></div>
           <div class="resumo-ia" x-show="atual && atual.conversa.resumo_ia" x-text="atual ? atual.conversa.resumo_ia : ''"></div>
           <div class="fraco" x-show="atual && atual.conversa.categoria" x-text="atual && atual.conversa.categoria ? 'Assunto (triagem IA): ' + atual.conversa.categoria.replaceAll('_', ' ') : ''"></div>
         </div>
@@ -332,11 +343,11 @@ function inbox() {
       const qtd = (k) => () => (this.contagem[k] ?? null)
       this.filtros = [
         { id: 'abertas', nome: 'Abertas', qtd: () => null },
-        { id: 'minhas', nome: 'Minhas', qtd: qtd('minhas') },
-        { id: 'fila', nome: '⏳ Fila', qtd: qtd('fila') },
-        { id: 'agente', nome: '🤖 Agente', qtd: qtd('agente') },
-        { id: 'humano', nome: '👤 Humanos', qtd: qtd('humano') },
-        { id: 'resolvidas', nome: 'Resolvidas', qtd: () => null },
+        { id: 'minhas', nome: 'Minhas', icone: 'user', qtd: qtd('minhas') },
+        { id: 'fila', nome: 'Fila', icone: 'hourglass', qtd: qtd('fila') },
+        { id: 'agente', nome: 'Agente', icone: 'bot', qtd: qtd('agente') },
+        { id: 'humano', nome: 'Equipe', icone: 'user-round', qtd: qtd('humano') },
+        { id: 'resolvidas', nome: 'Resolvidas', icone: 'circle-check', qtd: () => null },
       ]
       ;[this.respostas, this.usuarios, this.etiquetas, this.equipes, this.campos] = await Promise.all([
         api('/api/respostas-rapidas'), api('/api/usuarios'), api('/api/etiquetas'), api('/api/equipes'), api('/api/campos')])
@@ -390,14 +401,19 @@ function inbox() {
     souAtendente() {
       return this.atual && this.atual.conversa.modo === 'humano' && this.atual.conversa.atendente_id === USUARIO.id
     },
+    corDe(nome) { // cor estável por contato (avatar)
+      const cores = ['#3a55d9', '#17845a', '#9b51e0', '#c2410c', '#0e7490', '#b45309', '#be185d', '#4d7c0f']
+      let h = 0; for (const ch of nome || '') h = (h * 31 + ch.charCodeAt(0)) >>> 0
+      return cores[h % cores.length]
+    },
     rotuloResponsavel(r) {
       return { agente: '🤖 ' + r.nome, humano: '👤 ' + r.nome, fila: '⏳ Fila', resolvida: '✅ Resolvida' }[r.tipo]
     },
     previa(c) {
       const m = c.ultima_mensagem
       if (!m) return ''
-      const quem = { agente: '🤖 ', humano: '👤 ' + m.autor.nome.split(' ')[0] + ': ', sistema: '⚙️ ', contato: '' }[m.autor.tipo]
-      return quem + (m.texto || (m.midia ? '📎 ' + m.midia : ''))
+      const quem = { agente: 'Agente: ', humano: m.autor.nome.split(' ')[0] + ': ', sistema: 'Automática: ', contato: '' }[m.autor.tipo]
+      return quem + (m.texto || (m.midia ? '[' + m.midia + ']' : ''))
     },
     filtrarSugestoes() {
       const t = this.texto

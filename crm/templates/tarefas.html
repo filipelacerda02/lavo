@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import i %}
 {% block conteudo %}
 <div class="conteudo" x-data="tarefas()" x-init="iniciar()">
   <div class="linha entre" style="margin-bottom:12px">
@@ -7,7 +8,7 @@
         <button class="chip" :class="filtro === f[0] ? 'ativo' : ''" @click="filtro = f[0]; carregar()" x-text="f[1]"></button>
       </template>
     </div>
-    <button class="btn primario" @click="editar(null)">+ Nova tarefa</button>
+    <button class="btn primario" @click="editar(null)">{{ i('plus', 'p') }} Nova tarefa</button>
   </div>
   <div class="cartao tabela-rolagem" style="padding:0">
     <table class="tabela">
@@ -17,7 +18,7 @@
           <tr>
             <td style="width:30px"><input type="checkbox" :checked="t.concluida" @change="alternar(t)"></td>
             <td><b x-text="t.titulo" :style="t.concluida ? 'text-decoration:line-through;opacity:.6' : ''"></b>
-              <span class="selo agente" x-show="t.origem === 'agente'" style="font-size:10px">🤖 criada pelo agente</span>
+              <span class="selo agente" x-show="t.origem === 'agente'" style="font-size:10px">criada pelo agente</span>
               <div class="fraco" x-text="t.descricao" style="max-width:420px; white-space:pre-wrap"></div></td>
             <td><a x-show="t.conversa_id" :href="'/conversas?c=' + t.conversa_id" x-text="t.contato_nome || 'conversa'"></a>
               <span x-show="!t.conversa_id" x-text="t.contato_nome || '—'"></span></td>

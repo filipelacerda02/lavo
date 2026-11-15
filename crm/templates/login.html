@@ -1,32 +1,51 @@
+{% from "_macros.html" import i %}
 <!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ 'Primeiro acesso' if modo == 'setup' else 'Entrar' }} · Lavo CRM</title>
+  <link rel="stylesheet" href="/static/vendor/fontes.css">
   <link rel="stylesheet" href="/static/app.css">
   <script src="/static/app.js"></script>
   <script defer src="/static/vendor/alpine-3.14.1.min.js"></script>
-  <style>
-    body { display: grid; place-items: center; min-height: 100vh; padding: 16px; }
-    .caixa { width: min(400px, 100%); }
-  </style>
 </head>
 <body>
-<form class="cartao caixa coluna" style="gap:14px; padding:28px" x-data="{nome:'', email:'', senha:'', erro:'', enviando:false}"
-      @submit.prevent="enviando = true; erro = '';
-        api('{{ '/api/setup' if modo == 'setup' else '/api/login' }}', {method:'POST', corpo: {{ '{nome, email, senha}' if modo == 'setup' else '{email, senha}' }} })
-          .then(() => location.href = '/')
-          .catch(e => { erro = e.message; enviando = false })">
-  <div class="marca" style="color:var(--texto); padding:0"><span style="color:#fff">🧺</span> Lavo CRM</div>
-  {% if modo == 'setup' %}
-  <p class="muted" style="margin:0">Primeiro acesso: crie a conta do administrador.</p>
-  <label>Seu nome <input x-model="nome" required minlength="2" autocomplete="name"></label>
-  {% endif %}
-  <label>E-mail <input type="email" x-model="email" required autocomplete="username"></label>
-  <label>Senha <input type="password" x-model="senha" required {{ 'minlength=8' if modo == 'setup' }} autocomplete="{{ 'new-password' if modo == 'setup' else 'current-password' }}"></label>
-  <p class="selo perigo" x-show="erro" x-text="erro" x-cloak style="white-space:normal"></p>
-  <button class="btn primario" :disabled="enviando" style="justify-content:center">{{ 'Criar administrador' if modo == 'setup' else 'Entrar' }}</button>
-</form>
+<div class="tela-login">
+  <aside class="lado">
+    <div class="bolhas" aria-hidden="true">
+      <span style="width:120px;height:120px;right:12%;top:18%"></span>
+      <span style="width:54px;height:54px;right:34%;top:42%;animation-delay:-3s"></span>
+      <span style="width:84px;height:84px;right:8%;bottom:16%;animation-delay:-5s"></span>
+      <span style="width:30px;height:30px;right:26%;bottom:34%;animation-delay:-1.5s"></span>
+    </div>
+    <div class="marca" style="padding:0">
+      <span class="logo">{{ i('shirt', 'g') }}</span>
+      <span><span class="nome">Lavo</span><span class="sub">Central de atendimento</span></span>
+    </div>
+    <div>
+      <p class="frase">Cada cliente atendido, pelo agente ou pela equipe.</p>
+      <p style="color:#b9c3f5; max-width:42ch; margin:14px 0 0">O agente de IA responde no WhatsApp a qualquer hora. Quando o caso pede uma pessoa, a conversa chega para você com todo o contexto.</p>
+    </div>
+    <div style="color:#9fa9dc; font-size:13px">Lavo · lavanderia por assinatura</div>
+  </aside>
+
+  <form class="coluna" style="gap:14px" x-data="{nome:'', email:'', senha:'', erro:'', enviando:false}"
+        @submit.prevent="enviando = true; erro = '';
+          api('{{ '/api/setup' if modo == 'setup' else '/api/login' }}', {method:'POST', corpo: {{ '{nome, email, senha}' if modo == 'setup' else '{email, senha}' }} })
+            .then(() => location.href = '/')
+            .catch(e => { erro = e.message; enviando = false })">
+    <h1 style="font-size:28px">{{ 'Crie a conta de administrador' if modo == 'setup' else 'Entrar' }}</h1>
+    <p class="muted" style="margin:0 0 6px">{{ 'É o primeiro acesso: esta conta poderá cadastrar o resto da equipe.' if modo == 'setup' else 'Use o e-mail e a senha que o administrador cadastrou para você.' }}</p>
+    {% if modo == 'setup' %}
+    <label>Seu nome <input x-model="nome" required minlength="2" autocomplete="name"></label>
+    {% endif %}
+    <label>E-mail <input type="email" x-model="email" required autocomplete="username"></label>
+    <label>Senha <input type="password" x-model="senha" required {{ 'minlength=8' if modo == 'setup' }} autocomplete="{{ 'new-password' if modo == 'setup' else 'current-password' }}"></label>
+    <p class="selo perigo" x-show="erro" x-text="erro" x-cloak style="white-space:normal; padding:8px 12px; border-radius:10px"></p>
+    <button class="btn primario" :disabled="enviando" style="justify-content:center; padding:11px">
+      <span x-text="enviando ? 'Entrando…' : '{{ 'Criar administrador' if modo == 'setup' else 'Entrar' }}'"></span></button>
+  </form>
+</div>
 </body>
 </html>

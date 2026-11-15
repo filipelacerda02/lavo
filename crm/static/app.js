@@ -131,7 +131,7 @@ window.barraTopo = function barraTopo() {
     },
     get wppTexto() {
       if (!this.wpp) return 'WhatsApp…'
-      return { conectado: 'WhatsApp oficial conectado', nao_configurado: 'WhatsApp não configurado',
+      return { conectado: 'WhatsApp conectado', nao_configurado: 'WhatsApp não configurado',
         erro: 'Erro na Cloud API', desconhecido: 'WhatsApp…' }[this.wpp.estado] || this.wpp.estado
     },
   }
@@ -207,3 +207,16 @@ window.seletorModelo = function seletorModelo() {
 window.ROTULO_CATEGORIA = { MARKETING: 'Marketing', UTILITY: 'Utilidade', AUTHENTICATION: 'Autenticação' }
 
 window.fmt.variavel = (i) => '{' + '{' + (i + 1) + '}' + '}'  // sem chaves duplas literais: os templates usam Jinja
+
+// Ícone do sprite para usar dentro de x-html.
+window.icone = (nome, classe = 'p') => `<svg class="ic ${classe}" aria-hidden="true"><use href="/static/vendor/icones.svg#i-${nome}"></use></svg>`
+// Número que conta até o valor (CountUp), respeitando "movimento reduzido".
+window.contar = function contar(el, valor, opcoes = {}) {
+  if (valor === null || valor === undefined || isNaN(valor)) { el.textContent = '—'; return }
+  const reduzido = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (!window.countUp || reduzido) { el.textContent = Number(valor).toLocaleString('pt-BR', opcoes.formato || {}); return }
+  const anterior = Number(el.dataset.valor || 0)
+  el.dataset.valor = valor
+  const c = new countUp.CountUp(el, valor, { startVal: anterior, duration: 1.1, separator: '.', decimal: ',', ...opcoes })
+  if (!c.error) c.start(); else el.textContent = valor
+}

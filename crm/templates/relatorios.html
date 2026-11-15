@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block cabeca %}<script src="/static/vendor/apexcharts-8.8.2.min.js"></script>{% endblock %}
 {% block conteudo %}
 <div class="conteudo" x-data="relatorios()" x-init="carregar()">
   <div class="chips" style="margin-bottom:16px">
@@ -8,19 +9,29 @@
   </div>
   <template x-if="r">
     <div class="coluna" style="gap:16px">
-      <div class="grade grade-4">
-        <div class="cartao"><div class="fraco">Conversas novas</div><div class="numero-grande" x-text="r.conversas_novas"></div></div>
-        <div class="cartao"><div class="fraco">Atendidas só pelo agente</div><div class="numero-grande" x-text="r.sem_humano"></div>
-          <div class="fraco" x-text="r.conversas_novas ? Math.round(100 * r.sem_humano / r.conversas_novas) + '% das conversas' : ''"></div></div>
-        <div class="cartao"><div class="fraco">Com participação humana</div><div class="numero-grande" x-text="r.com_humano"></div></div>
-        <div class="cartao"><div class="fraco">1ª resposta (média)</div><div class="numero-grande" x-text="fmt.duracao(r.tempo_primeira_resposta_s)"></div></div>
-        <div class="cartao"><div class="fraco">Custo do agente</div><div class="numero-grande" x-text="'US$ ' + r.custo_agente_usd.toFixed(2)"></div></div>
-        <div class="cartao"><div class="fraco">Satisfação (CSAT)</div>
-          <div class="numero-grande" x-text="r.csat.media !== null ? r.csat.media.toFixed(1) + ' / 5' : '—'"></div>
-          <div class="fraco" x-text="r.csat.respostas + ' de ' + r.csat.solicitadas + ' responderam' + (r.csat.satisfeitos_pct !== null ? ' · ' + r.csat.satisfeitos_pct + '% satisfeitos (4–5)' : '')"></div></div>
-        <div class="cartao"><div class="fraco">Resolvidas dentro do SLA</div>
-          <div class="numero-grande" x-text="r.sla.resolvidas_no_prazo_pct !== null ? r.sla.resolvidas_no_prazo_pct + '%' : '—'"></div>
-          <div class="fraco" x-text="r.sla.estouradas_agora + ' conversa(s) abertas com SLA estourado'"></div></div>
+      <div class="faixa-numeros">
+        <div><div class="rotulo">Conversas novas</div><div class="numero-grande" x-text="r.conversas_novas"></div>
+          <div class="fraco" x-text="r.com_humano + ' com participação da equipe'"></div></div>
+        <div><div class="rotulo">Só o agente atendeu</div><div class="numero-grande" x-text="r.conversas_novas ? Math.round(100 * r.sem_humano / r.conversas_novas) + '%' : '—'"></div>
+          <div class="fraco" x-text="r.sem_humano + ' conversas'"></div></div>
+        <div><div class="rotulo">Primeira resposta</div><div class="numero-grande" x-text="fmt.duracao(r.tempo_primeira_resposta_s)"></div>
+          <div class="fraco">tempo médio</div></div>
+        <div><div class="rotulo">Satisfação</div><div class="numero-grande" x-text="r.csat.media !== null ? r.csat.media.toFixed(1) : '—'"></div>
+          <div class="fraco" x-text="r.csat.respostas + ' de ' + r.csat.solicitadas + ' responderam'"></div></div>
+        <div><div class="rotulo">Resolvidas no prazo</div><div class="numero-grande" x-text="r.sla.resolvidas_no_prazo_pct !== null ? r.sla.resolvidas_no_prazo_pct + '%' : '—'"></div>
+          <div class="fraco" x-text="r.sla.estouradas_agora + ' abertas com prazo estourado'"></div></div>
+        <div><div class="rotulo">Custo do agente</div><div class="numero-grande" x-text="'US$ ' + r.custo_agente_usd.toFixed(2)"></div>
+          <div class="fraco" x-text="r.mensagens_agente + ' respostas'"></div></div>
+      </div>
+
+      <div class="cartao">
+        <div class="linha entre"><h2 style="margin:0">Quem respondeu, dia a dia</h2>
+          <div class="legenda"><span><i style="background:var(--agente)"></i>Agente</span><span><i style="background:var(--humano)"></i>Equipe</span></div></div>
+        <div x-ref="grafico" style="min-height:290px; margin-top:6px" role="img" :aria-label="'Mensagens por dia nos últimos ' + dias + ' dias'"></div>
+        <details style="margin-top:10px"><summary class="fraco">Ver como tabela</summary>
+          <table class="tabela"><thead><tr><th>Dia</th><th>Agente</th><th>Humanos</th></tr></thead>
+            <tbody><template x-for="d in r.por_dia" :key="d.dia"><tr><td x-text="fmt.data(d.dia + 'T12:00')"></td><td x-text="d.agente"></td><td x-text="d.humano"></td></tr></template></tbody></table>
+        </details>
       </div>
 
       <div class="grade grade-2">
@@ -44,25 +55,6 @@
         </div>
       </div>
 
-      <div class="cartao">
-        <div class="linha entre"><h2 style="margin:0">Mensagens enviadas por dia: agente x humanos</h2>
-          <div class="legenda"><span><i style="background:var(--agente)"></i>🤖 Agente</span><span><i style="background:var(--humano)"></i>👤 Humanos</span></div></div>
-        <div class="grafico" style="margin-top:12px" role="img" :aria-label="'Mensagens por dia nos últimos ' + dias + ' dias'">
-          <template x-for="d in r.por_dia" :key="d.dia">
-            <div class="barra" @mouseenter="dica = d.dia" @mouseleave="dica = null">
-              <div class="seg agente" :style="'height:' + (100 * d.agente / maximo()) + '%'"></div>
-              <div class="seg humano" :style="'height:' + (100 * d.humano / maximo()) + '%'"></div>
-              <div class="dica" x-show="dica === d.dia" x-text="fmt.data(d.dia + 'T12:00') + ' · agente ' + d.agente + ' · humanos ' + d.humano"></div>
-            </div>
-          </template>
-        </div>
-        <div class="eixo"><template x-for="(d, i) in r.por_dia" :key="d.dia"><span x-text="(r.por_dia.length <= 10 || i % Math.ceil(r.por_dia.length / 10) === 0) ? d.dia.slice(8, 10) + '/' + d.dia.slice(5, 7) : ''"></span></template></div>
-        <details style="margin-top:10px"><summary class="fraco">Ver como tabela</summary>
-          <table class="tabela"><thead><tr><th>Dia</th><th>Agente</th><th>Humanos</th></tr></thead>
-            <tbody><template x-for="d in r.por_dia" :key="d.dia"><tr><td x-text="fmt.data(d.dia + 'T12:00')"></td><td x-text="d.agente"></td><td x-text="d.humano"></td></tr></template></tbody></table>
-        </details>
-      </div>
-
       <div class="cartao tabela-rolagem">
         <h2>Atendimento humano por colaborador</h2>
         <table class="tabela">
@@ -79,9 +71,31 @@
 <script>
 function relatorios() {
   return {
-    dias: 7, r: null, dica: null,
-    async carregar() { this.r = await api('/api/relatorios/resumo?dias=' + this.dias) },
-    maximo() { return Math.max(1, ...this.r.por_dia.map((d) => d.agente + d.humano)) },
+    dias: 7, r: null, grafico: null,
+    async carregar() {
+      this.r = await api('/api/relatorios/resumo?dias=' + this.dias)
+      this.$nextTick(() => this.desenhar())
+    },
+    desenhar() {
+      if (!window.ApexCharts || !this.$refs.grafico) return
+      const css = getComputedStyle(document.documentElement), cor = (v) => css.getPropertyValue(v).trim()
+      const dias = this.r.por_dia
+      const opcoes = {
+        chart: { type: 'bar', height: 300, stacked: true, toolbar: { show: false }, fontFamily: cor('--fonte'),
+                 animations: { enabled: !matchMedia('(prefers-reduced-motion: reduce)').matches, speed: 450 } },
+        series: [{ name: 'Agente', data: dias.map((d) => d.agente) }, { name: 'Equipe', data: dias.map((d) => d.humano) }],
+        colors: [cor('--agente'), cor('--humano')],
+        plotOptions: { bar: { columnWidth: dias.length > 20 ? '70%' : '42%', borderRadius: 4, borderRadiusApplication: 'end', borderRadiusWhenStacked: 'last' } },
+        stroke: { show: true, width: 2, colors: [cor('--superficie')] },
+        xaxis: { categories: dias.map((d) => d.dia.slice(8, 10) + '/' + d.dia.slice(5, 7)), axisBorder: { show: false }, axisTicks: { show: false },
+                 labels: { style: { colors: cor('--texto-3') }, hideOverlappingLabels: true, rotate: 0 }, tickAmount: Math.min(dias.length, 12) },
+        yaxis: { labels: { style: { colors: cor('--texto-3') }, formatter: (v) => Math.round(v) } },
+        grid: { borderColor: cor('--borda'), strokeDashArray: 4 }, legend: { show: false }, dataLabels: { enabled: false },
+        tooltip: { theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', y: { formatter: (v) => v + ' mensagens' } },
+      }
+      if (this.grafico && document.body.contains(this.grafico.el)) this.grafico.updateOptions(opcoes)
+      else { this.grafico = new ApexCharts(this.$refs.grafico, opcoes); this.grafico.render() }
+    },
   }
 }
 </script>

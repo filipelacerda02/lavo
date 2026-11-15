@@ -1,12 +1,13 @@
 {% extends "base.html" %}
+{% from "_macros.html" import i %}
 {% block conteudo %}
 <div class="conteudo" x-data="telaModelos()" x-init="iniciar()">
   <div class="linha entre" style="margin-bottom:12px">
     <p class="muted" style="margin:0; max-width:760px">Modelos são mensagens pré-aprovadas pela Meta. São a única forma de falar com o cliente <b>fora da janela de 24 horas</b> e de fazer <a href="/campanhas">campanhas</a>. A aprovação costuma levar de minutos a algumas horas.</p>
     {% if usuario.papel != 'atendente' %}
     <div class="linha">
-      <button class="btn" @click="sincronizar()">↻ Sincronizar com a Meta</button>
-      <button class="btn primario" @click="form = novoForm()">+ Novo modelo</button>
+      <button class="btn" @click="sincronizar()">{{ i('refresh-cw', 'p') }} Sincronizar com a Meta</button>
+      <button class="btn primario" @click="form = novoForm()">{{ i('plus', 'p') }} Novo modelo</button>
     </div>
     {% endif %}
   </div>

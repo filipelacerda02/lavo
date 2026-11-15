@@ -1,15 +1,16 @@
 {% extends "base.html" %}
+{% from "_macros.html" import i %}
 {% block conteudo %}
 <div class="conteudo" x-data="configuracoes()" x-init="iniciar()">
   <div class="abas">
-    <button :class="aba === 'agente' ? 'ativo' : ''" @click="aba = 'agente'">🤖 Agente e horários</button>
-    <button :class="aba === 'atendimento' ? 'ativo' : ''" @click="aba = 'atendimento'">🎧 Atendimento, SLA e CSAT</button>
-    <button :class="aba === 'equipes' ? 'ativo' : ''" @click="aba = 'equipes'">🏢 Equipes</button>
-    <button :class="aba === 'campos' ? 'ativo' : ''" @click="aba = 'campos'">🧩 Campos</button>
-    {% if usuario.papel == 'admin' %}<button :class="aba === 'usuarios' ? 'ativo' : ''" @click="aba = 'usuarios'">👥 Colaboradores</button>{% endif %}
-    <button :class="aba === 'respostas' ? 'ativo' : ''" @click="aba = 'respostas'">⚡ Respostas rápidas</button>
-    <button :class="aba === 'etiquetas' ? 'ativo' : ''" @click="aba = 'etiquetas'">🏷️ Etiquetas</button>
-    <button :class="aba === 'funil' ? 'ativo' : ''" @click="aba = 'funil'">🗂️ Etapas do funil</button>
+    <button :class="aba === 'agente' ? 'ativo' : ''" @click="aba = 'agente'">{{ i('bot', 'p') }} Agente e horários</button>
+    <button :class="aba === 'atendimento' ? 'ativo' : ''" @click="aba = 'atendimento'">{{ i('headset', 'p') }} Atendimento, prazos e satisfação</button>
+    <button :class="aba === 'equipes' ? 'ativo' : ''" @click="aba = 'equipes'">{{ i('building-2', 'p') }} Equipes</button>
+    <button :class="aba === 'campos' ? 'ativo' : ''" @click="aba = 'campos'">{{ i('tag', 'p') }} Campos</button>
+    {% if usuario.papel == 'admin' %}<button :class="aba === 'usuarios' ? 'ativo' : ''" @click="aba = 'usuarios'">{{ i('users', 'p') }} Colaboradores</button>{% endif %}
+    <button :class="aba === 'respostas' ? 'ativo' : ''" @click="aba = 'respostas'">{{ i('zap', 'p') }} Respostas rápidas</button>
+    <button :class="aba === 'etiquetas' ? 'ativo' : ''" @click="aba = 'etiquetas'">{{ i('tag', 'p') }} Etiquetas</button>
+    <button :class="aba === 'funil' ? 'ativo' : ''" @click="aba = 'funil'">{{ i('folder-kanban', 'p') }} Etapas do funil</button>
   </div>
 
   <!-- ================= agente ================= -->
@@ -18,7 +19,7 @@
       <div class="cartao coluna" style="gap:14px">
         <h2>Ativação do agente</h2>
         <div class="linha">
-          <span class="selo" :class="ag.estado.ativo ? 'agente' : 'neutro'" x-text="ag.estado.ativo ? '🤖 Ligado agora' : '🤖 Desligado agora'"></span>
+          <span class="selo" :class="ag.estado.ativo ? 'agente' : 'neutro'" x-text="ag.estado.ativo ? 'Ligado agora' : 'Desligado agora'"></span>
           <span class="muted" x-text="ag.estado.motivo"></span>
         </div>
         <div class="fraco" x-show="ag.estado.proxima_mudanca" x-text="'Próxima mudança automática: ' + fmt.dataHora(ag.estado.proxima_mudanca)"></div>
@@ -104,7 +105,7 @@
         <div class="fraco">A conversa vai para o colaborador <b>online</b> (com o CRM aberto) que tem menos conversas, respeitando a equipe da conversa e o limite de cada um. Em caso de empate, vai para quem recebeu há mais tempo (rodízio).</div>
         <label>Encerrar conversas em que o cliente não responde há (horas, 0 = nunca)
           <input type="number" min="0" x-model.number="ag.config.resolver_inativas_h"></label>
-        <label class="check"><input type="checkbox" x-model="ag.config.triagem_ia"> ✨ Triagem por IA nas conversas novas (assunto e prioridade)</label>
+        <label class="check"><input type="checkbox" x-model="ag.config.triagem_ia"> Triagem por IA nas conversas novas (assunto e prioridade)</label>
         <label class="check"><input type="checkbox" x-model="ag.config.criar_negocio_novo_contato"> Criar negócio no funil para cada contato novo do WhatsApp</label>
         <h2 style="margin-top:6px">SLA por prioridade</h2>
         <table class="tabela">

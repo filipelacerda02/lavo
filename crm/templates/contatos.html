@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import i %}
 {% block conteudo %}
 <div class="conteudo" x-data="contatos()" x-init="iniciar()">
   <div class="linha entre" style="margin-bottom:16px">
@@ -11,11 +12,11 @@
     </div>
     <div class="linha">
       {% if usuario.papel != 'atendente' %}
-      <a class="btn" href="/api/contatos/exportar.csv">⬇️ Exportar CSV</a>
-      <label class="btn" style="flex-direction:row; font-size:14px; color:var(--texto)">⬆️ Importar CSV
+      <a class="btn" href="/api/contatos/exportar.csv">{{ i('download', 'p') }} Exportar CSV</a>
+      <label class="btn" style="flex-direction:row; font-size:14px; color:var(--texto)">{{ i('upload', 'p') }} Importar CSV
         <input type="file" accept=".csv" hidden @change="importar($event)"></label>
       {% endif %}
-      <button class="btn primario" @click="editar(null)">+ Novo contato</button>
+      <button class="btn primario" @click="editar(null)">{{ i('plus', 'p') }} Novo contato</button>
     </div>
   </div>
   <div class="cartao tabela-rolagem" style="padding:0">
@@ -35,7 +36,7 @@
             <td x-text="c.responsavel ? c.responsavel.nome : '—'"></td>
             <td class="fraco" x-text="fmt.dataHora(c.ultima_interacao)"></td>
             <td style="text-align:right; white-space:nowrap">
-              <button class="btn pequeno" @click="conversar(c)" :disabled="!c.telefone">💬</button>
+              <button class="btn pequeno" @click="conversar(c)" :disabled="!c.telefone" title="Conversar no WhatsApp" aria-label="Conversar no WhatsApp">{{ i('message-circle', 'p') }}</button>
               <button class="btn pequeno" @click="editar(c)">Editar</button>
             </td>
           </tr>

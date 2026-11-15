@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% from "_macros.html" import i %}
 {% block conteudo %}
 <div class="conteudo" x-data="telaWpp()" x-init="iniciar()">
   <div class="grade grade-2">
     <div class="cartao coluna" style="gap:12px">
       <div class="linha entre"><h2 style="margin:0">WhatsApp Business — API oficial (Cloud API)</h2>
-        <button class="btn pequeno" @click="carregar()">↻ Testar conexão</button></div>
+        <button class="btn pequeno" @click="carregar()">{{ i('refresh-cw', 'p') }} Testar conexão</button></div>
       <template x-if="s">
         <div class="coluna" style="gap:10px">
           <div class="linha">
