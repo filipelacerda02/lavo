@@ -1,0 +1,9 @@
+[project]
+name = "lavo"
+version = "0.1.0"
+description = "Agente de IA completo: contexto, RAG, embeddings, banco vetorial, tools, loop, structured output, streaming, guardrails, cache, fallback, evals e observabilidade"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]

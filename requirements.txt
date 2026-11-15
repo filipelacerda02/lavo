@@ -1,0 +1,9 @@
+anthropic>=2.8
+pydantic>=2
+chromadb>=1.0
+fastapi>=0.110
+uvicorn>=0.29
+voyageai  # embeddings recomendados (opcional se usar LAVO_EMBEDDINGS=local)
+pypdf  # para indexar PDFs em docs/
+pytest
+# opcional, embeddings locais: sentence-transformers

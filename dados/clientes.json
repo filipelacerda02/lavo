@@ -1,0 +1,37 @@
+{
+  "clientes": {
+    "cli_ana": {
+      "nome": "Ana Souza",
+      "email": "ana.souza@exemplo.com",
+      "cpf": "123.456.789-09",
+      "telefone": "(11) 98888-1111",
+      "endereco": "Rua das Flores, 120 - Pinheiros, São Paulo",
+      "assinatura": {"plano": "Família", "status": "ativa", "valor_mensal": 289.9, "renova_em": "2026-12-05", "pecas_restantes_no_mes": 34}
+    },
+    "cli_bruno": {
+      "nome": "Bruno Lima",
+      "email": "bruno.lima@exemplo.com",
+      "cpf": "987.654.321-00",
+      "telefone": "(11) 97777-2222",
+      "endereco": "Av. Paulista, 900 ap 52 - Bela Vista, São Paulo",
+      "assinatura": {"plano": "Essencial", "status": "ativa", "valor_mensal": 149.9, "renova_em": "2026-11-20", "pecas_restantes_no_mes": 3}
+    },
+    "cli_carla": {
+      "nome": "Carla Mendes",
+      "email": "carla.mendes@exemplo.com",
+      "cpf": "321.654.987-11",
+      "telefone": "(21) 96666-3333",
+      "endereco": "Rua Voluntários da Pátria, 45 - Botafogo, Rio de Janeiro",
+      "assinatura": {"plano": "Avulso", "status": "sem_assinatura", "valor_mensal": 0, "renova_em": null, "pecas_restantes_no_mes": 0}
+    }
+  },
+  "pedidos": {
+    "PED-1041": {"cliente_id": "cli_ana", "status": "entregue", "servico": "lavar e passar", "pecas": 22, "criado_em": "2026-11-03", "previsao_entrega": "2026-11-05", "valor": 0},
+    "PED-1042": {"cliente_id": "cli_ana", "status": "aguardando_coleta", "servico": "lavar e dobrar", "pecas": 15, "criado_em": "2026-11-14", "previsao_entrega": "2026-11-18", "valor": 0},
+    "PED-1043": {"cliente_id": "cli_ana", "status": "em_lavagem", "servico": "lavagem a seco", "pecas": 2, "criado_em": "2026-11-12", "previsao_entrega": "2026-11-17", "valor": 64.0},
+    "PED-2001": {"cliente_id": "cli_bruno", "status": "pronto_para_entrega", "servico": "lavar e passar", "pecas": 12, "criado_em": "2026-11-11", "previsao_entrega": "2026-11-15", "valor": 0},
+    "PED-2002": {"cliente_id": "cli_bruno", "status": "aguardando_coleta", "servico": "edredom", "pecas": 1, "criado_em": "2026-11-14", "previsao_entrega": "2026-11-19", "valor": 59.9},
+    "PED-3001": {"cliente_id": "cli_carla", "status": "coletado", "servico": "lavar e dobrar", "pecas": 8, "criado_em": "2026-11-14", "previsao_entrega": "2026-11-17", "valor": 72.0}
+  },
+  "chamados": []
+}
