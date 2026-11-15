@@ -30,7 +30,7 @@ from lavo.agente import SYSTEM, Agente
 from lavo.conversa import Conversa as ConversaAgente
 from lavo.ferramentas import Loja
 
-from . import recursos, whatsapp
+from . import campanhas, recursos, whatsapp
 from .agenda import estado_do_agente
 from .db import sessao
 from .eventos import barramento
@@ -173,14 +173,20 @@ def cancelar_agendamento(conv_id: int) -> None:
 
 # ------------------------------------------------------------------ entrada do WhatsApp
 async def receber_do_whatsapp(evento: dict[str, Any]) -> int | None:
-    """Processa uma mensagem vinda do gateway. Retorna o id da conversa."""
-    jid, wid = evento.get("jid"), evento.get("id")
+    """Processa uma mensagem recebida (já convertida do webhook da Cloud API). Retorna o id da conversa."""
+    jid, wid = whatsapp.wa_id(evento.get("jid") or ""), evento.get("id")
     if not jid:
         return None
+    evento = {**evento, "jid": jid, "telefone": whatsapp.wa_id(evento.get("telefone") or jid)}
     texto = (evento.get("texto") or "").strip()
     midia = evento.get("midia")
     aviso: tuple[str, str] | None = None
     nova_conversa = False
+    msg_midia: tuple[int, str] | None = None
+    if not evento.get("de_mim") and midia == "reacao":
+        return await _registrar_reacao(evento)
+    if not evento.get("de_mim") and (intencao := campanhas.intencao_consentimento(texto, evento.get("botao"))):
+        return await _registrar_consentimento(evento, intencao)
     if not evento.get("de_mim"):
         # Resposta à pesquisa de satisfação de uma conversa já resolvida?
         with sessao() as db:
@@ -198,6 +204,11 @@ async def receber_do_whatsapp(evento: dict[str, Any]) -> int | None:
             return None  # duplicada
         contato = localizar_ou_criar_contato(db, jid, evento.get("telefone"), evento.get("nome"))
         contato.ultima_interacao = agora()
+        if not evento.get("de_mim"):
+            contato.ultima_entrada_em = agora()  # abre/renova a janela de 24h
+            campanhas.registrar_resposta_campanha(db, contato.id)
+        anterior = None if conversa_aberta(db, contato.id) else db.scalar(
+            select(Conversa).where(Conversa.contato_id == contato.id).order_by(Conversa.id.desc()))
         conv = conversa_aberta(db, contato.id)
         cfg = ler_config(db)
 
@@ -229,6 +240,13 @@ async def receber_do_whatsapp(evento: dict[str, Any]) -> int | None:
                 nova_conversa = True
                 evento_sistema(db, conv, "Nova conversa — 🤖 atendida pelo agente." if agente_pode
                                else f"Nova conversa — ⏳ na fila. {motivo_off}.")
+                if anterior:
+                    modelo_recente = db.scalar(select(Mensagem).where(
+                        Mensagem.conversa_id == anterior.id, Mensagem.modelo_nome.is_not(None),
+                        Mensagem.criada_em >= agora() - timedelta(hours=72)).order_by(Mensagem.id.desc()))
+                    if modelo_recente:
+                        evento_sistema(db, conv, f"↩️ Cliente respondeu ao modelo '{modelo_recente.modelo_nome}'"
+                                       + (" (campanha)." if modelo_recente.campanha_id else "."))
                 if getattr(contato, "_novo", False) and cfg.get("criar_negocio_novo_contato"):
                     recursos.criar_negocio_lead(db, contato)
             elif conv.modo == MODO_FILA and agente_pode and conv.atendente_id is None \
@@ -239,8 +257,13 @@ async def receber_do_whatsapp(evento: dict[str, Any]) -> int | None:
                 mudar_modo(db, conv, MODO_FILA, motivo=motivo_off)
                 evento_sistema(db, conv, f"⏳ Conversa enviada para a fila. {motivo_off}.")
 
-            db.add(Mensagem(conversa_id=conv.id, direcao="entrada", autor_tipo="contato", origem="whatsapp",
-                            texto=texto, midia=midia, whatsapp_id=wid))
+            msg = Mensagem(conversa_id=conv.id, direcao="entrada", autor_tipo="contato", origem="whatsapp",
+                           texto=texto, midia=midia, whatsapp_id=wid, midia_id=evento.get("midia_id"),
+                           midia_mime=evento.get("midia_mime"), midia_nome=evento.get("midia_nome"))
+            db.add(msg)
+            db.flush()
+            if msg.midia_id:
+                msg_midia = (msg.id, msg.midia_id)
             conv.nao_lidas += 1
             conv.ultima_mensagem_em = agora()
             conv_id = conv.id
@@ -259,6 +282,8 @@ async def receber_do_whatsapp(evento: dict[str, Any]) -> int | None:
             recursos.notificar("fila", f"Nova conversa na fila: {nome_contato}", conv_id)
         if nova_conversa and texto and cfg.get("triagem_ia"):
             asyncio.create_task(asyncio.to_thread(recursos.triagem_ia, conv_id, texto))
+    if msg_midia and not whatsapp.SIMULADO:
+        asyncio.create_task(baixar_midia_mensagem(*msg_midia))
     if aviso:
         await _enviar_automatico(conv_id, *aviso)
     publicar_conversa(conv_id)
@@ -270,7 +295,82 @@ async def receber_do_whatsapp(evento: dict[str, Any]) -> int | None:
     return conv_id
 
 
+async def _registrar_reacao(evento: dict[str, Any]) -> int | None:
+    with sessao() as db:
+        contato = db.scalar(select(Contato).where(Contato.whatsapp_jid == evento["jid"]))
+        conv = db.scalar(select(Conversa).where(Conversa.contato_id == contato.id).order_by(Conversa.id.desc())) \
+            if contato else None
+        if not conv:
+            return None
+        contato.ultima_entrada_em = agora()
+        alvo = db.scalar(select(Mensagem).where(Mensagem.whatsapp_id == evento.get("reacao_a")))
+        sobre = f" a: “{(alvo.texto or '')[:60]}”" if alvo else ""
+        db.add(Mensagem(conversa_id=conv.id, direcao="entrada", autor_tipo="contato", origem="whatsapp",
+                        texto=(evento.get("texto") or "removeu a reação") + sobre, midia="reacao",
+                        whatsapp_id=evento.get("id"), processada_pelo_agente=True))
+        conv_id = conv.id
+    barramento.publicar("mensagem", {"conversa_id": conv_id})
+    return conv_id
+
+
+async def _registrar_consentimento(evento: dict[str, Any], intencao: str) -> int:
+    """SAIR/PARAR desliga o opt-in; VOLTAR religa. Não vai para o agente."""
+    with sessao() as db:
+        contato = localizar_ou_criar_contato(db, evento["jid"], evento.get("telefone"), evento.get("nome"))
+        contato.ultima_entrada_em = contato.ultima_interacao = agora()
+        if intencao == "sair":
+            contato.opt_in, contato.opt_out_em = False, agora()
+            resposta = ("Pronto! Você não vai mais receber nossas mensagens promocionais. "
+                        "Se mudar de ideia, é só responder VOLTAR.")
+        else:
+            contato.opt_in, contato.opt_out_em, contato.opt_in_em = True, None, agora()
+            contato.opt_in_origem = "whatsapp (VOLTAR)"
+            resposta = "Combinado! Você voltará a receber nossas novidades. Para sair, responda SAIR."
+        conv = conversa_aberta(db, contato.id) or db.scalar(
+            select(Conversa).where(Conversa.contato_id == contato.id).order_by(Conversa.id.desc()))
+        if not conv:
+            conv = Conversa(contato_id=contato.id, status="resolvida", resolvida_em=agora())
+            db.add(conv)
+            db.flush()
+        db.add(Mensagem(conversa_id=conv.id, direcao="entrada", autor_tipo="contato", origem="whatsapp",
+                        texto=evento.get("texto") or "", whatsapp_id=evento.get("id"), processada_pelo_agente=True))
+        evento_sistema(db, conv, "🚫 Contato pediu para sair das campanhas (opt-out)." if intencao == "sair"
+                       else "✅ Contato voltou a aceitar campanhas (opt-in).")
+        auditar(db, None, "opt_out" if intencao == "sair" else "opt_in", "contato", contato.id, origem="whatsapp")
+        conv_id, contato_id, jid = conv.id, contato.id, contato.whatsapp_jid or contato.telefone
+    await _enviar_automatico(conv_id, jid, resposta)
+    barramento.publicar("contato", {"id": contato_id})
+    publicar_conversa(conv_id)
+    return conv_id
+
+
+async def baixar_midia_mensagem(mensagem_id: int, midia_id: str) -> None:
+    """Baixa a mídia da Meta (a URL expira) e guarda em .crm/midia/."""
+    from .config import PASTA_DADOS
+
+    try:
+        conteudo, mime = await whatsapp.baixar_midia(midia_id)
+    except whatsapp.ErroWhatsapp:
+        log.warning("não foi possível baixar a mídia %s", midia_id, exc_info=True)
+        return
+    pasta = PASTA_DADOS / "midia"
+    pasta.mkdir(exist_ok=True)
+    nome = f"{mensagem_id}-{re.sub(r'[^A-Za-z0-9_-]', '', midia_id)[:40]}{whatsapp.extensao(mime)}"
+    (pasta / nome).write_bytes(conteudo)
+    with sessao() as db:
+        m = db.get(Mensagem, mensagem_id)
+        if m:
+            m.midia_arquivo, m.midia_mime = nome, mime
+            conv_id = m.conversa_id
+    barramento.publicar("mensagem", {"conversa_id": conv_id})
+
+
 async def _enviar_automatico(conv_id: int, jid: str, texto: str) -> None:
+    with sessao() as db:
+        conv = db.get(Conversa, conv_id)
+        if conv and not whatsapp.janela_aberta(conv.contato.ultima_entrada_em):
+            evento_sistema(db, conv, "Mensagem automática não enviada: janela de 24h fechada (use um modelo).")
+            return
     try:
         wid, erro = await whatsapp.enviar(jid, texto), None
     except whatsapp.ErroWhatsapp as e:
@@ -338,15 +438,24 @@ async def executar_agente(conv_id: int) -> None:
                 Mensagem.direcao.in_(["entrada", "saida"])).order_by(Mensagem.id)) if m.id not in ids_pendentes]
             # Só faz sentido contar o que os humanos falaram se o agente já participou antes.
             contexto_extra = _formatar_ocorrido(ocorrido) if ocorrido and estado else None
+            if not estado:  # 1ª resposta: o cliente pode estar respondendo a um modelo/campanha nosso
+                recentes = list(db.scalars(select(Mensagem).join(Conversa).where(
+                    Conversa.contato_id == conv.contato_id, Mensagem.conversa_id != conv_id,
+                    Mensagem.direcao == "saida", Mensagem.criada_em >= agora() - timedelta(hours=72))
+                    .order_by(Mensagem.id.desc()).limit(3)))[::-1]
+                if recentes:
+                    contexto_extra = "Mensagens que a empresa enviou ao cliente antes desta conversa:\n" + \
+                        "\n".join(f"Empresa: {m.texto}" for m in recentes)
             pergunta = "\n".join(_conteudo(m) for m in pendentes)
             contato = conv.contato
             dados = dict(jid=contato.whatsapp_jid or whatsapp.jid_de_telefone(contato.telefone or ""),
+                         ultimo_wamid=pendentes[-1].whatsapp_id,
                          cliente_id=contato.cliente_externo_id, contato_id=contato.id,
                          nome=contato.nome or None, telefone=contato.telefone)
             cfg = ler_config(db)
             ultimo_pendente = pendentes[-1].id
 
-        await whatsapp.digitando(dados["jid"], True)
+        await whatsapp.digitando(dados["jid"], True, message_id=dados["ultimo_wamid"])
         try:
             resposta, historico, ferramentas = await asyncio.to_thread(
                 _rodar_agente, conv_id, estado.get("conversa"), dados, pergunta, contexto_extra)
@@ -355,7 +464,6 @@ async def executar_agente(conv_id: int) -> None:
             log.exception("agente falhou na conversa %s", conv_id)
             resposta = historico = ferramentas = None
             erro = f"{type(e).__name__}: {e}"
-        await whatsapp.digitando(dados["jid"], False)
 
         with sessao() as db:
             conv = db.get(Conversa, conv_id)
@@ -461,6 +569,9 @@ async def enviar_humano(db: Session, conv: Conversa, usuario: Usuario, texto: st
     jid = contato.whatsapp_jid or (whatsapp.jid_de_telefone(contato.telefone) if contato.telefone else None)
     if not jid:
         raise ErroAtendimento("Contato sem WhatsApp/telefone.")
+    if not whatsapp.janela_aberta(contato.ultima_entrada_em):
+        raise ErroAtendimento("Janela de 24h fechada: o cliente não escreve há mais de 24 horas. "
+                              "Pela regra da Meta, só é possível enviar um modelo aprovado.", 409)
     try:
         wid, erro = await whatsapp.enviar(jid, texto), None
     except whatsapp.ErroWhatsapp as e:

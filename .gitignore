@@ -8,5 +8,4 @@ traces/
 evals/resultados/
 .venv/
 .crm/
-whatsapp-gateway/node_modules/
-whatsapp-gateway/sessao/
+whatsapp-gateway/

@@ -13,10 +13,8 @@ PASTA_DADOS.mkdir(parents=True, exist_ok=True)
 
 URL_BANCO = os.getenv("CRM_BANCO", f"sqlite:///{PASTA_DADOS / 'crm.db'}")
 
-# Gateway do WhatsApp (pasta whatsapp-gateway/). Sem URL => modo simulado.
-GATEWAY_URL = os.getenv("WHATSAPP_GATEWAY_URL", "").rstrip("/")
-GATEWAY_TOKEN = os.getenv("WHATSAPP_GATEWAY_TOKEN", "")
-WHATSAPP_SIMULADO = not GATEWAY_URL or os.getenv("WHATSAPP_SIMULADO") == "1"
+# WhatsApp: Cloud API oficial (veja crm/whatsapp.py). Sem WHATSAPP_TOKEN => modo simulado.
+from .whatsapp import SIMULADO as WHATSAPP_SIMULADO  # noqa: E402
 
 # Cookies de sessão: segredo persistente gerado no primeiro uso.
 _arquivo_segredo = PASTA_DADOS / "segredo"

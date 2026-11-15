@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<div class="conteudo" x-data="telaModelos()" x-init="iniciar()">
+  <div class="linha entre" style="margin-bottom:12px">
+    <p class="muted" style="margin:0; max-width:760px">Modelos são mensagens pré-aprovadas pela Meta. São a única forma de falar com o cliente <b>fora da janela de 24 horas</b> e de fazer <a href="/campanhas">campanhas</a>. A aprovação costuma levar de minutos a algumas horas.</p>
+    {% if usuario.papel != 'atendente' %}
+    <div class="linha">
+      <button class="btn" @click="sincronizar()">↻ Sincronizar com a Meta</button>
+      <button class="btn primario" @click="form = novoForm()">+ Novo modelo</button>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="cartao tabela-rolagem" style="padding:0">
+    <table class="tabela">
+      <thead><tr><th>Nome</th><th>Categoria</th><th>Idioma</th><th>Status</th><th>Conteúdo</th><th></th></tr></thead>
+      <tbody>
+        <template x-for="m in lista" :key="m.id">
+          <tr>
+            <td><b x-text="m.nome"></b></td>
+            <td x-text="ROTULO_CATEGORIA[m.categoria] || m.categoria"></td>
+            <td x-text="m.idioma"></td>
+            <td><span class="selo" :class="{APPROVED: 'ok', PENDING: 'fila', REJECTED: 'perigo', PAUSED: 'perigo', DISABLED: 'perigo'}[m.status] || 'neutro'"
+                      x-text="{APPROVED: 'Aprovado', PENDING: 'Em análise', REJECTED: 'Rejeitado', PAUSED: 'Pausado', DISABLED: 'Desativado', IN_APPEAL: 'Em recurso'}[m.status] || m.status"></span>
+              <div class="fraco" x-show="m.motivo_rejeicao" x-text="m.motivo_rejeicao"></div></td>
+            <td style="max-width:420px; white-space:pre-wrap" class="muted" x-text="m.previa"></td>
+            <td>{% if usuario.papel != 'atendente' %}<button class="btn pequeno perigo" @click="excluir(m)">Excluir</button>{% endif %}</td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+    <div class="vazio" x-show="!lista.length">Nenhum modelo. Sincronize com a Meta ou crie um novo.</div>
+  </div>
+
+  <div class="modal-fundo" x-show="form" x-cloak @click.self="form = null">
+    <form class="modal coluna" style="width:min(680px, 100%)" @submit.prevent="criar()" x-show="form">
+      <h2>Novo modelo</h2>
+      <template x-if="form">
+        <div class="coluna">
+          <div class="linha">
+            <label style="flex:2">Nome (minúsculas e _) <input x-model="form.nome" required pattern="[a-z0-9_]+" placeholder="lembrete_coleta"></label>
+            <label style="flex:1">Idioma <select x-model="form.idioma"><option value="pt_BR">Português (BR)</option><option value="en_US">Inglês (EUA)</option><option value="es">Espanhol</option></select></label>
+          </div>
+          <label>Categoria
+            <select x-model="form.categoria">
+              <option value="UTILITY">Utilidade — confirmações, lembretes, avisos sobre um pedido/serviço</option>
+              <option value="MARKETING">Marketing — promoções, novidades, reativação (exige opt-in)</option>
+              <option value="AUTHENTICATION">Autenticação — códigos de verificação</option>
+            </select></label>
+          <div class="fraco">A Meta reclassifica modelos de "utilidade" com tom promocional para marketing, que é mais caro.</div>
+          <label>Cabeçalho (opcional) <input x-model="form.cabecalho" maxlength="60" placeholder="Sua coleta está chegando"></label>
+          <label>Corpo — use {{ '{{1}}' }}, {{ '{{2}}' }}… para variáveis
+            <textarea rows="5" x-model="form.corpo" required maxlength="1024" placeholder="Olá {{ '{{1}}' }}! Sua coleta está agendada para {{ '{{2}}' }}. Precisa remarcar? Responda esta mensagem."></textarea></label>
+          <template x-for="(v, i) in form.exemplos_cabecalho" :key="'ec' + i">
+            <label><span x-text="'Exemplo para ' + fmt.variavel(i) + ' do cabeçalho'"></span><input x-model="form.exemplos_cabecalho[i]" required></label>
+          </template>
+          <template x-for="(v, i) in form.exemplos_corpo" :key="'e' + i">
+            <label><span x-text="'Exemplo para ' + fmt.variavel(i) + ' (a Meta usa para avaliar)'"></span><input x-model="form.exemplos_corpo[i]" required></label>
+          </template>
+          <label>Rodapé (opcional) <input x-model="form.rodape" maxlength="60" placeholder="Lavo · Responda SAIR para não receber"></label>
+          <div>
+            <div class="linha entre"><span class="fraco">Botões (até 3)</span>
+              <div class="linha">
+                <button type="button" class="btn pequeno" @click="form.botoes.push({tipo: 'QUICK_REPLY', texto: ''})" :disabled="form.botoes.length >= 3">+ Resposta rápida</button>
+                <button type="button" class="btn pequeno" @click="form.botoes.push({tipo: 'URL', texto: '', url: ''})" :disabled="form.botoes.length >= 3">+ Link</button>
+                <button type="button" class="btn pequeno" @click="form.botoes.push({tipo: 'QUICK_REPLY', texto: 'Parar promoções'})" :disabled="form.botoes.length >= 3" x-show="form.categoria === 'MARKETING'">+ Botão de descadastro</button>
+              </div></div>
+            <template x-for="(b, i) in form.botoes" :key="i">
+              <div class="linha" style="margin-top:6px">
+                <span class="selo neutro" x-text="b.tipo === 'URL' ? 'Link' : 'Resposta'"></span>
+                <input x-model="b.texto" maxlength="25" placeholder="Texto do botão" style="flex:1" required>
+                <input x-show="b.tipo === 'URL'" x-model="b.url" placeholder="https://…" style="flex:2">
+                <button type="button" class="btn pequeno perigo" @click="form.botoes.splice(i, 1)">✕</button>
+              </div>
+            </template>
+          </div>
+          <div class="resumo-ia" x-text="previa()"></div>
+        </div>
+      </template>
+      <div class="acoes">
+        <button type="button" class="btn" @click="form = null">Cancelar</button>
+        <button class="btn primario" :disabled="enviando">Enviar para aprovação</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% raw %}
+<script>
+function telaModelos() {
+  const contar = (t) => Math.max(0, ...[...(t || '').matchAll(/\{\{(\d+)\}\}/g)].map((m) => Number(m[1])))
+  return {
+    lista: [], form: null, enviando: false,
+    async iniciar() {
+      await this.carregar()
+      window.addEventListener('lavo:modelo', () => this.carregar())
+      this.$watch('form && form.corpo', (t) => this.ajustar('exemplos_corpo', contar(t)))
+      this.$watch('form && form.cabecalho', (t) => this.ajustar('exemplos_cabecalho', contar(t)))
+    },
+    ajustar(campo, n) {
+      if (!this.form) return
+      const atual = this.form[campo]
+      this.form[campo] = Array.from({ length: n }, (_, i) => atual[i] || '')
+    },
+    novoForm() {
+      return { nome: '', idioma: 'pt_BR', categoria: 'UTILITY', cabecalho: '', corpo: '', rodape: '',
+        exemplos_corpo: [], exemplos_cabecalho: [], botoes: [] }
+    },
+    previa() {
+      const f = this.form
+      if (!f) return ''
+      const sub = (t, ex) => (t || '').replace(/\{\{(\d+)\}\}/g, (m, n) => ex[Number(n) - 1] || m)
+      return [f.cabecalho ? '*' + sub(f.cabecalho, f.exemplos_cabecalho) + '*' : '', sub(f.corpo, f.exemplos_corpo),
+        f.rodape ? '_' + f.rodape + '_' : '', f.botoes.map((b) => '[' + b.texto + ']').join(' ')].filter(Boolean).join('\n')
+    },
+    async carregar() { this.lista = await api('/api/modelos') },
+    async sincronizar() {
+      const r = await tentar(() => api('/api/modelos/sincronizar', { method: 'POST' }))
+      avisar(`${r.sincronizados} modelo(s) sincronizado(s)`)
+      this.carregar()
+    },
+    async criar() {
+      this.enviando = true
+      try {
+        const f = this.form
+        await tentar(() => api('/api/modelos', { method: 'POST', corpo: { ...f, cabecalho: f.cabecalho || null, rodape: f.rodape || null } }),
+          'Modelo enviado para aprovação')
+        this.form = null
+        this.carregar()
+      } finally { this.enviando = false }
+    },
+    async excluir(m) {
+      if (!confirm(`Excluir o modelo "${m.nome}"? Ele também é excluído na Meta.`)) return
+      await tentar(() => api('/api/modelos/' + m.id, { method: 'DELETE' }), 'Modelo excluído')
+      this.carregar()
+    },
+  }
+}
+</script>
+{% endraw %}
+{% endblock %}

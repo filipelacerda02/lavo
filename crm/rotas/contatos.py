@@ -15,7 +15,8 @@ from sqlalchemy.orm import Session
 from .. import atendimento as at
 from .. import serializar as s
 from ..db import obter_db
-from ..modelos import CampoPersonalizado, Contato, Conversa, Etiqueta, Negocio, Tarefa, Usuario, contato_etiquetas
+from ..modelos import (CampoPersonalizado, Contato, Conversa, Etiqueta, Negocio, Tarefa, Usuario, agora,
+                       contato_etiquetas)
 from .base import admin, gestor, usuario_logado
 
 rotas = APIRouter(prefix="/api", tags=["contatos"])
@@ -33,6 +34,8 @@ class DadosContato(BaseModel):
     responsavel_id: int | None = None
     etiqueta_ids: list[int] | None = None
     campos_extras: dict[str, str | float | None] | None = None
+    opt_in: bool | None = None
+    opt_in_origem: str | None = Field(None, max_length=80)
 
 
 class DadosCampo(BaseModel):
@@ -64,6 +67,14 @@ def _aplicar(db: Session, c: Contato, dados: DadosContato) -> None:
     campos = dados.model_dump(exclude_unset=True)
     if "telefone" in campos:
         c.telefone = _telefone(campos.pop("telefone"))  # o jid real chega na primeira mensagem
+    if "opt_in" in campos:
+        aceita = campos.pop("opt_in")
+        origem = campos.pop("opt_in_origem", None) or "cadastro manual"
+        if aceita and not c.opt_in:
+            c.opt_in, c.opt_in_em, c.opt_in_origem, c.opt_out_em = True, agora(), origem, None
+        elif aceita is False and c.opt_in:
+            c.opt_in, c.opt_out_em = False, agora()
+    campos.pop("opt_in_origem", None)
     extras = campos.pop("campos_extras", None)
     if extras is not None:
         validos = {cp.chave for cp in db.scalars(select(CampoPersonalizado))}
@@ -121,10 +132,11 @@ def exportar(u: Usuario = Depends(gestor), db: Session = Depends(obter_db)):
     saida = io.StringIO()
     w = csv.writer(saida)
     extras = [cp.chave for cp in db.scalars(select(CampoPersonalizado).order_by(CampoPersonalizado.ordem))]
-    w.writerow(["nome", "telefone", "email", "empresa", "origem", "etiquetas", "observacoes", "criado_em", *extras])
+    w.writerow(["nome", "telefone", "email", "empresa", "origem", "etiquetas", "observacoes", "criado_em", "opt_in",
+                *extras])
     for c in db.scalars(select(Contato).order_by(Contato.id)).unique():
         w.writerow([c.nome, c.telefone or "", c.email or "", c.empresa or "", c.origem,
-                    ";".join(e.nome for e in c.etiquetas), c.observacoes, s.iso(c.criado_em),
+                    ";".join(e.nome for e in c.etiquetas), c.observacoes, s.iso(c.criado_em), "sim" if c.opt_in else "nao",
                     *[(c.campos_extras or {}).get(k, "") for k in extras]])
     at.auditar(db, u, "contatos_exportados")
     db.commit()
@@ -155,6 +167,8 @@ async def importar(arquivo: UploadFile = File(...), u: Usuario = Depends(gestor)
         for campo in ("nome", "email", "empresa", "observacoes"):
             if linha.get(campo):
                 setattr(c, campo, linha[campo])
+        if (linha.get("opt_in") or "").lower() in ("sim", "s", "1", "true", "yes") and not c.opt_out_em:
+            c.opt_in, c.opt_in_em, c.opt_in_origem = True, agora(), f"importação CSV ({arquivo.filename})"[:80]
         extras = {k: v for k, v in linha.items() if k in chaves_extras and v}
         if extras:
             c.campos_extras = {**(c.campos_extras or {}), **extras}

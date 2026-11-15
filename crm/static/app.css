@@ -162,7 +162,7 @@ label.check { flex-direction: row; align-items: center; gap: 8px; font-weight: 5
 .mensagens { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; background: var(--fundo); }
 .msg { max-width: min(560px, 80%); display: flex; flex-direction: column; gap: 3px; }
 .msg .autor { font-size: 11.5px; font-weight: 700; display: flex; align-items: center; gap: 5px; }
-.msg .balao { padding: 9px 12px; border-radius: 12px; white-space: pre-wrap; word-wrap: break-word; box-shadow: 0 1px 1px rgba(0,0,0,.05); }
+.msg .balao { padding: 9px 12px; border-radius: 12px; white-space: normal; word-wrap: break-word; box-shadow: 0 1px 1px rgba(0,0,0,.05); }
 .msg .hora { font-size: 11px; color: var(--texto-3); }
 .msg.entrada { align-self: flex-start; }
 .msg.entrada .balao { background: var(--superficie); border: 1px solid var(--borda); border-top-left-radius: 4px; }
@@ -240,3 +240,4 @@ label.check { flex-direction: row; align-items: center; gap: 8px; font-weight: 5
 .estrelas { color: #eda100; letter-spacing: 1px; }
 .ponto.on { background: var(--ok); } .ponto.aus { background: var(--fila); } .ponto.off { background: var(--texto-3); }
 .barra-h { height: 8px; border-radius: 4px; background: var(--agente); }
+.msg .balao .texto-msg, .msg.nota .balao { white-space: pre-wrap; }

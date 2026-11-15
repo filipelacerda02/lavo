@@ -26,7 +26,9 @@
           <tr>
             <td><b x-text="c.nome"></b><div class="fraco" x-text="c.empresa || ''"></div>
               <span class="selo agente" x-show="c.cliente_externo_id" style="font-size:10px">cliente</span>
-              <span class="selo humano" x-show="c.agente_bloqueado" style="font-size:10px">só humanos</span></td>
+              <span class="selo humano" x-show="c.agente_bloqueado" style="font-size:10px">só humanos</span>
+              <span class="selo ok" x-show="c.opt_in" style="font-size:10px" :title="'opt-in: ' + (c.opt_in_origem || '') + ' em ' + fmt.data(c.opt_in_em)">opt-in</span>
+              <span class="selo perigo" x-show="c.opt_out_em" style="font-size:10px" :title="'saiu em ' + fmt.data(c.opt_out_em)">opt-out</span></td>
             <td x-text="fmt.telefone(c.telefone)"></td>
             <td x-text="c.email || ''"></td>
             <td><template x-for="e in c.etiquetas" :key="e.id"><span class="etiqueta" :style="'background:' + e.cor" x-text="e.nome" style="margin-right:3px"></span></template></td>
@@ -80,6 +82,10 @@
               <label class="check" style="font-size:13px"><input type="checkbox" :value="e.id" x-model.number="form.etiqueta_ids"> <span class="etiqueta" :style="'background:' + e.cor" x-text="e.nome"></span></label>
             </template></div></div>
           <label class="check"><input type="checkbox" x-model="form.agente_bloqueado"> Só humanos atendem (o agente não responde este contato)</label>
+          <label class="check"><input type="checkbox" x-model="form.opt_in"> Aceita receber mensagens da empresa (opt-in)</label>
+          <label x-show="form.opt_in && !form.opt_in_em">Como o consentimento foi obtido <input x-model="form.opt_in_origem" placeholder="ex.: formulário do site, balcão da loja, contrato"></label>
+          <div class="fraco" x-show="form.opt_in_em" x-text="'Consentimento em ' + fmt.dataHora(form.opt_in_em) + ' · ' + (form.opt_in_origem || '')"></div>
+          <div class="fraco">A Meta exige consentimento para mensagens iniciadas pela empresa, e a LGPD exige que você saiba comprovar como ele foi obtido.</div>
         </div>
       </template>
       <div class="acoes">
@@ -90,11 +96,25 @@
       </div>
     </form>
   </div>
+  <div class="modal-fundo" x-show="modeloPara" x-cloak @click.self="modeloPara = null">
+    <div class="modal coluna" x-data="seletorModelo()" x-init="$watch('modeloPara', v => v && carregarModelos())">
+      <h2 x-text="modeloPara ? 'Iniciar conversa com ' + modeloPara.nome : ''"></h2>
+      <p class="fraco" style="margin:0">Este contato não escreveu nas últimas 24 horas. Pela regra da Meta, a primeira mensagem precisa ser um modelo aprovado.</p>
+      <select x-model="modeloId" @change="escolher()"><option value="">Escolha o modelo…</option>
+        <template x-for="mo in modelos" :key="mo.id"><option :value="mo.id" x-text="mo.nome + ' · ' + ROTULO_CATEGORIA[mo.categoria]"></option></template></select>
+      <template x-for="(v, i) in varsCab" :key="'c' + i"><input x-model="varsCab[i]" :placeholder="'Cabeçalho ' + fmt.variavel(i)"></template>
+      <template x-for="(v, i) in vars" :key="'v' + i"><input x-model="vars[i]" :placeholder="'Variável ' + fmt.variavel(i)"></template>
+      <div class="resumo-ia" x-show="modelo" x-text="previaModelo"></div>
+      <div class="fraco" x-show="modelo && modelo.categoria === 'MARKETING' && modeloPara && !modeloPara.opt_in">⚠️ Marketing exige opt-in, e este contato não tem.</div>
+      <div class="acoes"><button class="btn" @click="modeloPara = null">Cancelar</button>
+        <button class="btn primario" :disabled="!modelo" @click="enviarModelo(Number(modeloId), vars, varsCab)">Enviar</button></div>
+    </div>
+  </div>
 </div>
 <script>
 function contatos() {
   return {
-    lista: [], total: 0, pagina: 1, busca: '', etiqueta: '', etiquetas: [], usuarios: [], form: null, campos: [],
+    lista: [], total: 0, pagina: 1, busca: '', etiqueta: '', etiquetas: [], usuarios: [], form: null, campos: [], modeloPara: null,
     async iniciar() {
       ;[this.etiquetas, this.usuarios, this.campos] = await Promise.all([api('/api/etiquetas'), api('/api/usuarios'), api('/api/campos')])
       this.carregar()
@@ -114,7 +134,7 @@ function contatos() {
       const f = this.form
       const corpo = { nome: f.nome, telefone: f.telefone, email: f.email || null, empresa: f.empresa || null, observacoes: f.observacoes || '',
         responsavel_id: f.responsavel_id || null, etiqueta_ids: f.etiqueta_ids, agente_bloqueado: !!f.agente_bloqueado,
-        campos_extras: f.campos_extras }
+        campos_extras: f.campos_extras, opt_in: !!f.opt_in, opt_in_origem: f.opt_in_origem || null }
       await tentar(() => f.id ? api('/api/contatos/' + f.id, { method: 'PATCH', corpo }) : api('/api/contatos', { method: 'POST', corpo }), 'Contato salvo')
       this.form = null
       this.carregar()
@@ -126,9 +146,15 @@ function contatos() {
       this.carregar()
     },
     async conversar(c) {
+      if (!c.janela_aberta) { this.modeloPara = c; return }  // fora da janela de 24h: só modelo
       const texto = prompt(`Mensagem para ${c.nome} pelo WhatsApp:`)
       if (!texto) return
       const r = await tentar(() => api(`/api/contatos/${c.id}/conversa`, { method: 'POST', corpo: { texto } }), 'Mensagem enviada')
+      location.href = '/conversas?c=' + r.conversa_id
+    },
+    async enviarModelo(modeloId, variaveis, variaveisCabecalho) {
+      const r = await tentar(() => api(`/api/contatos/${this.modeloPara.id}/modelo`, { method: 'POST',
+        corpo: { modelo_id: modeloId, variaveis, variaveis_cabecalho: variaveisCabecalho } }), 'Modelo enviado')
       location.href = '/conversas?c=' + r.conversa_id
     },
     async importar(ev) {

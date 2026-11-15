@@ -134,8 +134,8 @@ async def solicitar_csat(conv_id: int) -> None:
             return
         contato = conv.contato
         jid = contato.whatsapp_jid or (whatsapp.jid_de_telefone(contato.telefone) if contato.telefone else None)
-        if not jid:
-            return
+        if not jid or not whatsapp.janela_aberta(contato.ultima_entrada_em):
+            return  # fora da janela de 24h a pesquisa exigiria um modelo pago: não envia
         conv.csat_status, conv.csat_solicitado_em = "aguardando", agora()
         texto = cfg["csat_mensagem"]
     from .atendimento import _enviar_automatico
@@ -253,10 +253,19 @@ async def enviar_agendadas() -> int:
                 continue
             conv = db.get(Conversa, ag.conversa_id)
             try:
-                await iniciar_conversa(db, conv.contato, ag.criada_por, ag.texto)
+                if whatsapp.janela_aberta(conv.contato.ultima_entrada_em):
+                    await iniciar_conversa(db, conv.contato, ag.criada_por, ag.texto)
+                elif ag.modelo_id:
+                    from .campanhas import enviar_modelo_para_contato
+                    from .modelos import ModeloMensagem
+
+                    await enviar_modelo_para_contato(db, conv.contato, db.get(ModeloMensagem, ag.modelo_id),
+                                                     list(ag.parametros or []), usuario=ag.criada_por)
+                else:
+                    raise ErroAtendimento("Janela de 24h fechada no horário do envio e o agendamento não tem modelo.")
                 ag.status = "enviada"
                 enviadas += 1
-            except (ErroAtendimento, whatsapp.ErroWhatsapp) as e:
+            except (ErroAtendimento, whatsapp.ErroWhatsapp, ValueError) as e:
                 db.rollback()
                 ag = db.get(MensagemAgendada, ag_id)
                 ag.status, ag.erro = "erro", str(e)[:300]
@@ -287,6 +296,9 @@ async def resolver_inativas() -> list[int]:
 
 
 async def rotina() -> None:
+    from .campanhas import processar_campanhas
+
     await enviar_agendadas()
+    await processar_campanhas()
     await resolver_inativas()
     await asyncio.to_thread(distribuir_fila)

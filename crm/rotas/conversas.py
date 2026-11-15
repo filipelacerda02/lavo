@@ -39,8 +39,10 @@ class Edicao(BaseModel):
 
 
 class Agendamento(BaseModel):
-    texto: str = Field(min_length=1, max_length=4000)
+    texto: str = Field("", max_length=4000)
     enviar_em: datetime
+    modelo_id: int | None = None      # usado se a janela de 24h estiver fechada na hora do envio
+    parametros: list[str] = []
 
 
 def _conversa(db: Session, conversa_id: int) -> Conversa:
@@ -241,7 +243,23 @@ def agendar(conversa_id: int, dados: Agendamento, u: Usuario = Depends(usuario_l
         tzinfo=ZoneInfo(ler_config(db)["fuso_horario"]))
     if quando <= agora():
         raise HTTPException(400, "Escolha um horário no futuro.")
-    a = MensagemAgendada(conversa_id=conv.id, texto=dados.texto.strip(), enviar_em=quando, criada_por_id=u.id)
+    if not dados.texto.strip() and not dados.modelo_id:
+        raise HTTPException(400, "Escreva a mensagem ou escolha um modelo.")
+    texto = dados.texto.strip()
+    if dados.modelo_id:
+        from ..campanhas import renderizar, validar_parametros
+        from ..modelos import ModeloMensagem
+
+        modelo = db.get(ModeloMensagem, dados.modelo_id)
+        if not modelo:
+            raise HTTPException(404, "Modelo não encontrado.")
+        try:
+            validar_parametros(modelo, dados.parametros, None)
+        except ValueError as e:
+            raise HTTPException(400, str(e)) from e
+        texto = texto or renderizar(modelo, dados.parametros)
+    a = MensagemAgendada(conversa_id=conv.id, texto=texto, enviar_em=quando, criada_por_id=u.id,
+                         modelo_id=dados.modelo_id, parametros=dados.parametros or None)
     db.add(a)
     db.flush()
     at.evento_sistema(db, conv, f"⏰ {u.nome} agendou uma mensagem para {quando.astimezone(ZoneInfo(ler_config(db)['fuso_horario'])):%d/%m %H:%M}.", u)

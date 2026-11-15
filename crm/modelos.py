@@ -134,6 +134,13 @@ class Contato(Base):
     agente_bloqueado: Mapped[bool] = mapped_column(Boolean, default=False)  # só humanos atendem
     responsavel_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"), nullable=True)
     campos_extras: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # valores dos CampoPersonalizado
+    # Janela de 24h da Cloud API: conta a partir da última mensagem RECEBIDA do cliente
+    ultima_entrada_em: Mapped[datetime | None] = mapped_column(DataHora(), nullable=True)
+    # Consentimento para mensagens iniciadas pela empresa (exigido pela Meta e pela LGPD)
+    opt_in: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    opt_in_em: Mapped[datetime | None] = mapped_column(DataHora(), nullable=True)
+    opt_in_origem: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    opt_out_em: Mapped[datetime | None] = mapped_column(DataHora(), nullable=True)
     criado_em: Mapped[datetime] = mapped_column(DataHora(), default=agora)
     atualizado_em: Mapped[datetime] = mapped_column(DataHora(), default=agora, onupdate=agora)
     ultima_interacao: Mapped[datetime | None] = mapped_column(DataHora(), nullable=True)
@@ -200,6 +207,16 @@ class Mensagem(Base):
     processada_pelo_agente: Mapped[bool] = mapped_column(Boolean, default=False)
     trace_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
     custo_usd: Mapped[float] = mapped_column(Float, default=0.0)
+    # Cloud API: mídia, recibos e cobrança
+    midia_id: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    midia_arquivo: Mapped[str | None] = mapped_column(String(200), nullable=True)  # nome do arquivo salvo
+    midia_mime: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    midia_nome: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    entregue_em: Mapped[datetime | None] = mapped_column(DataHora(), nullable=True)
+    lida_em: Mapped[datetime | None] = mapped_column(DataHora(), nullable=True)
+    cobranca: Mapped[str | None] = mapped_column(String(20), nullable=True)  # marketing | utility | service...
+    modelo_nome: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    campanha_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     criada_em: Mapped[datetime] = mapped_column(DataHora(), default=agora, index=True)
 
     usuario: Mapped[Usuario | None] = relationship(lazy="joined")
@@ -269,8 +286,62 @@ class MensagemAgendada(Base):
     status: Mapped[str] = mapped_column(String(10), default="pendente")  # pendente|enviada|cancelada|erro
     erro: Mapped[str | None] = mapped_column(String(300), nullable=True)
     criada_em: Mapped[datetime] = mapped_column(DataHora(), default=agora)
+    # Fora da janela de 24h só sai modelo: se preenchido, envia o modelo em vez do texto
+    modelo_id: Mapped[int | None] = mapped_column(ForeignKey("modelos_mensagem.id", ondelete="SET NULL"), nullable=True)
+    parametros: Mapped[list | None] = mapped_column(JSON, nullable=True)
 
     criada_por: Mapped[Usuario] = relationship(lazy="joined")
+
+
+class ModeloMensagem(Base):
+    """Modelo (template) do WhatsApp: cópia local do que está na conta da Meta."""
+
+    __tablename__ = "modelos_mensagem"
+    __table_args__ = (UniqueConstraint("nome", "idioma"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    meta_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    nome: Mapped[str] = mapped_column(String(120))
+    idioma: Mapped[str] = mapped_column(String(10), default="pt_BR")
+    categoria: Mapped[str] = mapped_column(String(20), default="UTILITY")  # MARKETING | UTILITY | AUTHENTICATION
+    status: Mapped[str] = mapped_column(String(20), default="PENDING")  # APPROVED | PENDING | REJECTED | PAUSED...
+    componentes: Mapped[list] = mapped_column(JSON, default=list)
+    motivo_rejeicao: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    atualizado_em: Mapped[datetime] = mapped_column(DataHora(), default=agora, onupdate=agora)
+
+
+class Campanha(Base):
+    """Disparo de um modelo para contatos com opt-in (filtrados por etiqueta)."""
+
+    __tablename__ = "campanhas"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    nome: Mapped[str] = mapped_column(String(120))
+    modelo_id: Mapped[int] = mapped_column(ForeignKey("modelos_mensagem.id"))
+    # variáveis do corpo, em ordem: {"tipo": "campo", "valor": "nome"} ou {"tipo": "texto", "valor": "..."}
+    variaveis: Mapped[list] = mapped_column(JSON, default=list)
+    etiqueta_ids: Mapped[list] = mapped_column(JSON, default=list)  # vazio = todos com opt-in
+    agendada_para: Mapped[datetime | None] = mapped_column(DataHora(), nullable=True)
+    status: Mapped[str] = mapped_column(String(12), default="rascunho")  # rascunho|agendada|enviando|concluida|cancelada
+    por_minuto: Mapped[int] = mapped_column(Integer, default=60)
+    criada_por_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"), nullable=True)
+    criada_em: Mapped[datetime] = mapped_column(DataHora(), default=agora)
+    concluida_em: Mapped[datetime | None] = mapped_column(DataHora(), nullable=True)
+
+    modelo: Mapped[ModeloMensagem] = relationship(lazy="joined")
+    criada_por: Mapped[Usuario | None] = relationship(lazy="joined")
+
+
+class CampanhaEnvio(Base):
+    __tablename__ = "campanha_envios"
+    __table_args__ = (UniqueConstraint("campanha_id", "contato_id"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    campanha_id: Mapped[int] = mapped_column(ForeignKey("campanhas.id", ondelete="CASCADE"), index=True)
+    contato_id: Mapped[int] = mapped_column(ForeignKey("contatos.id", ondelete="CASCADE"))
+    status: Mapped[str] = mapped_column(String(12), default="pendente")  # pendente|enviada|entregue|lida|respondida|erro|ignorado
+    whatsapp_id: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
+    erro: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    enviada_em: Mapped[datetime | None] = mapped_column(DataHora(), nullable=True)
+
+    contato: Mapped[Contato] = relationship(lazy="joined")
 
 
 class RespostaRapida(Base):
@@ -322,6 +393,7 @@ class Auditoria(Base):
 
 __all__ = [
     "Auditoria", "CampoPersonalizado", "Configuracao", "Contato", "Conversa", "Equipe", "Etiqueta", "EtapaFunil",
-    "ExcecaoAgente", "HorarioAgente", "Mensagem", "MensagemAgendada", "Negocio", "RespostaRapida", "Tarefa", "Usuario", "UniqueConstraint",
+    "ExcecaoAgente", "HorarioAgente", "Mensagem", "MensagemAgendada", "ModeloMensagem", "Campanha", "CampanhaEnvio",
+    "Negocio", "RespostaRapida", "Tarefa", "Usuario", "UniqueConstraint",
     "MODO_AGENTE", "MODO_FILA", "MODO_HUMANO", "PAPEIS", "agora",
 ]

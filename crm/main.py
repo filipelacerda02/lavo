@@ -24,6 +24,7 @@ from .eventos import barramento
 from .modelos import EtapaFunil, Etiqueta, HorarioAgente, RespostaRapida, Usuario
 from .modelos import agora
 from .rotas import administracao, auth, contatos, conversas, gestao, ia
+from .rotas import whatsapp as rotas_whatsapp
 from .rotas.base import usuario_opcional
 
 log = logging.getLogger("crm")
@@ -35,6 +36,11 @@ def inicializar_banco() -> None:
     novas = migrar_colunas()
     if novas:
         log.info("colunas novas no banco: %s", ", ".join(novas))
+    with motor.begin() as conexao:  # versões antigas guardavam o jid do Baileys; a Cloud API usa só dígitos
+        from sqlalchemy import text
+
+        conexao.execute(text("UPDATE contatos SET whatsapp_jid = REPLACE(whatsapp_jid, '@s.whatsapp.net', '') "
+                             "WHERE whatsapp_jid LIKE '%@s.whatsapp.net'"))
     with sessao() as db:
         if not db.scalar(select(func.count(EtapaFunil.id))):
             for i, (nome, cor) in enumerate([("Novo lead", "#2a78d6"), ("Qualificado", "#1baf7a"),
@@ -87,7 +93,7 @@ def _aquecer() -> None:
 app = FastAPI(title="Lavo CRM", lifespan=ciclo_de_vida)
 app.mount("/static", StaticFiles(directory=PASTA / "static"), name="static")
 templates = Jinja2Templates(directory=PASTA / "templates")
-for modulo in (auth, ia, conversas, contatos, gestao, administracao):
+for modulo in (auth, ia, rotas_whatsapp, conversas, contatos, gestao, administracao):
     app.include_router(modulo.rotas)
 
 
@@ -129,6 +135,8 @@ PAGINAS = {
     "tarefas": ("tarefas.html", "Tarefas"),
     "relatorios": ("relatorios.html", "Relatórios"),
     "whatsapp": ("whatsapp.html", "WhatsApp"),
+    "modelos": ("modelos.html", "Modelos de mensagem"),
+    "campanhas": ("campanhas.html", "Campanhas"),
     "configuracoes": ("configuracoes.html", "Configurações"),
     "auditoria": ("auditoria.html", "Auditoria"),
 }

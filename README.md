@@ -9,7 +9,7 @@ Ele usa o Claude (Anthropic SDK para Python), o ChromaDB como banco vetorial e o
 O projeto tem duas partes:
 
 1. **O agente** (`lavo/`): as 13 peças do vídeo, descritas logo abaixo.
-2. **O CRM com WhatsApp** (`crm/` + `whatsapp-gateway/`): o sistema de atendimento construído em volta do agente, onde o agente e a equipe humana atendem juntos. Veja [CRM com WhatsApp](#crm-com-whatsapp).
+2. **O CRM com WhatsApp** (`crm/`, usando a API oficial do WhatsApp Business): o sistema de atendimento construído em volta do agente, onde o agente e a equipe humana atendem juntos. Veja [CRM com WhatsApp](#crm-com-whatsapp).
 
 ## As peças, onde estão e como funcionam
 
@@ -122,18 +122,19 @@ Para experimentar, alguns exemplos com a cliente `cli_ana`:
 
 # CRM com WhatsApp
 
-Sistema de atendimento em volta do agente. As mensagens chegam pelo WhatsApp, o agente responde sozinho e a equipe pode assumir qualquer conversa a qualquer momento. **Cada mensagem mostra quem respondeu:** 🤖 o agente, 👤 o colaborador (pelo login dele na plataforma) ou 📱 o celular da empresa (quando alguém responde direto pelo aparelho).
+Sistema de atendimento em volta do agente. As mensagens chegam pelo WhatsApp, o agente responde sozinho e a equipe pode assumir qualquer conversa a qualquer momento. **Cada mensagem mostra quem respondeu:** 🤖 o agente, 👤 o colaborador (pelo login dele na plataforma) ou 📱 o celular da empresa (quando o número também está no app WhatsApp Business, no modo coexistência).
 
-## Peças
-
-| Pasta | O que é |
-|---|---|
-| `whatsapp-gateway/` | Serviço Node com o [Baileys](https://github.com/WhiskeySockets/Baileys). Conecta como "WhatsApp Web" (por QR code), envia mensagens e repassa tudo que chega para o CRM via webhook |
-| `crm/` | O CRM (FastAPI + SQLite/Postgres + telas com Alpine.js), que usa o agente de `lavo/` |
+O CRM fica em `crm/` (FastAPI + SQLite/Postgres + telas com Alpine.js), usa o agente de `lavo/` e fala com o WhatsApp pela **Cloud API oficial da Meta** (`crm/whatsapp.py`).
 
 ## Funcionalidades
 
-- **WhatsApp dentro do sistema:** tela com o QR code para conectar o número e caixa de entrada com todas as conversas em tempo real. Grupos e status são ignorados, e mídia aparece como anexo.
+- **WhatsApp dentro do sistema (API oficial):**
+  - caixa de entrada com todas as conversas em tempo real, recebidas pelo webhook assinado da Meta;
+  - recibos ✓ enviada, ✓✓ entregue e ✓✓ lida (azul);
+  - fotos, áudios, vídeos e documentos recebidos ficam salvos e aparecem na conversa, e a equipe envia anexos;
+  - botões interativos, localização e reações chegam como mensagem;
+  - "digitando…" e confirmação de leitura enquanto o agente responde;
+  - a tela WhatsApp mostra o número, o nome verificado, a qualidade e o limite de envio, além de um passo a passo para cadastrar o webhook.
 - **Agente × humano, sempre visível:**
   - cada conversa mostra quem está no comando: 🤖 agente, 👤 colaborador (com nome), ⏳ fila ou ✅ resolvida;
   - cada mensagem traz o autor, com o nome e o papel do colaborador logado;
@@ -188,7 +189,17 @@ Comparando com HubSpot, Pipedrive, RD Station CRM, Kommo, Chatwoot e plataformas
 | **Notificações** no navegador e sinal sonoro (fila nova, conversa atribuída a você, mensagem nas suas conversas, avaliação baixa) | todos | botão "Ativar avisos" |
 | Relatórios de **CSAT** (média, distribuição, por atendente) e de **SLA** (% resolvidas no prazo, estouradas agora) | Chatwoot, HubSpot | Relatórios e Painel |
 
-Ficaram de fora de propósito: **disparos em massa** e **modelos de mensagem/carrossel**. Com uma conexão não oficial (QR code), envio em massa é o caminho mais rápido para o número ser bloqueado. Esses recursos fazem sentido com a API oficial do WhatsApp Business, que tem modelos aprovados pela Meta.
+## Recursos da API oficial do WhatsApp
+
+| Recurso | Como funciona |
+|---|---|
+| **Janela de 24 horas** | Depois da última mensagem do cliente, a equipe e o agente respondem livremente por 24 h. A conversa mostra até quando a janela fica aberta. Fora dela, o campo de texto dá lugar ao botão **Enviar modelo**, e o CRM bloqueia mensagens livres, anexos e avisos automáticos (inclusive a pesquisa de satisfação). |
+| **Modelos de mensagem** (página Modelos) | Criação com cabeçalho, corpo com variáveis `{{1}}`, rodapé e botões (resposta rápida, link, descadastro). Os exemplos que a Meta exige são pedidos no formulário. Os modelos vão para aprovação, são sincronizados com a conta e o status (aprovado, em análise, rejeitado com motivo, pausado) é atualizado pelo webhook `message_template_status_update`. |
+| **Enviar modelo** | Na conversa, no contato (para iniciar uma conversa) ou em uma **mensagem agendada**, que usa o modelo se a janela estiver fechada na hora do envio. Mostra a prévia com as variáveis preenchidas. |
+| **Campanhas** (página Campanhas) | Um modelo para os contatos com **opt-in**, filtrados por etiqueta. As variáveis podem vir de campos do contato (nome, e-mail, campos personalizados). Há prévia do público e da mensagem, agendamento, ritmo de envio (mensagens por minuto) e cancelamento. As métricas acompanham enviadas → entregues → lidas → responderam, além das falhas. Quando o cliente responde, o agente sabe qual campanha ele recebeu. |
+| **Opt-in e opt-out** | O consentimento é registrado no contato (quando e como foi obtido), inclusive na importação por CSV. Quem responde **SAIR** ou **PARAR**, ou toca no botão "Parar promoções", sai das campanhas, e **VOLTAR** reativa. Isso não passa pelo agente. Modelos de marketing só vão para contatos com opt-in. |
+| **Erros traduzidos** | Os códigos da Meta (janela fechada, número sem WhatsApp, limite de marketing, modelo pausado, token expirado…) aparecem em português na mensagem que falhou. |
+| **Cobrança** | Cada mensagem guarda a categoria cobrada informada pela Meta (marketing, utilidade, serviço). |
 
 ## Como rodar
 
@@ -204,31 +215,20 @@ uvicorn crm.main:app --reload
 
 Abra http://localhost:8000. O primeiro acesso cria o administrador. Na tela **WhatsApp** há um simulador para "receber" mensagens como se fosse um cliente. Para o agente responder, preencha `ANTHROPIC_API_KEY` no `.env`.
 
-**2. Com WhatsApp de verdade.** Gere um token:
+**2. Com a API oficial do WhatsApp:**
 
-```bash
-python3 -c "import secrets;print(secrets.token_hex(24))"
-```
+1. No [Meta for Developers](https://developers.facebook.com/), crie um app do tipo *Business* e adicione o produto **WhatsApp**.
+2. No Gerenciador de Negócios, adicione e verifique o número da empresa. Crie um **usuário do sistema** com as permissões `whatsapp_business_messaging` e `whatsapp_business_management` e gere um token permanente.
+3. Preencha no `.env`: `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_WABA_ID`, `WHATSAPP_APP_SECRET` e `WHATSAPP_VERIFY_TOKEN` (um texto que você escolhe).
+4. Publique o CRM com **HTTPS** (a Meta não aceita webhook sem HTTPS):
 
-Coloque o token em `WHATSAPP_GATEWAY_TOKEN` no `.env` e defina `WHATSAPP_GATEWAY_URL=http://localhost:3001`. Depois, num terminal, instale o gateway:
+   ```bash
+   uvicorn crm.main:app --host 0.0.0.0 --port 8000
+   ```
 
-```bash
-cd whatsapp-gateway && npm install
-```
-
-E suba o gateway com o mesmo token:
-
-```bash
-GATEWAY_TOKEN=seu-token CRM_WEBHOOK_URL=http://localhost:8000/api/whatsapp/webhook npm start
-```
-
-Em outro terminal, suba o CRM:
-
-```bash
-uvicorn crm.main:app
-```
-
-No CRM, abra **WhatsApp › Gerar QR code** e escaneie pelo celular da empresa (WhatsApp › Dispositivos conectados › Conectar um dispositivo).
+   Use um proxy reverso com certificado na frente. Para testar no computador, um túnel como o Cloudflare Tunnel ou o ngrok resolve.
+5. No app da Meta, em **WhatsApp › Configuração › Webhook**, cadastre `https://seu-dominio/api/whatsapp/webhook` com o mesmo verify token. Assine os campos `messages` e `message_template_status_update`, e também `smb_message_echoes` se o número estiver no app WhatsApp Business (coexistência).
+6. No CRM, a tela **WhatsApp** confirma a conexão. Depois abra **Modelos › Sincronizar com a Meta**.
 
 **3. Com Docker:**
 
@@ -236,7 +236,9 @@ No CRM, abra **WhatsApp › Gerar QR code** e escaneie pelo celular da empresa (
 docker compose up -d
 ```
 
-> ⚠️ **Sobre o WhatsApp via QR code:** o Baileys é uma biblioteca **não oficial**. Automatizar o WhatsApp assim vai contra os termos de uso do WhatsApp, e o número pode ser **bloqueado**, principalmente com envio em massa ou para quem nunca falou com a empresa. Use um número dedicado e responda só a quem procurou vocês. Para operação crítica, a alternativa oficial é a **WhatsApp Business Cloud API** (Meta): nesse caso só o `whatsapp-gateway/` muda; o CRM conversa com ele pela mesma interface (`/status`, `/enviar` e webhook).
+O CRM sobe na porta 8000. Coloque o proxy HTTPS na frente.
+
+> A Meta cobra por mensagem de modelo entregue, com preço por categoria e país. Respostas dentro da janela de 24 h não são cobradas. Confira a tabela atual na documentação de preços da plataforma.
 
 ## Como o CRM decide quem responde
 
@@ -258,11 +260,12 @@ agente chama transferir_para_humano       → ⏳ fila
 pytest
 ```
 
-São 52 testes, sem rede. Os 23 do CRM cobrem:
+São 60 testes, sem rede (a Graph API da Meta é simulada nos testes). Os 31 do CRM cobrem:
 
 - o fluxo agente → humano assume → devolve ao agente, a transferência pelo agente, a resposta descartada quando um humano assume e o celular da empresa;
 - a programação do agente, as exceções e a rotina que desliga o agente;
 - distribuição automática, equipes, SLA, CSAT, mensagens agendadas, encerramento por inatividade, triagem por IA, regras do funil, campos personalizados e sugestão de resposta;
+- a Cloud API: verificação e assinatura do webhook, resposta do agente pela Graph API com "digitando…", recibos de entrega e leitura, erro de janela fechada, janela de 24h e envio de modelo, criação e sincronização de modelos, campanha com opt-in e descadastro, mídia recebida, reação e anexo enviado;
 - o CRM básico e as permissões.
 
 Bancos criados antes desta versão recebem as colunas novas automaticamente ao iniciar.

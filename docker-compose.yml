@@ -1,12 +1,13 @@
-# Sobe o CRM (com o agente) e o gateway do WhatsApp.
-#   cp .env.example .env   # preencha ANTHROPIC_API_KEY e WHATSAPP_GATEWAY_TOKEN
-#   docker compose up -d   # abra http://localhost:8000
+# Sobe o CRM (com o agente) usando a Cloud API oficial do WhatsApp.
+#   cp .env.example .env   # preencha ANTHROPIC_API_KEY e as variáveis WHATSAPP_*
+#   docker compose up -d   # o CRM fica em http://localhost:8000
+# O webhook da Meta precisa de HTTPS público: coloque um proxy reverso (Caddy, Nginx, Cloudflare Tunnel)
+# apontando https://seu-dominio/ para a porta 8000 e cadastre https://seu-dominio/api/whatsapp/webhook na Meta.
 services:
   crm:
     build: .
     env_file: .env
     environment:
-      WHATSAPP_GATEWAY_URL: http://whatsapp:3001
       CRM_DADOS: /dados
       LAVO_VETORES: /dados/vetores
       LAVO_TRACES: /dados/traces
@@ -14,19 +15,7 @@ services:
       - crm-dados:/dados
     ports:
       - "8000:8000"
-    depends_on: [whatsapp]
-    restart: unless-stopped
-
-  whatsapp:
-    build: ./whatsapp-gateway
-    environment:
-      GATEWAY_TOKEN: ${WHATSAPP_GATEWAY_TOKEN}
-      CRM_WEBHOOK_URL: http://crm:8000/api/whatsapp/webhook
-      PASTA_SESSAO: /sessao
-    volumes:
-      - whatsapp-sessao:/sessao   # credenciais do WhatsApp: trate como senha
     restart: unless-stopped
 
 volumes:
   crm-dados:
-  whatsapp-sessao:

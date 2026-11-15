@@ -2,78 +2,69 @@
 {% block conteudo %}
 <div class="conteudo" x-data="telaWpp()" x-init="iniciar()">
   <div class="grade grade-2">
-    <div class="cartao coluna" style="gap:14px; align-items:center; text-align:center">
-      <h2 style="align-self:flex-start">Conexão do WhatsApp</h2>
-      <template x-if="s && s.estado === 'conectado'">
-        <div class="coluna" style="align-items:center">
-          <div style="font-size:56px">✅</div>
-          <div><b>Conectado</b> <span x-show="s.simulado" class="selo fila">modo simulado</span></div>
-          <div class="muted" x-text="(s.nome || '') + ' · ' + fmt.telefone(s.numero || '')"></div>
-          {% if usuario.papel != 'atendente' %}
-          <button class="btn perigo" x-show="!s.simulado" @click="desconectar()">Desconectar este número</button>
-          {% endif %}
+    <div class="cartao coluna" style="gap:12px">
+      <div class="linha entre"><h2 style="margin:0">WhatsApp Business — API oficial (Cloud API)</h2>
+        <button class="btn pequeno" @click="carregar()">↻ Testar conexão</button></div>
+      <template x-if="s">
+        <div class="coluna" style="gap:10px">
+          <div class="linha">
+            <span class="selo" :class="s.estado === 'conectado' ? 'ok' : 'perigo'"
+                  x-text="{conectado: '✅ Conectado', nao_configurado: '⚙️ Falta configurar', erro: '⚠️ Erro', desconhecido: '…'}[s.estado] || s.estado"></span>
+            <span x-show="s.simulado" class="selo fila">modo simulado — nada sai para a Meta</span>
+          </div>
+          <div class="selo perigo" style="white-space:normal" x-show="s.erro" x-text="s.erro"></div>
+          <div class="campo"><span>Número</span><b x-text="s.numero || '—'"></b></div>
+          <div class="campo"><span>Nome verificado</span><b x-text="s.nome || '—'"></b></div>
+          <div class="campo"><span>Qualidade do número</span>
+            <span class="selo" :class="{GREEN: 'ok', YELLOW: 'fila', RED: 'perigo'}[s.qualidade] || 'neutro'"
+                  x-text="{GREEN: 'Alta', YELLOW: 'Média', RED: 'Baixa'}[s.qualidade] || (s.qualidade || '—')"></span></div>
+          <div class="campo"><span>Limite de conversas iniciadas pela empresa</span><b x-text="s.limite || '—'"></b></div>
+          <div class="campo"><span>Versão da Graph API</span><span x-text="s.versao"></span></div>
+          <p class="fraco" style="margin:0">A qualidade cai quando clientes bloqueiam ou denunciam o número. Qualidade baixa reduz o limite de envio e pode pausar modelos. Envie campanhas só para quem deu opt-in.</p>
         </div>
-      </template>
-      <template x-if="s && s.estado === 'aguardando_qr' && s.qr">
-        <div class="coluna" style="align-items:center">
-          <img :src="s.qr" alt="QR code do WhatsApp" width="280" height="280" style="border-radius:12px; background:#fff; padding:8px">
-          <ol class="muted" style="text-align:left; margin:0; padding-left:18px">
-            <li>Abra o WhatsApp no celular da empresa</li>
-            <li>Toque em <b>Mais opções ⋮</b> ou <b>Configurações</b> › <b>Dispositivos conectados</b></li>
-            <li>Toque em <b>Conectar um dispositivo</b> e aponte para este código</li>
-          </ol>
-          <div class="fraco">O código se renova sozinho a cada ~20 segundos.</div>
-        </div>
-      </template>
-      <template x-if="s && ['desconectado', 'gateway_offline', 'desconhecido'].includes(s.estado)">
-        <div class="coluna" style="align-items:center">
-          <div style="font-size:56px">📱</div>
-          <div><b x-text="s.estado === 'gateway_offline' ? 'Gateway do WhatsApp fora do ar' : 'WhatsApp desconectado'"></b></div>
-          <div class="fraco" x-text="s.erro || ''"></div>
-          {% if usuario.papel != 'atendente' %}
-          <button class="btn primario" @click="conectar()" x-show="s.estado !== 'gateway_offline'">Gerar QR code</button>
-          {% endif %}
-          <div class="fraco" x-show="s.estado === 'gateway_offline'">Inicie o serviço em <code>whatsapp-gateway/</code> (veja o README).</div>
-        </div>
-      </template>
-      <template x-if="s && s.estado === 'conectando'">
-        <div class="coluna" style="align-items:center"><div style="font-size:56px">⏳</div><b>Conectando…</b><div class="fraco" x-text="s.erro || ''"></div></div>
       </template>
     </div>
 
-    <div class="cartao coluna">
-      <h2>WhatsApp dentro do sistema</h2>
-      <p class="muted" style="margin:0">Todas as conversas deste número aparecem em <a href="/conversas">Conversas</a>, em tempo real. Lá você vê quem respondeu cada mensagem: o 🤖 agente de IA, um 👤 colaborador (pelo login) ou o 📱 celular da empresa.</p>
-      <p class="fraco" style="margin:0">Grupos e status são ignorados. Mensagens de áudio, imagem e documento aparecem como anexo (o agente pede para o cliente escrever).</p>
-      <template x-if="s && s.simulado">
-        <div class="coluna" style="border-top:1px solid var(--borda); padding-top:12px">
-          <h2>Simulador (modo simulado)</h2>
-          <p class="fraco" style="margin:0">Sem gateway configurado, nada sai para o WhatsApp. Use isto para testar como se um cliente tivesse mandado mensagem.</p>
-          <label>Telefone do cliente <input x-model="sim.telefone" placeholder="5511988881111"></label>
-          <label>Nome (como aparece no WhatsApp) <input x-model="sim.nome" placeholder="Ana Souza"></label>
-          <label>Mensagem <textarea rows="2" x-model="sim.texto" placeholder="Oi, quero cancelar meu pedido"></textarea></label>
-          {% if usuario.papel != 'atendente' %}
-          <button class="btn primario" style="align-self:flex-start" @click="simular()" :disabled="!sim.telefone || !sim.texto">Receber mensagem</button>
-          {% else %}<div class="fraco">Somente supervisores e administradores usam o simulador.</div>{% endif %}
-        </div>
-      </template>
+    <div class="cartao coluna" style="gap:10px">
+      <h2>Como conectar</h2>
+      <ol class="muted" style="margin:0; padding-left:18px; display:flex; flex-direction:column; gap:6px">
+        <li>No <b>Meta for Developers</b>, crie um app do tipo <i>Business</i> e adicione o produto <b>WhatsApp</b>.</li>
+        <li>No <b>Gerenciador de Negócios</b>, adicione e verifique o número da empresa, e crie um <b>usuário do sistema</b> com as permissões <code>whatsapp_business_messaging</code> e <code>whatsapp_business_management</code>. Gere um token permanente.</li>
+        <li>Preencha no <code>.env</code> do servidor: <code>WHATSAPP_TOKEN</code>, <code>WHATSAPP_PHONE_NUMBER_ID</code>, <code>WHATSAPP_WABA_ID</code>, <code>WHATSAPP_APP_SECRET</code> (Configurações do app › Básico) e <code>WHATSAPP_VERIFY_TOKEN</code> (um texto que você escolhe).</li>
+        <li>Em <b>WhatsApp › Configuração › Webhook</b>, cadastre a URL abaixo (precisa ser HTTPS público) e o mesmo verify token. Assine os campos <code>messages</code> e <code>message_template_status_update</code> (e <code>smb_message_echoes</code>, se o número também for usado no app WhatsApp Business).</li>
+      </ol>
+      <label>URL do webhook
+        <div class="linha" style="flex-wrap:nowrap"><input readonly :value="s ? s.webhook_url : ''">
+          <button class="btn" @click="navigator.clipboard.writeText(s.webhook_url); avisar('URL copiada')">Copiar</button></div></label>
+      <div class="fraco" x-show="s && !s.verify_token_definido">⚠️ WHATSAPP_VERIFY_TOKEN ainda não foi definido no servidor.</div>
+      <h2 style="margin-top:8px">Regras da API oficial</h2>
+      <ul class="muted" style="margin:0; padding-left:18px">
+        <li><b>Janela de 24 horas:</b> depois da última mensagem do cliente, você (ou o agente) responde livremente por 24 h. Fora disso, só com <a href="/modelos">modelos aprovados</a>.</li>
+        <li><b>Modelos de marketing</b> e <a href="/campanhas">campanhas</a> exigem <b>opt-in</b>. O cliente que responder SAIR é descadastrado automaticamente.</li>
+        <li>A Meta cobra por mensagem de modelo entregue, com preço por categoria (marketing, utilidade, autenticação). Respostas dentro da janela não são cobradas.</li>
+      </ul>
     </div>
+
+    <template x-if="s && s.simulado">
+      <div class="cartao coluna">
+        <h2>Simulador (modo simulado)</h2>
+        <p class="fraco" style="margin:0">Sem <code>WHATSAPP_TOKEN</code>, nada sai para a Meta. Use isto para testar como se um cliente tivesse escrito.</p>
+        <label>Telefone do cliente <input x-model="sim.telefone" placeholder="5511988881111"></label>
+        <label>Nome (perfil do WhatsApp) <input x-model="sim.nome" placeholder="Ana Souza"></label>
+        <label>Mensagem <textarea rows="2" x-model="sim.texto" placeholder="Oi, quero cancelar meu pedido"></textarea></label>
+        {% if usuario.papel != 'atendente' %}
+        <button class="btn primario" style="align-self:flex-start" @click="simular()" :disabled="!sim.telefone || !sim.texto">Receber mensagem</button>
+        {% else %}<div class="fraco">Somente supervisores e administradores usam o simulador.</div>{% endif %}
+      </div>
+    </template>
   </div>
 </div>
 <script>
 function telaWpp() {
   return {
     s: null, sim: { telefone: '5511988881111', nome: 'Ana Souza', texto: '' },
-    async iniciar() {
-      this.s = await api('/api/whatsapp/status')
-      window.addEventListener('lavo:whatsapp', (e) => (this.s = e.detail))
-      setInterval(async () => { if (this.s && this.s.estado !== 'conectado') this.s = await api('/api/whatsapp/status') }, 5000)
-    },
-    async conectar() { this.s = await tentar(() => api('/api/whatsapp/conectar', { method: 'POST' })) },
-    async desconectar() {
-      if (!confirm('Desconectar o WhatsApp? O agente e a equipe param de receber mensagens até conectar de novo.')) return
-      this.s = await tentar(() => api('/api/whatsapp/desconectar', { method: 'POST' }), 'Desconectado')
-    },
+    async iniciar() { await this.carregar() },
+    async carregar() { this.s = await api('/api/whatsapp/status') },
     async simular() {
       const r = await tentar(() => api('/api/whatsapp/simular', { method: 'POST', corpo: this.sim }), 'Mensagem recebida')
       this.sim.texto = ''

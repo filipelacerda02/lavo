@@ -21,10 +21,12 @@
     <a href="/funil" class="{{ 'ativo' if pagina == 'funil' }}">🗂️ Funil</a>
     <a href="/tarefas" class="{{ 'ativo' if pagina == 'tarefas' }}">✅ Tarefas</a>
     <a href="/relatorios" class="{{ 'ativo' if pagina == 'relatorios' }}">📈 Relatórios</a>
+    <a href="/campanhas" class="{{ 'ativo' if pagina == 'campanhas' }}">📣 Campanhas</a>
+    <a href="/modelos" class="{{ 'ativo' if pagina == 'modelos' }}">🧾 Modelos</a>
     <a href="/whatsapp" class="{{ 'ativo' if pagina == 'whatsapp' }}">📱 WhatsApp</a>
     {% if usuario.papel != 'atendente' %}
     <a href="/configuracoes" class="{{ 'ativo' if pagina == 'configuracoes' }}">⚙️ Configurações</a>
-    <a href="/auditoria" class="{{ 'ativo' if pagina == 'auditoria' }}">🧾 Auditoria</a>
+    <a href="/auditoria" class="{{ 'ativo' if pagina == 'auditoria' }}">🔍 Auditoria</a>
     {% endif %}
     <div class="rodape" x-data="{status: '{{ usuario.status or 'offline' }}', notif: notificacoes.ativas()}"
          x-init="window.MEU_STATUS = status">

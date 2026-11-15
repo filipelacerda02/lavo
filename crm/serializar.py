@@ -6,6 +6,8 @@ from typing import Any
 
 from datetime import timedelta
 
+from .whatsapp import janela_aberta, janela_fecha_em
+
 from .modelos import Contato, Conversa, Mensagem, MensagemAgendada, Negocio, Tarefa, Usuario, agora
 
 
@@ -33,6 +35,9 @@ def contato(c: Contato) -> dict[str, Any]:
         "criado_em": iso(c.criado_em), "ultima_interacao": iso(c.ultima_interacao),
         "tem_whatsapp": bool(c.whatsapp_jid or c.telefone),
         "campos_extras": c.campos_extras or {},
+        "opt_in": c.opt_in, "opt_in_em": iso(c.opt_in_em), "opt_in_origem": c.opt_in_origem,
+        "opt_out_em": iso(c.opt_out_em),
+        "janela_aberta": janela_aberta(c.ultima_entrada_em), "janela_fecha_em": iso(janela_fecha_em(c.ultima_entrada_em)),
     }
 
 
@@ -55,6 +60,10 @@ def mensagem(m: Mensagem, nome_agente: str, c: Contato | None = None) -> dict[st
         "id": m.id, "conversa_id": m.conversa_id, "direcao": m.direcao, "origem": m.origem, "texto": m.texto,
         "midia": m.midia, "status_envio": m.status_envio, "erro": m.erro, "criada_em": iso(m.criada_em),
         "autor": autor(m, nome_agente, c), "trace_id": m.trace_id, "custo_usd": round(m.custo_usd or 0, 6),
+        "recibo": "lida" if m.lida_em else "entregue" if m.entregue_em else m.status_envio,
+        "midia_url": f"/api/midia/{m.id}" if m.midia_arquivo else None, "midia_mime": m.midia_mime,
+        "midia_nome": m.midia_nome, "modelo_nome": m.modelo_nome, "campanha_id": m.campanha_id,
+        "cobranca": m.cobranca,
     }
 
 

@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import asyncio
-import hmac
 import re
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -16,9 +15,7 @@ from sqlalchemy.orm import Session
 
 from .. import atendimento as at
 from .. import serializar as s
-from .. import whatsapp
 from ..agenda import DIAS, estado_do_agente
-from ..config import GATEWAY_TOKEN, WHATSAPP_SIMULADO
 from ..db import obter_db
 from ..eventos import barramento
 from ..modelos import (
@@ -280,66 +277,6 @@ def excluir_excecao(excecao_id: int, u: Usuario = Depends(gestor), db: Session =
         db.commit()
     barramento.publicar("agente_status", _estado_json(db))
     return {"ok": True}
-
-
-# ---------------------------------------------------------------- WhatsApp
-class Simulacao(BaseModel):
-    telefone: str = Field(min_length=8, max_length=20)
-    nome: str | None = None
-    texto: str = Field(min_length=1, max_length=4000)
-
-
-@rotas.get("/whatsapp/status")
-async def wpp_status(u: Usuario = Depends(usuario_logado)):
-    return await whatsapp.status()
-
-
-@rotas.post("/whatsapp/conectar")
-async def wpp_conectar(u: Usuario = Depends(gestor), db: Session = Depends(obter_db)):
-    try:
-        r = await whatsapp.conectar()
-    except whatsapp.ErroWhatsapp as e:
-        raise HTTPException(502, str(e)) from e
-    at.auditar(db, u, "whatsapp_conectar")
-    db.commit()
-    return r
-
-
-@rotas.post("/whatsapp/desconectar")
-async def wpp_desconectar(u: Usuario = Depends(gestor), db: Session = Depends(obter_db)):
-    try:
-        r = await whatsapp.desconectar()
-    except whatsapp.ErroWhatsapp as e:
-        raise HTTPException(502, str(e)) from e
-    at.auditar(db, u, "whatsapp_desconectado")
-    db.commit()
-    return r
-
-
-@rotas.post("/whatsapp/webhook", include_in_schema=False)
-async def wpp_webhook(request: Request, x_gateway_token: str | None = Header(default=None)):
-    """Chamado pelo gateway (whatsapp-gateway/) a cada mensagem ou mudança de status."""
-    if not GATEWAY_TOKEN or not hmac.compare_digest(x_gateway_token or "", GATEWAY_TOKEN):
-        raise HTTPException(401, "token inválido")
-    evento = await request.json()
-    if evento.get("tipo") == "status":
-        whatsapp.ultimo_status.update({k: evento.get(k) for k in ("estado", "qr", "numero", "nome", "erro")})
-        barramento.publicar("whatsapp", whatsapp.ultimo_status)
-    elif evento.get("tipo") == "mensagem":
-        await at.receber_do_whatsapp(evento)
-    return {"ok": True}
-
-
-@rotas.post("/whatsapp/simular")
-async def wpp_simular(d: Simulacao, u: Usuario = Depends(gestor)):
-    """Só no modo simulado: finge que um contato mandou uma mensagem."""
-    if not WHATSAPP_SIMULADO:
-        raise HTTPException(409, "Simulador disponível só no modo simulado.")
-    tel = at.so_digitos(d.telefone)
-    conv_id = await at.receber_do_whatsapp({
-        "tipo": "mensagem", "id": f"simin-{datetime.now().timestamp()}", "jid": whatsapp.jid_de_telefone(tel),
-        "telefone": tel, "nome": d.nome, "de_mim": False, "texto": d.texto, "midia": None})
-    return {"conversa_id": conv_id}
 
 
 # ---------------------------------------------------------------- relatórios

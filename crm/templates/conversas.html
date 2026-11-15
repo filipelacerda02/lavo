@@ -93,6 +93,8 @@
           <template x-if="atual.conversa.sla && atual.conversa.sla.resolucao">
             <span class="selo" :class="atual.conversa.sla.resolucao.estourado ? 'sla-estourado' : 'sla-ok'" x-text="'⏱ Resolução: ' + fmt.prazo(atual.conversa.sla.resolucao.vence_em)"></span>
           </template>
+          <span class="selo" :class="atual.conversa.contato.janela_aberta ? 'sla-ok' : 'perigo'"
+                x-text="atual.conversa.contato.janela_aberta ? '🕐 Janela aberta até ' + fmt.hora(atual.conversa.contato.janela_fecha_em) : '🔒 Janela de 24h fechada: só modelos'"></span>
           <template x-if="atual.conversa.csat">
             <span class="selo neutro" x-text="atual.conversa.csat.status === 'respondida' ? 'Avaliação: ' + '★'.repeat(atual.conversa.csat.nota) + '☆'.repeat(5 - atual.conversa.csat.nota) : 'Pesquisa de satisfação: ' + atual.conversa.csat.status"></span>
           </template>
@@ -124,10 +126,20 @@
                     <template x-if="m.autor.tipo === 'sistema'"><span>⚙️ Mensagem automática</span></template>
                     <template x-if="m.autor.tipo === 'contato'"><span class="muted" x-text="m.autor.nome"></span></template>
                   </div>
-                  <div class="balao"><span x-show="m.midia" class="selo neutro" x-text="'📎 ' + m.midia" style="margin-right:6px"></span><span x-text="m.texto"></span></div>
+                  <div class="balao">
+                    <template x-if="m.midia_url && (m.midia_mime || '').startsWith('image/')">
+                      <a :href="m.midia_url" target="_blank"><img :src="m.midia_url" alt="imagem recebida" style="max-width:260px; max-height:260px; border-radius:8px; display:block; margin-bottom:4px"></a></template>
+                    <template x-if="m.midia_url && (m.midia_mime || '').startsWith('audio/')"><audio controls :src="m.midia_url" style="max-width:260px; display:block"></audio></template>
+                    <template x-if="m.midia_url && (m.midia_mime || '').startsWith('video/')"><video controls :src="m.midia_url" style="max-width:260px; display:block"></video></template>
+                    <template x-if="m.midia_url && !/^(image|audio|video)\//.test(m.midia_mime || '')"><a :href="m.midia_url" target="_blank" x-text="'📎 ' + (m.midia_nome || 'arquivo')"></a></template>
+                    <span x-show="m.midia && !m.midia_url" class="selo neutro" x-text="'📎 ' + m.midia" style="margin-right:6px"></span>
+                    <span x-show="m.modelo_nome" class="selo neutro" style="margin-right:6px" x-text="(m.campanha_id ? '📣 campanha · ' : '🧾 modelo · ') + m.modelo_nome"></span>
+                    <span class="texto-msg" x-text="m.texto"></span></div>
                   <div class="hora">
                     <span x-text="fmt.hora(m.criada_em)"></span>
-                    <span x-show="m.status_envio === 'erro'" class="selo perigo" :title="m.erro">falhou ao enviar</span>
+                    <span x-show="m.direcao === 'saida' && m.status_envio !== 'erro'" :title="{enviada: 'Enviada', entregue: 'Entregue', lida: 'Lida'}[m.recibo]"
+                          :style="m.recibo === 'lida' ? 'color:#2a78d6; font-weight:700' : ''" x-text="m.recibo === 'enviada' ? '✓' : '✓✓'"></span>
+                    <span x-show="m.status_envio === 'erro'" class="selo perigo" style="white-space:normal" x-text="'falhou: ' + (m.erro || '')"></span>
                     <span x-show="m.trace_id && USUARIO.papel !== 'atendente'" class="fraco" x-text="'· $' + m.custo_usd.toFixed(4) + ' · trace ' + m.trace_id"></span>
                   </div>
                 </div>
@@ -151,19 +163,34 @@
               <button @click="texto = r.texto; sugestoes = []; $refs.campo.focus()"><b x-text="'/' + r.atalho"></b> <span class="muted" x-text="r.texto"></span></button>
             </template>
           </div>
-          <textarea x-ref="campo" x-model="texto" rows="2"
+          <div class="agendadas" x-show="!atual.conversa.contato.janela_aberta && !modoNota" style="border-style:solid">
+            <span>🔒 O cliente não escreve há mais de 24 horas. Pela regra da Meta, para retomar o contato envie um <b>modelo aprovado</b>. Quando ele responder, a janela abre de novo.</span>
+            <button class="btn pequeno primario" style="align-self:flex-start" @click="modalModelo = true">🧾 Enviar modelo</button>
+          </div>
+          <textarea x-ref="campo" x-model="texto" rows="2" x-show="atual.conversa.contato.janela_aberta || modoNota"
                     :placeholder="modoNota ? 'Nota interna (o cliente não vê)…' : 'Escreva uma resposta… (/ para respostas rápidas, Enter envia, Shift+Enter quebra linha)'"
                     @input="filtrarSugestoes()" @keydown.enter="if (!$event.shiftKey) { $event.preventDefault(); enviar() }"></textarea>
-          <div class="linha" x-show="agendando" x-cloak>
-            <input type="datetime-local" x-model="agendarPara" style="width:auto">
-            <button class="btn" @click="agendar()" :disabled="!texto.trim() || !agendarPara">Agendar envio</button>
-            <button class="btn" @click="agendando = false">Cancelar</button>
+          <div class="coluna" x-show="agendando" x-cloak x-data="seletorModelo()" x-init="carregarModelos()" style="gap:6px">
+            <div class="linha">
+              <input type="datetime-local" x-model="agendarPara" style="width:auto">
+              <select x-model="modeloId" @change="escolher()" style="width:auto" title="Se a janela de 24h estiver fechada na hora do envio, sai este modelo">
+                <option value="">Texto livre (precisa da janela aberta)</option>
+                <template x-for="mo in modelos" :key="mo.id"><option :value="mo.id" x-text="'Modelo: ' + mo.nome"></option></template></select>
+              <template x-for="(v, i) in vars" :key="i"><input style="width:140px" :placeholder="fmt.variavel(i)" x-model="vars[i]"></template>
+            </div>
+            <div class="linha">
+              <button class="btn" @click="agendar(modeloId ? Number(modeloId) : null, vars)" :disabled="!agendarPara || (!texto.trim() && !modeloId)">Agendar envio</button>
+              <button class="btn" @click="agendando = false">Cancelar</button>
+            </div>
           </div>
           <div class="linha entre">
             <div class="ferramentas">
               <label class="check"><input type="checkbox" x-model="modoNota"> 📝 Nota</label>
               <button class="btn pequeno agente" @click="sugerir()" :disabled="sugerindo" x-text="sugerindo ? '✨ Escrevendo…' : '✨ Sugerir resposta'"></button>
               <button class="btn pequeno" @click="agendando = !agendando" x-show="!modoNota">⏰ Agendar</button>
+              <button class="btn pequeno" @click="modalModelo = true" x-show="!modoNota">🧾 Modelo</button>
+              <label class="btn pequeno" x-show="!modoNota && atual.conversa.contato.janela_aberta" style="flex-direction:row; font-size:12px; color:var(--texto)">📎 Anexo
+                <input type="file" hidden @change="enviarAnexo($event)"></label>
             </div>
             <div class="linha">
               <span class="fraco" x-show="!modoNota && !souAtendente() && atual.conversa.status === 'aberta'">Enviar faz você assumir a conversa</span>
@@ -248,6 +275,25 @@
     </template>
   </section>
 
+  <!-- enviar modelo -->
+  <div class="modal-fundo" x-show="modalModelo" x-cloak @click.self="modalModelo = false">
+    <div class="modal coluna" x-data="seletorModelo()" x-init="$watch('modalModelo', v => v && carregarModelos())">
+      <h2>Enviar modelo aprovado</h2>
+      <label>Modelo
+        <select x-model="modeloId" @change="escolher()"><option value="">Escolha…</option>
+          <template x-for="mo in modelos" :key="mo.id"><option :value="mo.id" x-text="mo.nome + ' · ' + ROTULO_CATEGORIA[mo.categoria] + ' · ' + mo.idioma"></option></template></select></label>
+      <div class="fraco" x-show="!modelos.length">Nenhum modelo aprovado. Crie um em <a href="/modelos">Modelos</a>.</div>
+      <template x-for="(v, i) in varsCab" :key="'ci' + i"><input x-model="varsCab[i]" :placeholder="'Cabeçalho ' + fmt.variavel(i)"></template>
+      <template x-for="(v, i) in vars" :key="'v' + i"><input x-model="vars[i]" :placeholder="'Variável ' + fmt.variavel(i)"></template>
+      <div class="resumo-ia" x-show="modelo" x-text="previaModelo"></div>
+      <div class="fraco" x-show="modelo && modelo.categoria === 'MARKETING' && !atual.conversa.contato.opt_in">⚠️ Modelo de marketing exige opt-in, e este contato não tem.</div>
+      <div class="acoes">
+        <button class="btn" @click="modalModelo = false">Cancelar</button>
+        <button class="btn primario" :disabled="!modelo" @click="enviarModelo(Number(modeloId), vars, varsCab)">Enviar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- transferir -->
   <div class="modal-fundo" x-show="modalTransferir" x-cloak @click.self="modalTransferir = false">
     <div class="modal">
@@ -280,7 +326,7 @@ function inbox() {
     filtro: 'abertas', busca: '', conversas: [], contagem: {}, atual: null, contato: null,
     texto: '', modoNota: false, enviando: false, respostas: [], sugestoes: [], usuarios: [], etiquetas: [],
     modalTransferir: false, equipes: [], campos: [], equipeFiltro: '', prioridadeFiltro: '',
-    sugerindo: false, resumindo: false, agendando: false, agendarPara: '',
+    sugerindo: false, resumindo: false, agendando: false, agendarPara: '', modalModelo: false,
     filtros: [],
     async iniciar() {
       const qtd = (k) => () => (this.contagem[k] ?? null)
@@ -311,6 +357,7 @@ function inbox() {
       window.addEventListener('lavo:mensagem', recarregar)
       window.addEventListener('lavo:contato', () => this.atual && this.carregarContato())
       window.addEventListener('lavo:tarefa', () => this.atual && this.carregarContato())
+      window.addEventListener('lavo:recibo', recarregar)
     },
     async carregarLista() {
       const p = new URLSearchParams({ filtro: this.filtro, busca: this.busca })
@@ -404,11 +451,25 @@ function inbox() {
       try { await tentar(() => api(`/api/conversas/${this.atual.conversa.id}/ia/resumo`, { method: 'POST' })); await this.recarregarAtual() }
       finally { this.resumindo = false }
     },
-    async agendar() {
+    async agendar(modeloId = null, parametros = []) {
       await tentar(() => api(`/api/conversas/${this.atual.conversa.id}/agendadas`, { method: 'POST',
-        corpo: { texto: this.texto, enviar_em: new Date(this.agendarPara).toISOString() } }), 'Mensagem agendada')
+        corpo: { texto: this.texto, enviar_em: new Date(this.agendarPara).toISOString(), modelo_id: modeloId, parametros } }), 'Mensagem agendada')
       this.texto = ''; this.agendando = false; this.agendarPara = ''
       await this.recarregarAtual()
+    },
+    async enviarModelo(modeloId, variaveis, variaveisCabecalho) {
+      await tentar(() => api(`/api/conversas/${this.atual.conversa.id}/modelo`, { method: 'POST',
+        corpo: { modelo_id: modeloId, variaveis, variaveis_cabecalho: variaveisCabecalho } }), 'Modelo enviado')
+      this.modalModelo = false
+      await this.recarregarAtual(); this.rolar()
+    },
+    async enviarAnexo(ev) {
+      const arq = ev.target.files[0]
+      if (!arq) return
+      const fd = new FormData(); fd.append('arquivo', arq); fd.append('legenda', this.texto)
+      await tentar(() => api(`/api/conversas/${this.atual.conversa.id}/anexo`, { method: 'POST', corpo: fd }), 'Anexo enviado')
+      ev.target.value = ''; this.texto = ''
+      await this.recarregarAtual(); this.rolar()
     },
     async cancelarAgendada(id) {
       await tentar(() => api('/api/conversas/agendadas/' + id, { method: 'DELETE' }), 'Agendamento cancelado')

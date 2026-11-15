@@ -27,7 +27,8 @@ PADROES: dict[str, Any] = {
         "media": {"fila_min": 30, "resolucao_h": 24},
         "baixa": {"fila_min": 120, "resolucao_h": 72},
     },
-    "resolver_inativas_h": 24,            # resolve conversas em que o cliente não responde há N h (0 = nunca)
+    "resolver_inativas_h": 12,            # resolve conversas em que o cliente não responde há N h (0 = nunca)
+                                          # (menos de 24 h: a pesquisa de satisfação ainda cabe na janela)
     # ----- pesquisa de satisfação (CSAT)
     "csat_ativo": True,
     "csat_conversas_agente": True,        # também pergunta quando só o agente atendeu

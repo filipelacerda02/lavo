@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<div class="conteudo" x-data="telaCampanhas()" x-init="iniciar()">
+  <div class="linha entre" style="margin-bottom:12px">
+    <p class="muted" style="margin:0; max-width:760px">Envie um <a href="/modelos">modelo aprovado</a> para os contatos com <b>opt-in</b>, filtrando por etiqueta. Quem responder SAIR ou tocar no botão de descadastro sai da lista automaticamente. As respostas caem em <a href="/conversas">Conversas</a> e o agente atende sabendo qual campanha o cliente recebeu.</p>
+    {% if usuario.papel != 'atendente' %}<button class="btn primario" @click="abrirForm()">+ Nova campanha</button>{% endif %}
+  </div>
+
+  <div class="coluna" style="gap:12px">
+    <template x-for="c in lista" :key="c.id">
+      <div class="cartao">
+        <div class="linha entre">
+          <div><b x-text="c.nome"></b>
+            <span class="selo" :class="{rascunho: 'neutro', agendada: 'fila', enviando: 'agente', concluida: 'ok', cancelada: 'perigo'}[c.status]" x-text="c.status"></span>
+            <div class="fraco" x-text="'Modelo ' + c.modelo.nome + ' (' + ROTULO_CATEGORIA[c.modelo.categoria] + ') · ' + c.por_minuto + '/min' + (c.agendada_para ? ' · ' + fmt.dataHora(c.agendada_para) : '') + (c.criada_por ? ' · por ' + c.criada_por : '')"></div></div>
+          {% if usuario.papel != 'atendente' %}
+          <div class="linha">
+            <button class="btn pequeno primario" x-show="['rascunho', 'cancelada'].includes(c.status)" @click="acao(c, 'iniciar')" x-text="c.agendada_para && new Date(c.agendada_para) > new Date() ? 'Agendar' : 'Enviar agora'"></button>
+            <button class="btn pequeno perigo" x-show="['agendada', 'enviando'].includes(c.status)" @click="acao(c, 'cancelar')">Cancelar</button>
+            <button class="btn pequeno" @click="verEnvios(c)">Destinatários</button>
+          </div>
+          {% endif %}
+        </div>
+        <div class="grade" style="grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); margin-top:12px; gap:8px">
+          <template x-for="k in ['total', 'enviadas', 'entregues', 'lidas', 'respondidas', 'erro']" :key="k">
+            <div><div class="fraco" x-text="{total: 'Destinatários', enviadas: 'Enviadas', entregues: 'Entregues', lidas: 'Lidas', respondidas: 'Responderam', erro: 'Falhas'}[k]"></div>
+              <div style="font-size:20px; font-weight:700" x-text="c.metricas[k]"></div>
+              <div class="fraco" x-show="k !== 'total' && c.metricas.total" x-text="Math.round(100 * c.metricas[k] / c.metricas.total) + '%'"></div></div>
+          </template>
+        </div>
+      </div>
+    </template>
+    <div class="vazio cartao" x-show="!lista.length">Nenhuma campanha ainda.</div>
+  </div>
+
+  <div class="modal-fundo" x-show="form" x-cloak @click.self="form = null">
+    <form class="modal coluna" style="width:min(680px, 100%)" @submit.prevent="salvar()" x-show="form">
+      <h2>Nova campanha</h2>
+      <template x-if="form">
+        <div class="coluna">
+          <label>Nome interno <input x-model="form.nome" required placeholder="Reativação novembro"></label>
+          <label>Modelo aprovado
+            <select x-model.number="form.modelo_id" @change="escolherModelo()" required><option value="">Escolha…</option>
+              <template x-for="m in modelos" :key="m.id"><option :value="m.id" x-text="m.nome + ' · ' + ROTULO_CATEGORIA[m.categoria]"></option></template></select></label>
+          <template x-for="(v, i) in form.variaveis" :key="i">
+            <div class="linha">
+              <span class="selo neutro" x-text="fmt.variavel(i)"></span>
+              <select x-model="v.tipo" style="width:auto"><option value="campo">Campo do contato</option><option value="texto">Texto fixo</option></select>
+              <select x-show="v.tipo === 'campo'" x-model="v.valor" style="flex:1">
+                <option value="nome">Primeiro nome</option><option value="nome_completo">Nome completo</option>
+                <option value="email">E-mail</option><option value="empresa">Empresa</option>
+                <template x-for="cp in campos" :key="cp.id"><option :value="cp.chave" x-text="cp.rotulo"></option></template>
+              </select>
+              <input x-show="v.tipo === 'texto'" x-model="v.valor" style="flex:1" placeholder="Texto">
+            </div>
+          </template>
+          <div><div class="fraco" style="margin-bottom:4px">Público: contatos com opt-in que tenham qualquer uma destas etiquetas (nenhuma = todos com opt-in)</div>
+            <div class="linha"><template x-for="e in etiquetas" :key="e.id">
+              <label class="check" style="font-size:13px"><input type="checkbox" :value="e.id" x-model.number="form.etiqueta_ids"> <span class="etiqueta" :style="'background:' + e.cor" x-text="e.nome"></span></label>
+            </template></div></div>
+          <div class="linha">
+            <label style="flex:1">Agendar para (vazio = ao enviar) <input type="datetime-local" x-model="form.agendada_local"></label>
+            <label style="width:160px">Ritmo (mensagens/min) <input type="number" min="1" max="1000" x-model.number="form.por_minuto"></label>
+          </div>
+          <button type="button" class="btn" style="align-self:flex-start" @click="calcularPrevia()" :disabled="!form.modelo_id">Calcular público e prévia</button>
+          <template x-if="previa">
+            <div class="coluna">
+              <div><b x-text="previa.destinatarios + ' destinatário(s)'"></b>
+                <span class="fraco" x-text="'· ' + previa.excluidos_sem_opt_in_ou_filtro + ' contato(s) ficam de fora (sem opt-in ou fora do filtro)'"></span></div>
+              <div class="resumo-ia" x-show="previa.exemplo" x-text="previa.exemplo"></div>
+              <div class="fraco" x-show="previa.categoria === 'MARKETING'">A Meta cobra cada mensagem de marketing entregue e pode limitar o envio para quem recebe muitas mensagens de empresas.</div>
+            </div>
+          </template>
+        </div>
+      </template>
+      <div class="acoes">
+        <button type="button" class="btn" @click="form = null">Cancelar</button>
+        <button class="btn primario">Salvar como rascunho</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="modal-fundo" x-show="envios" x-cloak @click.self="envios = null">
+    <div class="modal" style="width:min(680px, 100%)">
+      <h2>Destinatários</h2>
+      <table class="tabela"><thead><tr><th>Contato</th><th>Status</th><th>Detalhe</th></tr></thead>
+        <tbody><template x-for="(e, i) in envios || []" :key="i">
+          <tr><td x-text="e.contato"></td><td><span class="selo neutro" x-text="e.status"></span></td><td class="fraco" x-text="e.erro || fmt.dataHora(e.enviada_em)"></td></tr>
+        </template></tbody></table>
+      <div class="acoes"><button class="btn" @click="envios = null">Fechar</button></div>
+    </div>
+  </div>
+</div>
+<script>
+function telaCampanhas() {
+  return {
+    lista: [], modelos: [], etiquetas: [], campos: [], form: null, previa: null, envios: null,
+    async iniciar() {
+      await this.carregar()
+      ;[this.modelos, this.etiquetas, this.campos] = await Promise.all([api('/api/modelos'), api('/api/etiquetas'), api('/api/campos')])
+      this.modelos = this.modelos.filter((m) => m.status === 'APPROVED')
+      window.addEventListener('lavo:campanha', () => this.carregar())
+      setInterval(() => { if (this.lista.some((c) => ['agendada', 'enviando'].includes(c.status))) this.carregar() }, 10000)
+    },
+    async carregar() { this.lista = await api('/api/campanhas') },
+    abrirForm() {
+      this.previa = null
+      this.form = { nome: '', modelo_id: '', variaveis: [], etiqueta_ids: [], agendada_local: '', por_minuto: 60 }
+    },
+    escolherModelo() {
+      const m = this.modelos.find((x) => x.id === this.form.modelo_id)
+      this.form.variaveis = m ? Array.from({ length: m.variaveis.corpo }, () => ({ tipo: 'campo', valor: 'nome' })) : []
+      this.previa = null
+    },
+    corpo() {
+      const f = this.form
+      return { nome: f.nome || 'prévia', modelo_id: f.modelo_id, variaveis: f.variaveis, etiqueta_ids: f.etiqueta_ids,
+        por_minuto: f.por_minuto, agendada_para: f.agendada_local ? new Date(f.agendada_local).toISOString() : null }
+    },
+    async calcularPrevia() { this.previa = await tentar(() => api('/api/campanhas/previa', { method: 'POST', corpo: this.corpo() })) },
+    async salvar() {
+      await tentar(() => api('/api/campanhas', { method: 'POST', corpo: this.corpo() }), 'Campanha salva como rascunho')
+      this.form = null
+      this.carregar()
+    },
+    async acao(c, nome) {
+      if (nome === 'iniciar' && !confirm(`Enviar "${c.nome}" para ${'os contatos com opt-in do filtro'}?`)) return
+      await tentar(() => api(`/api/campanhas/${c.id}/${nome}`, { method: 'POST' }), nome === 'iniciar' ? 'Campanha iniciada' : 'Campanha cancelada')
+      this.carregar()
+    },
+    async verEnvios(c) { this.envios = await api(`/api/campanhas/${c.id}/envios`) },
+  }
+}
+</script>
+{% endblock %}

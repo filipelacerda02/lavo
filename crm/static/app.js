@@ -54,7 +54,7 @@ window.tentar = async function tentar(fn, sucesso) {
   let fonte
   const abrir = () => {
     fonte = new EventSource('/api/eventos')
-    for (const tipo of ['conversa', 'mensagem', 'contato', 'tarefa', 'funil', 'agente_status', 'whatsapp', 'notificacao', 'equipe']) {
+    for (const tipo of ['conversa', 'mensagem', 'contato', 'tarefa', 'funil', 'agente_status', 'whatsapp', 'notificacao', 'equipe', 'recibo', 'modelo', 'campanha']) {
       fonte.addEventListener(tipo, (e) => {
         window.dispatchEvent(new CustomEvent('lavo:' + tipo, { detail: JSON.parse(e.data || 'null') }))
       })
@@ -131,8 +131,8 @@ window.barraTopo = function barraTopo() {
     },
     get wppTexto() {
       if (!this.wpp) return 'WhatsApp…'
-      return { conectado: 'WhatsApp conectado', aguardando_qr: 'Escaneie o QR code', conectando: 'Conectando…',
-        desconectado: 'WhatsApp desconectado', gateway_offline: 'Gateway offline' }[this.wpp.estado] || this.wpp.estado
+      return { conectado: 'WhatsApp oficial conectado', nao_configurado: 'WhatsApp não configurado',
+        erro: 'Erro na Cloud API', desconhecido: 'WhatsApp…' }[this.wpp.estado] || this.wpp.estado
     },
   }
 }
@@ -183,3 +183,27 @@ window.fmt.prazo = function prazo(iso) {
   return s >= 0 ? `vence em ${t}` : `estourou há ${t}`
 }
 window.ROTULO_PRIORIDADE = { baixa: 'Baixa', media: 'Média', alta: 'Alta', urgente: 'Urgente' }
+
+// Componente reutilizável: escolher um modelo aprovado e preencher as variáveis.
+window.seletorModelo = function seletorModelo() {
+  return {
+    modelos: [], modeloId: '', vars: [], varsCab: [],
+    async carregarModelos() { this.modelos = (await api('/api/modelos')).filter((m) => m.status === 'APPROVED') },
+    get modelo() { return this.modelos.find((m) => m.id === Number(this.modeloId)) },
+    escolher() {
+      const m = this.modelo
+      this.vars = m ? Array(m.variaveis.corpo).fill('') : []
+      this.varsCab = m ? Array(m.variaveis.cabecalho).fill('') : []
+    },
+    get previaModelo() {
+      if (!this.modelo) return ''
+      let t = this.modelo.previa
+      this.varsCab.forEach((v, i) => { t = t.replace(`{{${i + 1}}}`, v || `{{${i + 1}}}`) })
+      this.vars.forEach((v, i) => { t = t.replace(`{{${i + 1}}}`, v || `{{${i + 1}}}`) })
+      return t
+    },
+  }
+}
+window.ROTULO_CATEGORIA = { MARKETING: 'Marketing', UTILITY: 'Utilidade', AUTHENTICATION: 'Autenticação' }
+
+window.fmt.variavel = (i) => '{' + '{' + (i + 1) + '}' + '}'  // sem chaves duplas literais: os templates usam Jinja

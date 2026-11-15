@@ -14,8 +14,9 @@ from zoneinfo import ZoneInfo
 
 _PASTA = tempfile.mkdtemp(prefix="crm-teste-")
 os.environ["CRM_DADOS"] = _PASTA
-os.environ["WHATSAPP_GATEWAY_TOKEN"] = "token-teste"
-os.environ.pop("WHATSAPP_GATEWAY_URL", None)
+os.environ["WHATSAPP_APP_SECRET"] = "segredo-teste"
+os.environ["WHATSAPP_VERIFY_TOKEN"] = "verificacao-teste"
+os.environ.pop("WHATSAPP_TOKEN", None)  # modo simulado: nada sai para a Meta
 os.environ["CRM_AQUECER_AGENTE"] = "0"
 
 import pytest  # noqa: E402
@@ -62,11 +63,30 @@ def entrar(c, email, senha):
 _seq = iter(range(1, 10**6))
 
 
+def webhook_meta(c, valor: dict, campo: str = "messages"):
+    """Envia um payload no formato da Cloud API, assinado com o segredo do app."""
+    import hashlib
+    import hmac as _hmac
+
+    corpo = json.dumps({"object": "whatsapp_business_account", "entry": [{"id": "WABA", "changes": [
+        {"field": campo, "value": {"messaging_product": "whatsapp",
+                                   "metadata": {"display_phone_number": "5511900000000", "phone_number_id": "PNID"},
+                                   **valor}}]}]}).encode()
+    assinatura = "sha256=" + _hmac.new(b"segredo-teste", corpo, hashlib.sha256).hexdigest()
+    return c.post("/api/whatsapp/webhook", content=corpo,
+                  headers={"X-Hub-Signature-256": assinatura, "Content-Type": "application/json"})
+
+
+def mensagem_meta(tel, txt=None, nome=None, **extra):
+    m = {"from": tel, "id": f"wamid.in{next(_seq)}", "timestamp": str(int(time.time())), "type": "text",
+         "text": {"body": txt}}
+    m.update(extra)
+    return {"contacts": [{"profile": {"name": nome or ""}, "wa_id": tel}], "messages": [m]}
+
+
 def simular(c, tel, txt, nome=None):
-    """Mensagem chegando do WhatsApp, pelo mesmo webhook que o gateway usa."""
-    evento = {"tipo": "mensagem", "id": f"in-{next(_seq)}", "jid": f"{tel}@s.whatsapp.net", "telefone": tel,
-              "nome": nome, "de_mim": False, "texto": txt, "midia": None}
-    r = c.post("/api/whatsapp/webhook", json=evento, headers={"X-Gateway-Token": "token-teste"})
+    """Mensagem chegando do WhatsApp pelo webhook oficial."""
+    r = webhook_meta(c, mensagem_meta(tel, txt, nome))
     assert r.status_code == 200, r.text
     with sessao() as db:
         return db.query(Conversa).join(Conversa.contato).filter_by(telefone=tel).order_by(Conversa.id.desc()).first().id
@@ -193,10 +213,12 @@ def test_mensagem_pelo_celular_pausa_agente(cliente, rag):
     roteiro(([texto("Olá!")], "end_turn"), rag=rag)
     conv_id = simular(cliente, "5511955550000", "Bom dia", "Caio")
     assert esperar(lambda: autores(conv_id, "agente"))
-    evento = {"tipo": "mensagem", "id": "cel-1", "jid": "5511955550000@s.whatsapp.net", "telefone": "5511955550000",
-              "de_mim": True, "texto": "Caio, te respondo por aqui", "midia": None}
-    assert cliente.post("/api/whatsapp/webhook", json=evento).status_code == 401  # sem token
-    r = cliente.post("/api/whatsapp/webhook", json=evento, headers={"X-Gateway-Token": "token-teste"})
+    # coexistência: o número também está no app WhatsApp Business do celular
+    eco = {"message_echoes": [{"from": "5511900000000", "to": "5511955550000", "id": "wamid.eco1",
+                               "timestamp": str(int(time.time())), "type": "text",
+                               "text": {"body": "Caio, te respondo por aqui"}}]}
+    assert cliente.post("/api/whatsapp/webhook", json={"entry": []}).status_code == 401  # sem assinatura
+    r = webhook_meta(cliente, eco, campo="smb_message_echoes")
     assert r.status_code == 200
     assert conversa(conv_id)[:2] == ("humano", None)
     det = cliente.get(f"/api/conversas/{conv_id}").json()
@@ -454,3 +476,178 @@ def test_ia_sugerir_resposta(cliente, rag):
     conv_id = simular(cliente, "5511912410000", "Qual o prazo do lavar e passar?")
     r = cliente.post(f"/api/conversas/{conv_id}/ia/sugerir", headers=H)
     assert r.status_code == 200 and "3 dias" in r.json()["texto"]
+
+
+# ================================================================ Cloud API oficial
+import httpx  # noqa: E402
+
+from crm import campanhas as cp_mod  # noqa: E402
+from crm import whatsapp as wpp  # noqa: E402
+from crm.modelos import CampanhaEnvio as EnvioM, Contato as ContatoM, Mensagem as MsgM  # noqa: E402
+
+
+@pytest.fixture
+def graph(monkeypatch):
+    """Liga o modo 'cloud' com a Graph API falsa; devolve a lista de requisições feitas."""
+    pedidos: list[httpx.Request] = []
+
+    def responder(req: httpx.Request) -> httpx.Response:
+        pedidos.append(req)
+        caminho = req.url.path
+        if caminho.endswith("/PNID/messages"):
+            corpo = json.loads(req.content)
+            if corpo.get("status") == "read":
+                return httpx.Response(200, json={"success": True})
+            return httpx.Response(200, json={"messages": [{"id": f"wamid.out{len(pedidos)}"}]})
+        if caminho.endswith("/MIDIA1"):
+            return httpx.Response(200, json={"url": "https://lookaside.fbsbx.com/arquivo", "mime_type": "image/jpeg"})
+        if req.url.host == "lookaside.fbsbx.com":
+            return httpx.Response(200, content=b"\xff\xd8JPEG", headers={"content-type": "image/jpeg"})
+        if caminho.endswith("/WABA/message_templates"):
+            return httpx.Response(200, json={"data": [{"id": "999", "name": "boas_vindas", "language": "pt_BR",
+                                                       "status": "APPROVED", "category": "UTILITY",
+                                                       "components": [{"type": "BODY", "text": "Olá {{1}}!"}]}]})
+        return httpx.Response(404, json={"error": {"code": 100, "message": "rota falsa"}})
+
+    for nome, valor in {"SIMULADO": False, "TOKEN": "tok", "PHONE_NUMBER_ID": "PNID", "WABA_ID": "WABA",
+                        "transporte": httpx.MockTransport(responder)}.items():
+        monkeypatch.setattr(wpp, nome, valor)
+    return pedidos
+
+
+def _contato(tel):
+    with sessao() as db:
+        return db.query(ContatoM).filter_by(telefone=tel).first()
+
+
+def test_webhook_verificacao(cliente):
+    ok = cliente.get("/api/whatsapp/webhook", params={"hub.mode": "subscribe", "hub.verify_token": "verificacao-teste",
+                                                      "hub.challenge": "12345"})
+    assert ok.status_code == 200 and ok.text == "12345"
+    assert cliente.get("/api/whatsapp/webhook", params={"hub.mode": "subscribe", "hub.verify_token": "errado",
+                                                        "hub.challenge": "1"}).status_code == 403
+    r = cliente.post("/api/whatsapp/webhook", content=b"{}", headers={"X-Hub-Signature-256": "sha256=00"})
+    assert r.status_code == 401
+
+
+def test_cloud_agente_responde_pela_graph_api(cliente, rag, graph):
+    roteiro(([texto("Oi! Prazo de 3 dias úteis.")], "end_turn"), rag=rag)
+    conv_id = simular(cliente, "5511987650001", "Qual o prazo?", "Rita")
+    assert esperar(lambda: autores(conv_id, "agente"))
+    envios = [json.loads(p.content) for p in graph if p.url.path.endswith("/messages")]
+    lida = next(e for e in envios if e.get("status") == "read")
+    assert lida["typing_indicator"] == {"type": "text"} and lida["message_id"].startswith("wamid.in")
+    texto_enviado = next(e for e in envios if e.get("type") == "text")
+    assert texto_enviado["to"] == "5511987650001" and "3 dias" in texto_enviado["text"]["body"]
+    assert graph[0].headers["authorization"] == "Bearer tok"
+
+
+def test_recibos_de_entrega(cliente, rag):
+    roteiro(([texto("Olá!")], "end_turn"), rag=rag)
+    conv_id = simular(cliente, "5511987650002", "Oi", "Sara")
+    assert esperar(lambda: autores(conv_id, "agente"))
+    with sessao() as db:
+        msg = db.query(MsgM).filter_by(conversa_id=conv_id, autor_tipo="agente").first()
+        wid = msg.whatsapp_id
+    status = lambda s, **x: {"statuses": [{"id": wid, "status": s, "timestamp": "1", "recipient_id": "5511987650002", **x}]}  # noqa: E731
+    webhook_meta(cliente, status("delivered", pricing={"billable": False, "category": "service"}))
+    webhook_meta(cliente, status("read"))
+    det = cliente.get(f"/api/conversas/{conv_id}").json()
+    m = next(x for x in det["mensagens"] if x["autor"]["tipo"] == "agente")
+    assert m["recibo"] == "lida" and m["cobranca"] == "service"
+    webhook_meta(cliente, status("failed", errors=[{"code": 131047, "title": "Re-engagement message"}]))
+    with sessao() as db:
+        assert "Janela de 24h" in db.query(MsgM).filter_by(whatsapp_id=wid).first().erro
+
+
+def test_janela_24h_e_modelo(cliente, rag):
+    roteiro(rag=rag)
+    cliente.post("/api/contatos", json={"nome": "Janela", "telefone": "11987650003", "agente_bloqueado": True}, headers=H)
+    conv_id = simular(cliente, "5511987650003", "Oi")
+    with sessao() as db:
+        db.query(ContatoM).filter_by(telefone="5511987650003").first().ultima_entrada_em = agora_utc() - timedelta(hours=25)
+    r = cliente.post(f"/api/conversas/{conv_id}/mensagens", json={"texto": "Oi de novo"}, headers=H)
+    assert r.status_code == 409 and "24h" in r.json()["detail"]
+    assert cliente.get(f"/api/conversas/{conv_id}").json()["conversa"]["contato"]["janela_aberta"] is False
+    # modelo: sem exemplo é recusado; com exemplo fica aprovado (modo simulado aprova na hora)
+    base = {"nome": "retomar_contato", "categoria": "UTILITY", "corpo": "Olá {{1}}, podemos continuar seu atendimento?"}
+    assert cliente.post("/api/modelos", json=base, headers=H).status_code == 400
+    mod = cliente.post("/api/modelos", json={**base, "exemplos_corpo": ["Ana"]}, headers=H).json()
+    assert mod["status"] == "APPROVED" and mod["variaveis"]["corpo"] == 1
+    assert cliente.post(f"/api/conversas/{conv_id}/modelo", json={"modelo_id": mod["id"], "variaveis": []}, headers=H).status_code == 400
+    r = cliente.post(f"/api/conversas/{conv_id}/modelo", json={"modelo_id": mod["id"], "variaveis": ["Janela"]}, headers=H)
+    assert r.status_code == 200, r.text
+    ultima = [m for m in cliente.get(f"/api/conversas/{conv_id}").json()["mensagens"] if m["direcao"] == "saida"][-1]
+    assert ultima["modelo_nome"] == "retomar_contato" and ultima["texto"].startswith("Olá Janela")
+    mkt = cliente.post("/api/modelos", json={"nome": "promo_x", "categoria": "MARKETING", "corpo": "Promoção da semana!"},
+                       headers=H).json()
+    assert cliente.post(f"/api/conversas/{conv_id}/modelo", json={"modelo_id": mkt["id"]}, headers=H).status_code == 409
+
+
+def test_sincronizar_modelos(cliente, graph):
+    assert cliente.post("/api/modelos/sincronizar", headers=H).json()["sincronizados"] == 1
+    nomes = {m["nome"]: m for m in cliente.get("/api/modelos").json()}
+    assert nomes["boas_vindas"]["status"] == "APPROVED"
+    webhook_meta(cliente, {"event": "PAUSED", "message_template_id": 999, "message_template_name": "boas_vindas",
+                           "message_template_language": "pt_BR", "reason": "LOW_QUALITY"},
+                 campo="message_template_status_update")
+    assert {m["nome"]: m for m in cliente.get("/api/modelos").json()}["boas_vindas"]["status"] == "PAUSED"
+
+
+def test_campanha_respeita_opt_in(cliente, rag):
+    roteiro(rag=rag)
+    vip = next(e for e in cliente.get("/api/etiquetas").json() if e["nome"] == "VIP")["id"]
+    for tel, opt in (("11987651001", True), ("11987651002", True), ("11987651003", False)):
+        cliente.post("/api/contatos", json={"nome": f"Cliente {tel[-1]}", "telefone": tel, "etiqueta_ids": [vip],
+                                            "opt_in": opt, "agente_bloqueado": True}, headers=H)
+    mod = cliente.post("/api/modelos", json={"nome": "novidade_vip", "categoria": "MARKETING", "corpo": "Oi {{1}}, temos novidade!",
+                                             "exemplos_corpo": ["Ana"], "botoes": [{"tipo": "QUICK_REPLY", "texto": "Parar promoções"}]},
+                      headers=H).json()
+    dados = {"nome": "VIP novembro", "modelo_id": mod["id"], "variaveis": [{"tipo": "campo", "valor": "nome"}],
+             "etiqueta_ids": [vip], "por_minuto": 100}
+    previa = cliente.post("/api/campanhas/previa", json=dados, headers=H).json()
+    assert previa["destinatarios"] == 2 and previa["exemplo"].startswith("Oi Cliente")
+    camp = cliente.post("/api/campanhas", json=dados, headers=H).json()
+    cliente.post(f"/api/campanhas/{camp['id']}/iniciar", headers=H)
+    asyncio.run(cp_mod.processar_campanhas())
+    met = next(c for c in cliente.get("/api/campanhas").json() if c["id"] == camp["id"])
+    assert met["status"] == "concluida" and met["metricas"]["enviadas"] == 2
+    with sessao() as db:
+        wid = db.query(EnvioM).filter_by(campanha_id=camp["id"]).first().whatsapp_id
+    webhook_meta(cliente, {"statuses": [{"id": wid, "status": "read", "timestamp": "1", "recipient_id": "x"}]})
+    # cliente toca no botão "Parar promoções": opt-out, sem acionar o agente
+    falso = roteiro(rag=rag)
+    webhook_meta(cliente, mensagem_meta("5511987651001", nome="Cliente 1", type="button",
+                                        button={"payload": "Parar promoções", "text": "Parar promoções"}))
+    assert _contato("5511987651001").opt_in is False and falso.chamadas == []
+    simular(cliente, "5511987651001", "VOLTAR")
+    assert _contato("5511987651001").opt_in is True
+    # o outro responde a campanha: conta como respondida
+    simular(cliente, "5511987651002", "Quero saber mais!")
+    met = next(c for c in cliente.get("/api/campanhas").json() if c["id"] == camp["id"])["metricas"]
+    assert met["lidas"] >= 1 and met["respondidas"] == 1
+
+
+def test_midia_recebida_e_reacao(cliente, rag, graph):
+    falso = roteiro(rag=rag)
+    cliente.post("/api/contatos", json={"nome": "Foto", "telefone": "11987650004", "agente_bloqueado": True}, headers=H)
+    webhook_meta(cliente, mensagem_meta("5511987650004", type="image",
+                                        image={"id": "MIDIA1", "mime_type": "image/jpeg", "caption": "olha a mancha"}))
+    with sessao() as db:
+        msg = db.query(MsgM).filter_by(midia_id="MIDIA1").first()
+        msg_id, conv_id = msg.id, msg.conversa_id
+    assert esperar(lambda: cliente.get(f"/api/midia/{msg_id}").status_code == 200)
+    assert cliente.get(f"/api/midia/{msg_id}").content == b"\xff\xd8JPEG"
+    webhook_meta(cliente, mensagem_meta("5511987650004", type="reaction",
+                                        reaction={"message_id": "wamid.qualquer", "emoji": "👍"}))
+    assert any(m[2].startswith("👍") for m in mensagens(conv_id)) and falso.chamadas == []
+
+
+def test_anexo_enviado(cliente, rag):
+    roteiro(rag=rag)
+    cliente.post("/api/contatos", json={"nome": "Anexo", "telefone": "11987650005", "agente_bloqueado": True}, headers=H)
+    conv_id = simular(cliente, "5511987650005", "Me manda a tabela de preços?")
+    r = cliente.post(f"/api/conversas/{conv_id}/anexo", headers=H, data={"legenda": "Tabela 2026"},
+                     files={"arquivo": ("tabela.pdf", b"%PDF-1.4 teste", "application/pdf")})
+    assert r.status_code == 200, r.text
+    assert cliente.get(f"/api/midia/{r.json()['mensagem_id']}").content == b"%PDF-1.4 teste"
