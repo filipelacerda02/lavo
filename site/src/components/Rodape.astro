@@ -1,0 +1,52 @@
+---
+import { Image } from "astro:assets";
+import Icone from "./Icone.astro";
+import logo from "@/assets/img/logo.png";
+import { site, navegacao, linkWhats } from "@/config/site";
+const ano = new Date().getFullYear();
+---
+<footer class="on-dark relative overflow-hidden bg-roxo-noite pt-20 pb-8 text-white/75 sm:pt-28">
+  <div class="pointer-events-none absolute -top-40 -right-40 size-[520px] rounded-full border-[60px] border-white/[0.04]" aria-hidden="true"></div>
+  <div class="container-lavo relative">
+    <p class="mb-14 max-w-5xl font-titulo text-[clamp(2.4rem,7vw,5.6rem)] leading-[0.95] font-black tracking-[-0.04em] text-white" data-anim="sobe">
+      A maior rede de lavanderias <span class="text-lima">self-service</span> do Brasil.
+    </p>
+    <div class="grid gap-10 border-b border-white/10 pb-12 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+      <div>
+        <Image src={logo} alt="Lavô" width={64} height={64} class="mb-4 size-16 rounded-2xl" />
+        <p class="max-w-xs text-[0.95rem]">Lave e seque suas roupas em cerca de 1 hora, com economia de água e energia e produtos dosados automaticamente.</p>
+        <div class="mt-5 flex gap-2.5">
+          <a href={site.instagram} target="_blank" rel="noopener" aria-label="Instagram da Lavô (abre em nova aba)" class="grid size-11 place-items-center rounded-full bg-white/10 transition-colors hover:bg-lima hover:text-roxo-noite"><Icone nome="instagram" class="size-5" /></a>
+          <a href={site.facebook} target="_blank" rel="noopener" aria-label="Facebook da Lavô (abre em nova aba)" class="grid size-11 place-items-center rounded-full bg-white/10 transition-colors hover:bg-lima hover:text-roxo-noite"><Icone nome="facebook" class="size-5" /></a>
+          <a href={linkWhats} target="_blank" rel="noopener" aria-label="WhatsApp da Lavô (abre em nova aba)" class="grid size-11 place-items-center rounded-full bg-white/10 transition-colors hover:bg-lima hover:text-roxo-noite"><Icone nome="whats" class="size-5" /></a>
+        </div>
+      </div>
+      <nav aria-label="Rodapé: navegação">
+        <h2 class="mb-4 text-xs font-bold tracking-[0.16em] text-white uppercase">Navegue</h2>
+        <ul class="grid gap-2.5">{navegacao.map((n) => <li><a class="no-underline hover:text-lima" href={n.href}>{n.rotulo}</a></li>)}</ul>
+      </nav>
+      <nav aria-label="Rodapé: privacidade">
+        <h2 class="mb-4 text-xs font-bold tracking-[0.16em] text-white uppercase">Privacidade</h2>
+        <ul class="grid gap-2.5">
+          <li><a class="no-underline hover:text-lima" href="/privacidade">Política de privacidade</a></li>
+          <li><a class="no-underline hover:text-lima" href="/cookies">Política de cookies</a></li>
+          <li><a class="no-underline hover:text-lima" href="/direitos-do-titular">Seus direitos (LGPD)</a></li>
+          <li><a class="no-underline hover:text-lima" href="/termos">Termos de uso</a></li>
+          <li><button type="button" class="cursor-pointer text-left hover:text-lima" data-abrir-consentimento>Preferências de cookies</button></li>
+        </ul>
+      </nav>
+      <nav aria-label="Rodapé: institucional">
+        <h2 class="mb-4 text-xs font-bold tracking-[0.16em] text-white uppercase">Institucional</h2>
+        <ul class="grid gap-2.5">
+          <li><a class="no-underline hover:text-lima" href={site.franquia} target="_blank" rel="noopener">Seja um franqueado</a></li>
+          <li><a class="no-underline hover:text-lima" href="/acessibilidade">Acessibilidade</a></li>
+          <li><a class="no-underline hover:text-lima" href="/unidades">Encontre uma loja</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="flex flex-wrap justify-between gap-x-6 gap-y-3 pt-6 text-sm text-white/55">
+      <span>© {ano} {site.razaoSocial} · CNPJ {site.cnpj}</span>
+      <span>Encarregado de dados: <a class="underline hover:text-lima" href="/privacidade#encarregado">canal de privacidade</a></span>
+    </div>
+  </div>
+</footer>

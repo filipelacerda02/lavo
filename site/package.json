@@ -1,0 +1,30 @@
+{
+  "name": "lavo-site",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Site institucional da Lavô: Astro (SSG) + TypeScript + Tailwind, com funções na borda (Cloudflare Pages).",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro check && astro build && node scripts/verificar-build.mjs",
+    "preview": "wrangler pages dev ./dist",
+    "check": "astro check",
+    "deploy": "npm run build && wrangler pages deploy ./dist"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "3.7.6",
+    "@fontsource-variable/montserrat": "5.3.0",
+    "@fontsource-variable/open-sans": "5.3.0",
+    "@sentry/browser": "^11.18.0",
+    "astro": "7.4.13",
+    "web-vitals": "6.2.3"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.12",
+    "@cloudflare/workers-types": "5.20261125.1",
+    "@tailwindcss/vite": "4.3.5",
+    "tailwindcss": "4.3.5",
+    "typescript": "5.9.3",
+    "wrangler": "4.168.0"
+  }
+}

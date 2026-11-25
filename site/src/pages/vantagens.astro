@@ -1,0 +1,121 @@
+---
+import { Image } from "astro:assets";
+import Base from "@/layouts/Base.astro";
+import PaginaHero from "@/components/PaginaHero.astro";
+import FranquiaCTA from "@/components/FranquiaCTA.astro";
+import Icone from "@/components/Icone.astro";
+import TituloAnimado from "@/components/TituloAnimado.astro";
+import lojaMaquinas from "@/assets/img/loja-maquinas.webp";
+import fundadorLoja from "@/assets/img/fundador-loja.webp";
+
+const cards = [
+  { icone: "recicla", titulo: "Sustentabilidade", texto: "A Lavô é sustentável de verdade. Temos o Selo Eureciclo, que fortalece a reciclagem com responsabilidade social e une toda a cadeia. Quando você vê esse selo, sabe que está ajudando a conservar o planeta.", estilo: "destaque", largo: true },
+  { icone: "gota", titulo: "A economia", texto: "Imagina lavar e secar tudo em um só lugar? Na Lavô economizamos cerca de 70% de água e energia.", estilo: "", largo: false },
+  { icone: "folha", titulo: "Respeito ao meio ambiente", texto: "Nosso sabão e amaciante são biodegradáveis, e boa parte das nossas lojas é modular, o que reduz em até 80% o lixo da construção.", estilo: "", largo: false },
+  { icone: "escudo", titulo: "Roupas higienizadas", texto: "Mais que lavar, a Lavô higieniza. Os equipamentos são calibrados para remover sujeira, odores e bactérias, e suas peças saem limpas e seguras.", estilo: "", largo: false },
+  { icone: "frasco", titulo: "Produtos dosados automaticamente", texto: "Esqueça o exagero: as máquinas dosam a quantidade ideal de OMO e Comfort para cada lavagem.", estilo: "lima", largo: false },
+  { icone: "maquina", titulo: "Equipamentos", texto: "Máquinas de última geração, que lavam com eficiência e economia de recursos. Elas são automáticas, dosam cada produto e fazem o trabalho pesado por você.", estilo: "", largo: true },
+  { icone: "moeda", titulo: "Cashback", texto: "Escolher a Lavô também devolve vantagens para o seu bolso, com cashback nas suas lavagens.", estilo: "", largo: false },
+] as const;
+const investir = ["O autosserviço é a nova revolução do mercado", "Negócio de alta lucratividade", "Um dos setores que mais crescem no mercado", "Conceito inovador", "Operação sem funcionários", "Gestão fácil e descomplicada", "Responsabilidade socioambiental", "Mais chance de sucesso: somos mais de 700 lojas"];
+const pilares = [
+  { icone: "mentor", titulo: "Mentoria estratégica", texto: "Para atrair clientes desde a inauguração." },
+  { icone: "grafico", titulo: "Acompanhamento de performance", texto: "Indicadores acompanhados de perto e de forma constante." },
+  { icone: "loja", titulo: "Implantação eficiente", texto: "Do estudo de mercado à loja funcionando." },
+  { icone: "chip", titulo: "Tecnologia e inovação", texto: "Ferramentas digitais e sistema integrado online." },
+] as const;
+const barras = [
+  { grupo: "Água por lavagem", casa: "174 L", lavo: "54 L", pct: "31%" },
+  { grupo: "Energia por lavagem", casa: "9 kWh", lavo: "2 kWh", pct: "26%" },
+];
+---
+<Base titulo="Vantagens | Lavô" descricao="Economia de até 70% de água e energia, roupas higienizadas, produtos biodegradáveis e Selo Eureciclo. Conheça as vantagens da Lavô.">
+  <PaginaHero eyebrow="A líder do mercado" titulo="O que faz a Lavô ser *líder* em lavanderia self-service?" texto="Praticidade para você, generosidade com o planeta. Conheça as vantagens de escolher a maior rede de lavanderias de autoatendimento do Brasil." />
+
+  <section class="py-20 sm:py-32">
+    <div class="container-lavo">
+      <div class="mb-12 max-w-3xl">
+        <span class="eyebrow" data-anim="sobe">Essa é a Lavô</span>
+        <TituloAnimado tag="h2" texto="Prática e generosa com o *nosso planeta.*" destaque="text-anil" class="text-[clamp(2rem,4.2vw,3.4rem)] leading-[1.08] font-extrabold" />
+      </div>
+      <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" data-cascata="90">
+        {cards.map((c) => (
+          <article data-anim="sobe" data-inclinar class:list={["card-lavo gira-hover", c.largo && "lg:col-span-2", c.estilo === "destaque" && "border-roxo bg-roxo text-white", c.estilo === "lima" && "border-lima bg-lima"]}>
+            <span class:list={["mb-5 grid size-14 place-items-center rounded-2xl", c.estilo === "destaque" ? "bg-lima text-roxo-noite" : c.estilo === "lima" ? "bg-roxo-noite text-lima" : "bg-roxo text-lima"]}><Icone nome={c.icone} class="size-7" /></span>
+            <h3 class="mb-2.5 text-xl font-bold">{c.titulo}</h3>
+            <p class:list={["text-[0.98rem]", c.estilo === "destaque" ? "text-white/80" : c.estilo === "lima" ? "text-roxo-escuro" : "text-tinta-suave"]}>{c.texto}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="on-dark relative overflow-hidden bg-roxo-escuro py-20 text-white sm:py-32">
+    <div class="container-lavo grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
+      <div>
+        <span class="eyebrow" data-anim="sobe">Faça as contas</span>
+        <h2 class="text-[clamp(2rem,4.2vw,3.4rem)] leading-[1.08] font-extrabold" data-anim="sobe">Lavar na Lavô gasta <span class="text-lima" data-contar="70" data-sufixo="% menos">70% menos</span>.</h2>
+        <p class="mt-4 text-white/80" data-anim="sobe">Para a mesma quantidade de roupas, em casa usamos em média 174 litros de água e 9 kWh de energia. Na Lavô são só 54 litros e 2 kWh.</p>
+        <p class="mt-3 text-white/80" data-anim="sobe">A rede inteira economiza 53 milhões de litros de água por mês.</p>
+      </div>
+      <div class="grid gap-7" data-anim="direita">
+        {barras.map((b) => (
+          <div>
+            <h3 class="mb-3 text-sm font-bold tracking-[0.12em] text-lima uppercase">{b.grupo}</h3>
+            <div class="mb-2.5 grid grid-cols-[84px_1fr] items-center gap-3.5 font-titulo text-sm font-semibold">
+              <span>Em casa</span>
+              <div class="h-10 overflow-hidden rounded-full bg-white/10"><div class="flex h-full w-0 items-center justify-end rounded-full bg-white/25 px-4 font-extrabold whitespace-nowrap transition-[width] duration-[1600ms] ease-[cubic-bezier(.2,.8,.2,1)]" data-barra="100%">{b.casa}</div></div>
+            </div>
+            <div class="grid grid-cols-[84px_1fr] items-center gap-3.5 font-titulo text-sm font-semibold">
+              <span>Na Lavô</span>
+              <div class="h-10 overflow-hidden rounded-full bg-white/10"><div class="flex h-full w-0 items-center justify-end rounded-full bg-lima px-4 font-extrabold whitespace-nowrap text-roxo-noite transition-[width] delay-300 duration-[1600ms] ease-[cubic-bezier(.2,.8,.2,1)]" data-barra={b.pct}>{b.lavo}</div></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="py-20 sm:py-32">
+    <div class="container-lavo grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
+      <div class="overflow-hidden rounded-[32px] shadow-suave lg:order-2" data-anim="cortina-lado">
+        <Image src={lojaMaquinas} alt="Fileira de lavadoras e secadoras em uma loja Lavô" widths={[480, 800, 1200]} sizes="(min-width: 1024px) 560px, 100vw" class="w-full" />
+      </div>
+      <div>
+        <span class="eyebrow" data-anim="sobe">Máquinas e equipamentos</span>
+        <h2 class="text-[clamp(2rem,4.2vw,3.4rem)] leading-[1.08] font-extrabold" data-anim="sobe">Speed Queen, o que há de melhor no mundo das lavanderias.</h2>
+        <p class="mt-4 text-lg text-tinta-suave" data-anim="sobe">Máquinas feitas para lavar e secar grandes volumes por 24 horas seguidas, com baixo consumo de água e luz e durabilidade de mais de 10 anos.</p>
+        <a class="btn btn-roxo mt-7" href="/unidades" data-ima data-anim="sobe">Encontrar uma loja <Icone nome="seta" /></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-nevoa py-20 sm:py-32" id="investir">
+    <div class="container-lavo">
+      <div class="grid items-start gap-12 lg:grid-cols-2 lg:gap-20">
+        <div>
+          <span class="eyebrow" data-anim="sobe">Para o franqueado</span>
+          <h2 class="text-[clamp(2rem,4.2vw,3.4rem)] leading-[1.08] font-extrabold" data-anim="sobe">Por que investir em uma Lavô?</h2>
+          <ul class="mt-6 grid gap-3" data-cascata="70">
+            {investir.map((t) => <li class="flex gap-3.5" data-anim="esquerda"><span class="mt-0.5 grid size-6 flex-none place-items-center rounded-full bg-lima text-roxo-noite"><Icone nome="escudo" class="size-3.5" /></span>{t}</li>)}
+          </ul>
+        </div>
+        <div class="relative" data-anim="desfoque">
+          <div class="absolute -top-4 -right-4 -z-10 aspect-square w-[38%] rounded-full bg-lima" data-paralaxe="0.1" aria-hidden="true"></div>
+          <Image src={fundadorLoja} alt="Fundador da Lavô sentado em uma loja da rede" widths={[480, 652]} sizes="(min-width: 1024px) 560px, 100vw" class="w-full rounded-[46%_54%_42%_58%/52%_44%_56%_48%] object-cover shadow-forte" />
+        </div>
+      </div>
+      <div class="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4" data-cascata="100">
+        {pilares.map((p) => (
+          <article class="card-lavo" data-anim="sobe" data-inclinar>
+            <span class="mb-5 grid size-14 place-items-center rounded-2xl bg-roxo text-lima"><Icone nome={p.icone} class="size-7" /></span>
+            <h3 class="mb-2 text-lg font-bold">{p.titulo}</h3>
+            <p class="text-[0.95rem] text-tinta-suave">{p.texto}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <FranquiaCTA />
+</Base>

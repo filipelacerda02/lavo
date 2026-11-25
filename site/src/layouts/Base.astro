@@ -1,0 +1,86 @@
+---
+import { ClientRouter } from "astro:transitions";
+import "@/styles/global.css";
+import Cabecalho from "@/components/Cabecalho.astro";
+import Rodape from "@/components/Rodape.astro";
+import Consentimento from "@/components/Consentimento.astro";
+import Icone from "@/components/Icone.astro";
+import { site, linkWhats } from "@/config/site";
+import imagemPadrao from "@/assets/img/loja-interior.webp";
+import { getImage } from "astro:assets";
+
+interface Props {
+  titulo: string;
+  descricao: string;
+  imagem?: ImageMetadata;
+  semIndice?: boolean;
+}
+const { titulo, descricao, imagem = imagemPadrao, semIndice = false } = Astro.props;
+const canonica = new URL(Astro.url.pathname, Astro.site ?? site.url).href;
+const og = await getImage({ src: imagem, width: 1200, format: "jpeg" });
+const ogUrl = new URL(og.src, Astro.site ?? site.url).href;
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: site.nome,
+  legalName: site.razaoSocial,
+  url: site.url,
+  logo: new URL("/logo.png", site.url).href,
+  sameAs: [site.instagram, site.facebook],
+  description: site.descricao,
+};
+---
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{titulo}</title>
+    <meta name="description" content={descricao} />
+    <link rel="canonical" href={canonica} />
+    {semIndice && <meta name="robots" content="noindex" />}
+    <meta name="theme-color" content="#532458" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:site_name" content={site.nome} />
+    <meta property="og:title" content={titulo} />
+    <meta property="og:description" content={descricao} />
+    <meta property="og:url" content={canonica} />
+    <meta property="og:image" content={ogUrl} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/logo.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <script is:inline src="/js/flag.js"></script>
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+    <ClientRouter fallback="swap" />
+  </head>
+  <body class="flex min-h-dvh flex-col">
+    <a href="#conteudo" class="sr-only z-[100] rounded-lg bg-lima px-4 py-2 font-bold text-roxo-noite focus:not-sr-only focus:fixed focus:top-2 focus:left-2">Ir para o conteúdo</a>
+    <div class="progresso-leitura fixed inset-x-0 top-0 z-[60] h-1 bg-lima" aria-hidden="true" transition:persist></div>
+
+    <Cabecalho />
+
+    <main id="conteudo" class="flex-1" tabindex="-1">
+      <slot />
+    </main>
+
+    <Rodape />
+
+    <aside aria-label="Contato rápido" transition:persist>
+    <a href={linkWhats} target="_blank" rel="noopener" aria-label="Fale com a Lavô pelo WhatsApp (abre em nova aba)"
+      class="fixed right-5 bottom-5 z-40 grid size-15 place-items-center rounded-full bg-[#128c4b] text-white shadow-[0_12px_30px_-6px_rgb(37_211_102/0.6)] transition-transform duration-300 hover:scale-110"
+>
+      <Icone nome="whats" class="size-8" />
+    </a>
+    </aside>
+
+    <Consentimento />
+
+    <script>
+      import "@/scripts/animacoes";
+      import "@/scripts/observabilidade";
+    </script>
+  </body>
+</html>

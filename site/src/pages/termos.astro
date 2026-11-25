@@ -1,0 +1,30 @@
+---
+import Texto from "@/layouts/Texto.astro";
+import { site } from "@/config/site";
+const data = new Date(site.versaoPolitica + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
+---
+<Texto titulo="Termos de uso | Lavô" descricao="Regras de uso do site institucional da Lavô." eyebrow="Institucional" tituloHero="Termos de *uso*" resumo="As regras para usar este site, explicadas de forma direta." atualizado={data}>
+  <h2>1. Sobre o site</h2>
+  <p>Este site é mantido pela {site.razaoSocial} (CNPJ {site.cnpj}) para apresentar a rede Lavô, suas vantagens e a localização das unidades. Ao usar o site, você concorda com estes termos.</p>
+
+  <h2>2. Informações das unidades</h2>
+  <p>Procuramos manter endereços e informações atualizados, mas as unidades são operadas por franqueados e podem mudar sem aviso. Confirme os dados antes de se deslocar. Os preços e condições de uso das máquinas são os informados em cada loja.</p>
+
+  <h2>3. Propriedade intelectual</h2>
+  <p>A marca Lavô, os logotipos, os textos, as fotos e o design do site pertencem à {site.razaoSocial} ou a seus parceiros. Você não pode copiar ou reutilizar esse conteúdo para fins comerciais sem autorização por escrito.</p>
+
+  <h2>4. Links externos</h2>
+  <p>O site tem links para serviços de terceiros, como WhatsApp, redes sociais, Google Maps, Waze, a página de franquias e páginas de campanhas. Esses serviços têm termos e políticas próprios, e não respondemos pelo conteúdo deles.</p>
+
+  <h2>5. Uso adequado</h2>
+  <p>Não é permitido tentar invadir, sobrecarregar ou interferir no funcionamento do site, nem usar robôs para coletar o seu conteúdo de forma automatizada. Tentativas assim são bloqueadas e registradas.</p>
+
+  <h2>6. Promoções</h2>
+  <p>Sorteios e campanhas divulgados no site seguem regulamentos próprios, disponíveis nas páginas de cada campanha.</p>
+
+  <h2>7. Privacidade</h2>
+  <p>O tratamento de dados pessoais segue a nossa <a href="/privacidade">Política de privacidade</a> e a <a href="/cookies">Política de cookies</a>.</p>
+
+  <h2>8. Alterações e legislação</h2>
+  <p>Estes termos podem ser atualizados a qualquer momento, com a data indicada acima. Eles seguem a legislação brasileira, incluindo o Código de Defesa do Consumidor.</p>
+</Texto>

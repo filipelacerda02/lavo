@@ -1,0 +1,34 @@
+---
+import Texto from "@/layouts/Texto.astro";
+import { site } from "@/config/site";
+const data = new Date(site.versaoPolitica + "T12:00:00").toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
+---
+<Texto titulo="Política de cookies | Lavô" descricao="Quais cookies e tecnologias semelhantes o site da Lavô usa e como controlar cada categoria." eyebrow="Privacidade" tituloHero="Política de *cookies*" resumo="Você decide o que pode ser usado. Nada de terceiros é carregado sem a sua permissão." atualizado={data}>
+  <p class="aviso">Para mudar a sua escolha agora, abra as <button type="button" class="font-semibold text-roxo underline" data-abrir-consentimento>Preferências de cookies</button>.</p>
+
+  <h2>O que são cookies</h2>
+  <p>Cookies e tecnologias semelhantes (como o armazenamento local do navegador) são pequenos arquivos que guardam informações no seu dispositivo. Separamos o que usamos em quatro categorias.</p>
+
+  <h2>Categorias</h2>
+  <div class="overflow-x-auto" tabindex="0" role="region" aria-label="Tabela (role para os lados no celular)"><table>
+    <thead><tr><th>Categoria</th><th>Nome</th><th>Quem define</th><th>Para quê</th><th>Duração</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="3"><strong>Essenciais</strong> (sempre ativos)</td><td>lavo-consentimento (armazenamento local)</td><td>Lavô</td><td>Guardar a sua escolha de privacidade</td><td>Até você apagar ou a política mudar</td></tr>
+      <tr><td>__cf_bm</td><td>Cloudflare</td><td>Diferenciar pessoas de robôs (segurança)</td><td>30 minutos</td></tr>
+      <tr><td>Cloudflare Turnstile</td><td>Cloudflare</td><td>Proteger o formulário de direitos do titular contra robôs, só nessa página</td><td>Sessão</td></tr>
+      <tr><td><strong>Funcionais</strong></td><td>Cookies do Google Maps (por exemplo NID)</td><td>Google</td><td>Exibir o mapa das unidades</td><td>Até 6 meses</td></tr>
+      <tr><td><strong>Analíticos</strong></td><td>_ga, _ga_*</td><td>Google Analytics</td><td>Estatísticas de visitas, com IP anonimizado</td><td>Até 2 anos</td></tr>
+      <tr><td><strong>Marketing</strong></td><td>_fbp</td><td>Meta</td><td>Medir campanhas de anúncios</td><td>3 meses</td></tr>
+    </tbody>
+  </table></div>
+  <p>As ferramentas analíticas e de marketing só funcionam se estiverem configuradas no site. Mesmo assim, nunca carregam antes do seu aceite.</p>
+
+  <h2>Como bloqueamos de verdade</h2>
+  <p>Os scripts de terceiros não estão no código das páginas: eles só são inseridos depois que você aceita a categoria. O mapa do Google aparece como um quadro com um botão e só é carregado se você permitir. Ao revogar uma categoria, apagamos os cookies dela que conseguimos remover e recarregamos a página.</p>
+
+  <h2>Registro do consentimento</h2>
+  <p>Cada escolha é registrada com um identificador aleatório, as categorias, a versão desta política e a data, para cumprir o art. 8º da LGPD. Esse registro não inclui o seu nome nem o seu e-mail.</p>
+
+  <h2>Controle pelo navegador</h2>
+  <p>Você também pode apagar ou bloquear cookies nas configurações do navegador. Bloquear os essenciais pode impedir partes do site de funcionar.</p>
+</Texto>

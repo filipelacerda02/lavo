@@ -1,0 +1,18 @@
+---
+import Base from "@/layouts/Base.astro";
+import Icone from "@/components/Icone.astro";
+---
+<Base titulo="Página não encontrada | Lavô" descricao="A página que você procura não existe." semIndice>
+  <section class="on-dark relative grid min-h-[70vh] place-items-center overflow-hidden bg-roxo px-4 py-24 text-center text-white">
+    <div class="pointer-events-none absolute top-1/2 left-1/2 size-[520px] -translate-1/2 animate-giro rounded-full border-[14px] border-transparent border-t-lima border-r-lima opacity-60" aria-hidden="true"></div>
+    <div class="relative">
+      <p class="font-titulo text-[clamp(5rem,18vw,11rem)] leading-none font-black text-lima" data-anim="zoom">404</p>
+      <h1 class="mt-2 text-3xl font-extrabold" data-anim="sobe">Essa página foi para a máquina e não voltou.</h1>
+      <p class="mt-3 text-white/80" data-anim="sobe">Confira o endereço ou volte para o início.</p>
+      <div class="mt-8 flex flex-wrap justify-center gap-3" data-anim="sobe">
+        <a class="btn btn-lima" href="/">Voltar ao início <Icone nome="seta" /></a>
+        <a class="btn btn-contorno" href="/unidades">Encontrar uma loja</a>
+      </div>
+    </div>
+  </section>
+</Base>

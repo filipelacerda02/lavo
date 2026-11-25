@@ -1,0 +1,16 @@
+# Cloudflare Pages: CDN global, TLS 1.3, WAF e mitigação de DDoS na borda.
+name = "lavo-site"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Armazenamento de registros de consentimento e solicitações LGPD (criptografadas com AES-256-GCM)
+# Crie com:  npx wrangler kv namespace create LAVO_KV  e cole o id abaixo.
+[[kv_namespaces]]
+binding = "LAVO_KV"
+id = "SUBSTITUA_PELO_ID_DO_NAMESPACE"
+
+# Variáveis NÃO secretas. Segredos (CHAVE_CRIPTOGRAFIA, TURNSTILE_SECRET, WEBHOOK_SECRET,
+# SALT_IP) vão no painel: Pages > Settings > Variables and Secrets (tipo "Secret").
+[vars]
+WEBHOOK_TITULAR_URL = ""

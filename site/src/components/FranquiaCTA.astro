@@ -1,0 +1,23 @@
+---
+import { Image } from "astro:assets";
+import Icone from "./Icone.astro";
+import percentual from "@/assets/img/percentual-3d.webp";
+import { site } from "@/config/site";
+---
+<section class="py-20 sm:py-28" id="franquia">
+  <div class="container-lavo">
+    <div class="on-dark relative grid items-center gap-10 overflow-hidden rounded-[48px] bg-roxo p-8 text-white sm:p-14 lg:grid-cols-[1.2fr_0.8fr] lg:p-20" data-anim="zoom">
+      <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(600px_400px_at_100%_100%,rgb(197_213_57/0.25),transparent_60%),radial-gradient(700px_500px_at_0%_0%,rgb(190_148_255/0.3),transparent_60%)]" aria-hidden="true"></div>
+      <div class="relative">
+        <span class="eyebrow">Seja um franqueado</span>
+        <h2 class="text-[clamp(2rem,4vw,3.3rem)] leading-[1.05] font-extrabold">Quer fazer parte da família Lavô e abrir sua própria unidade?</h2>
+        <p class="mt-5 text-lg text-white/80">Somos a maior rede de lavanderias self-service do Brasil, com presença nacional e em breve na Europa. O modelo une tecnologia, praticidade e alto potencial de retorno, e abrimos uma loja nova a cada 36 horas.</p>
+        <div class="mt-7 flex flex-wrap gap-3">
+          <a class="btn btn-lima" href={site.franquia} target="_blank" rel="noopener" data-ima>Quero ser franqueado <Icone nome="seta" /></a>
+          <a class="btn btn-contorno" href="/vantagens#investir">Por que investir</a>
+        </div>
+      </div>
+      <Image src={percentual} alt="" width={340} class="relative order-first mx-auto w-full max-w-[220px] animate-flutua drop-shadow-[0_30px_40px_rgb(0_0_0/0.35)] lg:order-none lg:max-w-[340px]" />
+    </div>
+  </div>
+</section>

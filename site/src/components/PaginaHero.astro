@@ -1,0 +1,20 @@
+---
+import TituloAnimado from "./TituloAnimado.astro";
+import Onda from "./Onda.astro";
+interface Props { eyebrow: string; titulo: string; texto: string; ondaCor?: string }
+const { eyebrow, titulo, texto, ondaCor = "fill-white" } = Astro.props;
+---
+<section class="on-dark relative overflow-hidden bg-roxo pt-16 pb-28 text-white sm:pt-24 sm:pb-36">
+  <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_500px_at_100%_0%,rgb(190_148_255/0.35),transparent_60%)]" aria-hidden="true"></div>
+  <div class="pointer-events-none absolute top-1/2 -right-32 size-[460px] -translate-y-1/2 rounded-full border-[46px] border-white/[0.06]" aria-hidden="true" data-paralaxe="0.12">
+    <div class="absolute inset-10 animate-giro rounded-full border-8 border-transparent border-t-lima border-l-lima"></div>
+  </div>
+  <span class="bolha-deco top-[22%] left-[6%] size-10" aria-hidden="true"></span>
+  <span class="bolha-deco bottom-[30%] left-[46%] size-6 [animation-delay:-4s]" aria-hidden="true"></span>
+  <div class="container-lavo relative">
+    <span class="eyebrow" data-anim="sobe">{eyebrow}</span>
+    <TituloAnimado texto={titulo} class="max-w-4xl text-[clamp(2.4rem,5.4vw,4.4rem)] leading-[1.05] font-black" />
+    <p class="mt-6 max-w-2xl text-[clamp(1.05rem,1.4vw,1.2rem)] text-white/85" data-anim="sobe" data-atraso="350">{texto}</p>
+  </div>
+  <Onda cor={ondaCor} />
+</section>

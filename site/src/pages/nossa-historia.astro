@@ -1,0 +1,129 @@
+---
+import { Image } from "astro:assets";
+import Base from "@/layouts/Base.astro";
+import PaginaHero from "@/components/PaginaHero.astro";
+import Icone from "@/components/Icone.astro";
+import { site } from "@/config/site";
+import fundadorFachada from "@/assets/img/fundador-fachada.webp";
+import mapaBrasil from "@/assets/img/mapa-brasil.webp";
+
+const valores = ["Praticidade", "Sustentabilidade", "Honestidade", "Inovação", "Economia", "Segurança"];
+const marcos = [
+  { ano: "2019", texto: "Nasce a Lavô, com lojas em postos de combustível e a proposta de lavar e secar tudo em um só lugar." },
+  { ano: "2020", texto: "A marca entra no franchising e começa a se espalhar pelo país." },
+  { ano: "2025", texto: "Selecionada no ranking EXAME Negócios em Expansão, com crescimento de 911%." },
+  { ano: "2026", texto: "Pela primeira vez entre as 50 maiores franquias do Brasil, com mais de 700 lojas." },
+];
+const convencoes = [
+  { ano: "2024", local: "Cruzeiro MSC", estilo: "" },
+  { ano: "2025", local: "Costa do Sauípe, Salvador (BA)", estilo: "destaque" },
+  { ano: "2026", local: "Em breve.", estilo: "lima" },
+];
+---
+<Base titulo="Nossa história | Lavô" descricao="Conheça a história da Lavô, a lavanderia self-service que nasceu em 2019 para transformar a forma como os brasileiros cuidam das roupas.">
+  <PaginaHero eyebrow="Nossa história" titulo="Como tudo *começou*" texto="Conheça a jornada que revolucionou o jeito de cuidar das roupas do brasileiro." />
+
+  <section class="py-20 sm:py-32">
+    <div class="container-lavo grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
+      <div class="relative" data-anim="desfoque">
+        <div class="absolute -top-4 -right-4 -z-10 aspect-square w-[38%] rounded-full bg-lima" data-paralaxe="0.12" aria-hidden="true"></div>
+        <div class="absolute bottom-[6%] -left-5 -z-10 aspect-square w-[26%] rounded-full border-[10px] border-lilas" data-paralaxe="-0.1" aria-hidden="true"></div>
+        <Image src={fundadorFachada} alt="Fundador da Lavô em frente a uma loja da rede" widths={[480, 800, 1000]} sizes="(min-width: 1024px) 560px, 100vw" class="w-full drop-shadow-[0_30px_40px_rgb(43_15_48/0.25)]" />
+      </div>
+      <div>
+        <span class="eyebrow" data-anim="sobe">Desde 2019</span>
+        <h2 class="text-[clamp(1.8rem,3.6vw,2.9rem)] leading-[1.1] font-extrabold" data-anim="sobe">Uma missão clara: transformar a forma como os brasileiros cuidam das suas roupas.</h2>
+        <p class="mt-4 text-lg text-tinta-suave" data-anim="sobe">Depois de muita pesquisa e de viagens para ver de perto como operam as melhores lavanderias do mundo, nossos fundadores, executivos experientes e com visão empreendedora, decidiram trazer para cá uma lavanderia moderna, prática e com a qualidade que você merece.</p>
+        <p class="mt-3 text-lg text-tinta-suave" data-anim="sobe">Desde então, a Lavô não só cresceu como virou referência, com serviços reconhecidos pela organização, pela qualidade e pelo cuidado caprichado com cada peça. E tudo isso com máxima higiene e respeito ao meio ambiente.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-nevoa py-20 sm:py-32">
+    <div class="container-lavo">
+      <div class="mb-12 max-w-3xl">
+        <span class="eyebrow" data-anim="sobe">Sobre a empresa</span>
+        <h2 class="text-[clamp(2rem,4.2vw,3.4rem)] leading-[1.08] font-extrabold" data-anim="sobe">Cuidar das roupas pode ser mais fácil, rápido e sustentável.</h2>
+        <p class="mt-4 text-lg text-tinta-suave" data-anim="sobe">Nossa missão é oferecer um serviço de lavanderia que economiza o seu tempo, o seu dinheiro e os recursos do planeta. Por isso estamos sempre inovando, das tecnologias de lavagem à energia limpa e renovável.</p>
+      </div>
+      <div class="grid gap-5 lg:grid-cols-3" data-cascata="120">
+        <article class="card-lavo" data-anim="sobe" data-inclinar>
+          <span class="mb-5 grid size-15 place-items-center rounded-full border-[6px] border-lilas-claro text-roxo"><Icone nome="alvo" class="size-6.5" /></span>
+          <h3 class="mb-2 text-xl font-bold">Missão</h3>
+          <p class="text-tinta-suave">Oferecer soluções em lavanderia de autoatendimento com baixo custo, aliadas a uma operação rápida, simples e prática.</p>
+        </article>
+        <article class="card-lavo" data-anim="sobe" data-inclinar>
+          <span class="mb-5 grid size-15 place-items-center rounded-full border-[6px] border-lilas-claro text-roxo"><Icone nome="olho" class="size-6.5" /></span>
+          <h3 class="mb-2 text-xl font-bold">Visão</h3>
+          <p class="text-tinta-suave">Manter-se atualizada e sustentável, alcançando grande visibilidade no mercado nacional.</p>
+        </article>
+        <article class="card-lavo" data-anim="sobe" data-inclinar>
+          <span class="mb-5 grid size-15 place-items-center rounded-full border-[6px] border-lilas-claro text-roxo"><Icone nome="coracao" class="size-6.5" /></span>
+          <h3 class="mb-3 text-xl font-bold">Valores</h3>
+          <ul class="flex flex-wrap gap-2">{valores.map((v) => <li class="rounded-full bg-lilas-claro px-3.5 py-1.5 font-titulo text-[0.85rem] font-bold text-roxo">{v}</li>)}</ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="on-dark bg-roxo-escuro py-20 text-white sm:py-32">
+    <div class="container-lavo">
+      <div class="mb-14 max-w-3xl">
+        <span class="eyebrow" data-anim="sobe">Linha do tempo</span>
+        <h2 class="text-[clamp(2rem,4.2vw,3.4rem)] leading-[1.08] font-extrabold" data-anim="sobe">De uma ideia à maior rede do Brasil.</h2>
+      </div>
+      <div class="relative">
+        <svg class="pointer-events-none absolute top-[27px] left-0 hidden h-1 w-full lg:block" viewBox="0 0 1000 4" preserveAspectRatio="none" aria-hidden="true" data-desenho>
+          <line x1="0" y1="2" x2="1000" y2="2" stroke="#c5d539" stroke-width="4" />
+        </svg>
+        <svg class="pointer-events-none absolute top-0 bottom-0 left-[16px] w-1 lg:hidden" viewBox="0 0 4 1000" preserveAspectRatio="none" aria-hidden="true" data-desenho>
+          <line x1="2" y1="0" x2="2" y2="1000" stroke="#c5d539" stroke-width="4" />
+        </svg>
+        <ol class="grid gap-0 lg:grid-cols-4 lg:gap-5" data-cascata="160">
+          {marcos.map((m) => (
+            <li class="relative pb-9 pl-15 lg:pt-18 lg:pb-0 lg:pl-0" data-anim="sobe">
+              <span class="absolute top-0 left-0 size-[34px] rounded-full border-[6px] border-lima bg-roxo-escuro lg:top-3" aria-hidden="true"></span>
+              <p class="mb-2 font-titulo text-4xl leading-none font-black tracking-tight text-lima">{m.ano}</p>
+              <p class="text-white/80">{m.texto}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-20 sm:py-32">
+    <div class="container-lavo">
+      <div class="mb-12 max-w-3xl">
+        <span class="eyebrow" data-anim="sobe">Convenções Lavô</span>
+        <h2 class="text-[clamp(2rem,4.2vw,3.4rem)] leading-[1.08] font-extrabold" data-anim="sobe">A família Lavô se encontra todo ano.</h2>
+      </div>
+      <div class="grid gap-5 sm:grid-cols-3" data-cascata="120">
+        {convencoes.map((c) => (
+          <article data-anim="giro" data-inclinar class:list={["card-lavo", c.estilo === "destaque" && "border-roxo bg-roxo text-white", c.estilo === "lima" && "border-lima bg-lima"]}>
+            <span class:list={["mb-5 grid size-14 place-items-center rounded-2xl", c.estilo === "destaque" ? "bg-lima text-roxo-noite" : c.estilo === "lima" ? "bg-roxo-noite text-lima" : "bg-roxo text-lima"]}><Icone nome="brilho" class="size-7" /></span>
+            <h3 class="text-xl font-bold">Convenção {c.ano}</h3>
+            <p class:list={["mt-1", c.estilo === "destaque" ? "text-white/80" : c.estilo === "lima" ? "text-roxo-escuro" : "text-tinta-suave"]}>{c.local}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-nevoa py-20 sm:py-32">
+    <div class="container-lavo grid items-center gap-12 lg:grid-cols-2">
+      <div>
+        <span class="eyebrow" data-anim="sobe">Vem pra Lavô</span>
+        <h2 class="text-[clamp(2rem,4.2vw,3.4rem)] leading-[1.08] font-extrabold" data-anim="sobe">Tem uma Lavô pertinho de você.</h2>
+        <p class="mt-4 text-lg text-tinta-suave" data-anim="sobe">Encontre a loja mais próxima e trace a rota pelo Google Maps ou pelo Waze.</p>
+        <div class="mt-7 flex flex-wrap gap-3" data-anim="sobe">
+          <a class="btn btn-roxo" href="/unidades" data-ima>Encontrar a loja mais próxima <Icone nome="seta" /></a>
+          <a class="btn btn-contorno" href={site.franquia} target="_blank" rel="noopener">Seja um franqueado</a>
+        </div>
+      </div>
+      <div class="mx-auto max-w-md" data-anim="zoom">
+        <Image src={mapaBrasil} alt="Mapa do Brasil em lilás, representando a presença nacional da Lavô" width={483} class="w-full animate-flutua" />
+      </div>
+    </div>
+  </section>
+</Base>

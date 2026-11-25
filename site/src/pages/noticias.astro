@@ -1,0 +1,94 @@
+---
+import { Image } from "astro:assets";
+import Base from "@/layouts/Base.astro";
+import PaginaHero from "@/components/PaginaHero.astro";
+import FranquiaCTA from "@/components/FranquiaCTA.astro";
+import Icone from "@/components/Icone.astro";
+import premio from "@/assets/img/premio-exame.webp";
+import exame from "@/assets/img/imprensa-exame.webp";
+import cnn from "@/assets/img/imprensa-cnn.webp";
+import estadao from "@/assets/img/imprensa-estadao.webp";
+import pegn from "@/assets/img/imprensa-pegn.webp";
+import noticiaExame from "@/assets/img/noticia-exame.webp";
+import lojaMaquinas from "@/assets/img/loja-maquinas.webp";
+import lavoStreet from "@/assets/img/noticia-lavo-street.webp";
+
+const linkExame = "https://exame.com/negocios/negocios-em-expansao-2025-conheca-as-empresas-selecionadas-e-assista-ao-evento/";
+const imprensa = [
+  { url: linkExame, img: exame, nome: "Exame" },
+  { url: "https://www.cnnbrasil.com.br/economia/negocios/negocios-autonomos-saiba-como-empreender-com-tecnologia-e-sem-funcionarios/", img: cnn, nome: "CNN Brasil" },
+  { url: "https://bluestudio.estadao.com.br/agencia-de-comunicacao/markable-comunicacao/verao-aquece-o-turismo-e-movimenta-o-setor-de-lavanderias-self-service/", img: estadao, nome: "Estadão" },
+  { url: "https://revistapegn.globo.com/franquias/noticia/2026/03/cacau-show-o-boticario-e-mais-as-50-maiores-franquias-do-brasil-em-2025-segundo-a-abf.ghtml", img: pegn, nome: "Pequenas Empresas & Grandes Negócios" },
+];
+const noticias = [
+  { url: "https://lavo.eco.br/a-maior-franquia-de-lavanderias-do-brasil-praticidade-e-inovacao-ao-seu-alcance/", img: noticiaExame, meta: "Exame · Negócios em Expansão 2025", titulo: "Negócios em Expansão 2025: conheça as empresas selecionadas", texto: "A Lavô está entre as empresas selecionadas no ranking da EXAME com o BTG Pactual, com crescimento de 911% e receita de R$ 18 milhões em 2024." },
+  { url: "https://lavo.eco.br/a-maior-franquia-de-lavanderias-do-brasil-praticidade-e-inovacao-ao-seu-alcance-3/", img: lojaMaquinas, meta: "Mercado · Santa Catarina", titulo: "O que explica o “boom” de lavanderias self-service em cidades de SC", texto: "Apartamentos menores, invernos chuvosos e a economia em relação a lavar em casa ajudam a explicar o crescimento do autosserviço." },
+  { url: "https://lavo.eco.br/cafe-com-lavanderia-lavo-aposta-em-novo-formato-de-franquia-de-olho-na-conveniencia/", img: lavoStreet, meta: "Novidade · Lavô Street", titulo: "Café com lavanderia? Lavô aposta em novo formato de franquia", texto: "A Lavô Street une lavanderia e cafeteria em parceria com a United Coffee & Co. A primeira unidade fica no Itaim Bibi, em São Paulo." },
+];
+---
+<Base titulo="Notícias | Lavô" descricao="Prêmios, matérias na imprensa e novidades da Lavô, a maior rede de lavanderias self-service do Brasil.">
+  <PaginaHero eyebrow="Notícias Lavô" titulo="Notícias e *novidades* da Lavô" texto="Fique ligado nas dicas da Lavô para cuidar melhor das suas roupas, otimizar o tempo e economizar." />
+
+  <section class="py-20 sm:py-32">
+    <div class="container-lavo grid items-center gap-12 md:grid-cols-[300px_1fr] lg:gap-16">
+      <div class="relative max-w-[300px]" data-anim="giro">
+        <div class="absolute -inset-3 -z-10 animate-giro rounded-[40px] border-4 border-dashed border-lilas" aria-hidden="true"></div>
+        <Image src={premio} alt="Fundador da Lavô segurando o troféu do Prêmio Exame 2025" width={300} class="rounded-[32px] shadow-forte" />
+      </div>
+      <div>
+        <span class="eyebrow" data-anim="sobe">Prêmio Exame 2025</span>
+        <h2 class="text-[clamp(2rem,4.2vw,3.4rem)] leading-[1.08] font-extrabold" data-anim="sobe">Destaque em expansão.</h2>
+        <p class="mt-4 text-lg text-tinta-suave" data-anim="sobe">A Lavô foi selecionada no ranking <strong>EXAME Negócios em Expansão 2025</strong>, uma iniciativa da EXAME com o BTG Pactual, com <strong>crescimento de <span data-contar="911" data-sufixo="%">911%</span></strong> e receita de R$ 18 milhões em 2024.</p>
+        <p class="mt-3 text-lg text-tinta-suave" data-anim="sobe">Em 2026, a rede entrou pela primeira vez na lista das 50 maiores franquias do Brasil, segundo a ABF.</p>
+        <a class="link-seta mt-4" href={linkExame} target="_blank" rel="noopener" data-anim="sobe">Ver na Exame <Icone nome="seta" class="size-4.5" /><span class="sr-only"> (abre em nova aba)</span></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-nevoa py-20 sm:py-28">
+    <div class="container-lavo">
+      <div class="mb-10 max-w-3xl">
+        <span class="eyebrow" data-anim="sobe">Destaques na imprensa</span>
+        <h2 class="text-[clamp(2rem,4.2vw,3.4rem)] leading-[1.08] font-extrabold" data-anim="sobe">A Lavô na mídia</h2>
+        <p class="mt-3 text-tinta-suave" data-anim="sobe">Clique nas logos para ler as matérias.</p>
+      </div>
+      <ul class="grid grid-cols-2 gap-4 lg:grid-cols-4" data-cascata="100">
+        {imprensa.map((i) => (
+          <li data-anim="zoom">
+            <a href={i.url} target="_blank" rel="noopener" class="grid min-h-28 place-items-center rounded-3xl border border-roxo/12 bg-white p-6 transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 hover:border-lilas hover:shadow-suave">
+              <Image src={i.img} alt={`Ler matéria em ${i.nome} (abre em nova aba)`} width={289} class="max-h-14 w-auto mix-blend-multiply" />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <section class="py-20 sm:py-32">
+    <div class="container-lavo">
+      <div class="mb-10 max-w-3xl">
+        <span class="eyebrow" data-anim="sobe">Últimas notícias</span>
+        <h2 class="text-[clamp(2rem,4.2vw,3.4rem)] leading-[1.08] font-extrabold" data-anim="sobe">Fique por dentro</h2>
+      </div>
+      <ul class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" data-cascata="120">
+        {noticias.map((n) => (
+          <li data-anim="sobe">
+            <a href={n.url} target="_blank" rel="noopener" class="group flex h-full flex-col overflow-hidden rounded-3xl border border-roxo/12 bg-white no-underline transition-[transform,box-shadow] duration-500 hover:-translate-y-1.5 hover:shadow-suave" data-inclinar>
+              <div class="aspect-[16/10] overflow-hidden bg-nevoa">
+                <Image src={n.img} alt="" widths={[400, 640]} sizes="(min-width: 1024px) 380px, (min-width: 640px) 50vw, 100vw" class="size-full object-cover transition-transform duration-700 group-hover:scale-105" />
+              </div>
+              <div class="flex flex-1 flex-col gap-2.5 p-6">
+                <span class="font-titulo text-xs font-bold tracking-[0.12em] text-anil uppercase">{n.meta}</span>
+                <h3 class="text-lg font-bold">{n.titulo}</h3>
+                <p class="text-[0.95rem] text-tinta-suave">{n.texto}</p>
+                <span class="link-seta mt-auto self-start">Ler matéria<span class="sr-only"> (abre em nova aba)</span></span>
+              </div>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <FranquiaCTA />
+</Base>

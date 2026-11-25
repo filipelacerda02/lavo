@@ -1,0 +1,229 @@
+---
+import { Image } from "astro:assets";
+import Base from "@/layouts/Base.astro";
+import Icone from "@/components/Icone.astro";
+import TituloAnimado from "@/components/TituloAnimado.astro";
+import Onda from "@/components/Onda.astro";
+import FranquiaCTA from "@/components/FranquiaCTA.astro";
+import { site } from "@/config/site";
+import clienteFachada from "@/assets/img/cliente-fachada.webp";
+import lojaInterior from "@/assets/img/loja-interior.webp";
+import fundadorFachada from "@/assets/img/fundador-fachada.webp";
+import produtos from "@/assets/img/produtos-omo-comfort.webp";
+import promo from "@/assets/img/promo-sorteio.webp";
+import bancoBrasil from "@/assets/img/banco-do-brasil.webp";
+
+const marquee = ["+700 lojas no Brasil", "+2 mil máquinas", "+600 mil clientes por mês", "+90 toneladas de roupa por dia", "53 milhões de litros de água economizados por mês", "70% de economia de energia", "1 loja nova a cada 36 horas"];
+const passos = [
+  { icone: "cesto", titulo: "Meça as roupas", texto: "Use o cesto medidor para saber quanto cabe em cada ciclo." },
+  { icone: "cartao", titulo: "Pague no totem", texto: "Pagamento rápido no totem de autoatendimento, sem atendente e sem fila." },
+  { icone: "maquina", titulo: "Coloque na máquina", texto: "Máquinas Speed Queen de uso profissional, prontas para grandes volumes." },
+  { icone: "toque", titulo: "Escolha o ciclo", texto: "Selecione o tipo de lavagem ou de secagem ideal para suas peças." },
+  { icone: "play", titulo: "Pressione INICIAR", texto: "Sabão e amaciante entram automaticamente. É só esperar." },
+] as const;
+const numeros = [
+  { n: 700, p: "+", s: "", t: "lojas espalhadas pelo Brasil" },
+  { n: 2000, p: "+", s: "", t: "máquinas em operação" },
+  { n: 600, p: "+", s: " mil", t: "clientes atendidos por mês" },
+  { n: 90, p: "+", s: " t", t: "de roupa lavada por dia" },
+  { n: 53, p: "", s: " mi", t: "de litros de água economizados por mês" },
+  { n: 70, p: "", s: "%", t: "de economia de energia" },
+];
+const entregamos = ["Equipamentos de alta tecnologia", "Máquinas projetadas para lavar e secar grandes volumes por 24 horas seguidas", "Baixo consumo de água e luz", "Durabilidade de mais de 10 anos", "Máquinas Speed Queen, o que há de melhor no mundo das lavanderias", "Sistema integrado online", "Estudo de mercado profissional", "Assistência técnica nacional", "Suporte contínuo aos franqueados", "Universidade Corporativa", "Materiais de marketing padronizados (vídeos, posts, banners e mais)"];
+---
+<Base titulo="Lavô | A maior rede de lavanderias self-service do Brasil" descricao="Lave e seque suas roupas em até 1 hora em mais de 700 lojas Lavô pelo Brasil. Encontre a unidade mais próxima ou seja um franqueado.">
+
+  <!-- HERO -->
+  <section class="on-dark relative overflow-hidden bg-roxo pt-14 pb-28 text-white sm:pt-20 sm:pb-40" data-hero>
+    <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(1200px_600px_at_85%_10%,rgb(190_148_255/0.35),transparent_60%),radial-gradient(800px_500px_at_0%_100%,rgb(94_95_160/0.55),transparent_60%)]" aria-hidden="true"></div>
+    <span class="bolha-deco top-[16%] left-[5%] size-12" aria-hidden="true"></span>
+    <span class="bolha-deco top-[10%] left-[44%] size-5 [animation-delay:-3s]" aria-hidden="true"></span>
+    <span class="bolha-deco bottom-[18%] left-[38%] size-18 [animation-delay:-5s]" aria-hidden="true"></span>
+    <span class="bolha-deco right-[4%] bottom-[12%] size-8 [animation-delay:-7s]" aria-hidden="true"></span>
+
+    <div class="container-lavo relative grid items-center gap-12 lg:grid-cols-[1.08fr_0.92fr]">
+      <div>
+        <span class="eyebrow" data-anim="sobe">A maior rede de lavanderias self-service do Brasil</span>
+        <TituloAnimado texto="Você lava e seca suas roupas em *até 1 hora.*" class="text-[clamp(2.6rem,6.2vw,5.2rem)] leading-[1.02] font-black" />
+        <p class="mt-6 max-w-[34em] text-[clamp(1.05rem,1.5vw,1.25rem)] text-white/85" data-anim="sobe" data-atraso="500">
+          Mais de 700 lojas pelo Brasil. Você mesmo usa as máquinas, sem fila e sem atendente, com equipamentos Speed Queen e sabão e amaciante OMO e Comfort dosados automaticamente.
+        </p>
+        <form action="/unidades" method="get" role="search" class="mt-8 flex max-w-xl flex-wrap gap-2 rounded-[26px] bg-white p-2 shadow-forte sm:flex-nowrap sm:rounded-full" data-anim="sobe" data-atraso="650">
+          <label for="busca-home" class="sr-only">Buscar unidade por cidade, bairro, estado ou CEP</label>
+          <span class="grid w-11 flex-none place-items-center text-roxo"><Icone nome="pin" class="size-5.5" /></span>
+          <input id="busca-home" name="q" type="search" autocomplete="off" placeholder="Cidade, bairro, estado ou CEP" class="min-h-12 min-w-0 flex-1 bg-transparent text-base text-tinta outline-none placeholder:text-tinta-suave/80" />
+          <button class="btn btn-lima w-full sm:w-auto" type="submit" data-ima>Encontrar loja <Icone nome="seta" /></button>
+        </form>
+        <p class="mt-4 text-sm text-white/75" data-anim="sobe" data-atraso="750">Ou <a class="font-semibold text-lima underline" href="/unidades">veja todas as unidades no mapa</a></p>
+      </div>
+
+      <div class="relative mx-auto aspect-square w-full max-w-[420px] lg:max-w-[560px]" data-anim="zoom" data-atraso="300">
+        <div class="absolute inset-0 animate-giro rounded-full border-[10px] border-transparent border-t-lima border-r-lima" aria-hidden="true"></div>
+        <div class="absolute -inset-[4%] animate-giro-lento rounded-full border-[3px] border-transparent border-t-lilas border-l-lilas" aria-hidden="true"></div>
+        <div class="absolute inset-[6%] rounded-full bg-white p-[5.5%] shadow-[0_0_0_14px_rgb(255_255_255/0.08),0_30px_60px_-20px_rgb(0_0_0/0.45)] transition-transform duration-700 ease-out" data-porta>
+          <Image src={clienteFachada} alt="Cliente sorridente em frente a uma loja Lavô" widths={[320, 480, 640]} sizes="(min-width: 1024px) 480px, 80vw" loading="eager" fetchpriority="high" class="size-full rounded-full object-cover" />
+          <div class="pointer-events-none absolute inset-[2.5%] rounded-full border-[3px] border-roxo/10" aria-hidden="true"></div>
+        </div>
+        <div class="absolute bottom-[14%] -left-[4%] animate-flutua rounded-[22px] bg-white px-5 py-3.5 font-titulo text-roxo shadow-suave">
+          <strong class="block text-3xl leading-none font-black tracking-tight" data-contar="700" data-prefixo="+">+700</strong><span class="text-xs font-semibold text-tinta-suave">lojas no Brasil</span>
+        </div>
+        <div class="absolute top-[8%] -right-[2%] animate-flutua rounded-[22px] bg-lima px-5 py-3.5 font-titulo text-roxo-noite shadow-suave [animation-delay:-4s]">
+          <strong class="block text-3xl leading-none font-black tracking-tight">1h</strong><span class="text-xs font-semibold">lava e seca</span>
+        </div>
+      </div>
+    </div>
+    <Onda cor="fill-lima" />
+  </section>
+
+  <!-- MARQUEE -->
+  <div class="overflow-hidden border-y-2 border-roxo-noite bg-lima py-4 text-roxo-noite" aria-label="A Lavô em números">
+    <div class="flex w-max animate-rolar hover:[animation-play-state:paused]">
+      {[0, 1].map((k) => (
+        <ul class="flex" aria-hidden={k === 1 ? "true" : undefined}>
+          {marquee.map((m) => (
+            <li class="flex items-center gap-6 pr-6 font-titulo text-[clamp(1.05rem,2vw,1.4rem)] font-extrabold whitespace-nowrap uppercase after:size-3.5 after:rounded-full after:border-[3px] after:border-current">{m}</li>
+          ))}
+        </ul>
+      ))}
+    </div>
+  </div>
+
+  <!-- COMO FUNCIONA -->
+  <section class="relative bg-nevoa py-20 sm:py-32" id="como-funciona">
+    <div class="container-lavo">
+      <div class="mb-14 max-w-3xl">
+        <span class="eyebrow" data-anim="sobe">Como funciona</span>
+        <TituloAnimado tag="h2" texto="Cinco passos e sua roupa já está *girando.*" destaque="sublinhado is-visible" class="text-[clamp(2rem,4.2vw,3.4rem)] leading-[1.08] font-extrabold" />
+        <p class="mt-4 text-lg text-tinta-suave" data-anim="sobe" data-atraso="300">O processo é simples, intuitivo e feito para você não perder tempo.</p>
+      </div>
+      <div class="relative">
+        <svg class="pointer-events-none absolute top-[58px] left-[8%] hidden h-4 w-[84%] lg:block" viewBox="0 0 1000 16" preserveAspectRatio="none" aria-hidden="true" data-desenho>
+          <path d="M0 8 Q 125 0 250 8 T 500 8 T 750 8 T 1000 8" fill="none" stroke="#be94ff" stroke-width="3" stroke-dasharray="1000" stroke-linecap="round" />
+        </svg>
+        <ol class="relative grid gap-4 sm:grid-cols-2 lg:grid-cols-5" data-cascata="120">
+          {passos.map((p, i) => (
+            <li class:list={["card-lavo gira-hover", i === 4 && "border-roxo bg-roxo text-white sm:col-span-2 lg:col-span-1"]} data-anim="sobe" data-inclinar>
+              <span class:list={["mb-5 block font-titulo text-xs font-black tracking-[0.12em]", i === 4 ? "text-lima" : "text-anil"]}>PASSO {String(i + 1).padStart(2, "0")}</span>
+              <span class:list={["mb-5 grid size-16 place-items-center rounded-full", i === 4 ? "bg-lima text-roxo-noite" : "bg-lilas-claro text-roxo"]}><Icone nome={p.icone} class="size-7.5" /></span>
+              <h3 class="mb-1.5 text-lg font-bold">{p.titulo}</h3>
+              <p class:list={["text-[0.93rem]", i === 4 ? "text-white/80" : "text-tinta-suave"]}>{p.texto}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+      <div class="mt-8 flex flex-wrap items-center gap-3 font-titulo font-bold text-roxo" data-anim="sobe">
+        <span class="inline-flex items-center gap-2 rounded-full border border-roxo/12 bg-white px-4 py-2 text-sm"><Icone nome="relogio" class="size-4.5" />Lavagem: cerca de 35 min</span>
+        <span class="rounded-full border border-roxo/12 bg-white px-4 py-2 text-sm">Secagem: cerca de 45 min</span>
+        <span>Enquanto isso, aproveite para resolver outras coisas.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- VANTAGENS -->
+  <section class="py-20 sm:py-32">
+    <div class="container-lavo grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
+      <div class="overflow-hidden rounded-[32px] shadow-suave" data-anim="cortina">
+        <Image src={lojaInterior} alt="Interior de uma loja Lavô com lavadoras e secadoras Speed Queen" widths={[480, 800, 1089]} sizes="(min-width: 1024px) 560px, 100vw" class="w-full object-cover" />
+      </div>
+      <div>
+        <span class="eyebrow" data-anim="sobe">Conheça as vantagens</span>
+        <h2 class="text-[clamp(2rem,4.2vw,3.4rem)] leading-[1.08] font-extrabold" data-anim="sobe">Prática para você, <span class="sublinhado">generosa</span> com o planeta.</h2>
+        <p class="mt-4 text-lg text-tinta-suave" data-anim="sobe">Cashback, economia e sustentabilidade. Na Lavô você gasta em média 70% menos água e energia do que lavando em casa, e suas roupas saem higienizadas.</p>
+        <ul class="mt-6 grid gap-3" data-cascata="100">
+          {["Máquinas de última geração que dosam cada produto automaticamente, sem desperdício", "Sabão e amaciante biodegradáveis", "Lojas com Selo Eureciclo"].map((t) => (
+            <li class="flex gap-3.5" data-anim="direita"><span class="mt-0.5 grid size-6 flex-none place-items-center rounded-full bg-lima text-roxo-noite"><Icone nome="escudo" class="size-3.5" /></span>{t}</li>
+          ))}
+        </ul>
+        <a class="btn btn-roxo mt-8" href="/vantagens" data-ima data-anim="sobe">Ver todas as vantagens <Icone nome="seta" /></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- NÚMEROS -->
+  <section class="on-dark relative overflow-hidden bg-roxo-escuro py-20 text-white sm:py-32">
+    <div class="pointer-events-none absolute -top-24 -left-24 size-96 animate-giro-lento rounded-full border-[40px] border-dashed border-white/[0.04]" aria-hidden="true"></div>
+    <div class="container-lavo relative">
+      <div class="mb-12 max-w-3xl">
+        <span class="eyebrow" data-anim="sobe">A Lavô em números</span>
+        <TituloAnimado tag="h2" texto="A roxinha mais amada está presente em *todo o país.*" class="text-[clamp(2rem,4.2vw,3.4rem)] leading-[1.08] font-extrabold" />
+      </div>
+      <div class="grid gap-0.5 overflow-hidden rounded-[32px] bg-white/10 sm:grid-cols-2 lg:grid-cols-3" data-cascata="110">
+        {numeros.map((n) => (
+          <div class="group bg-roxo-escuro p-8 transition-colors duration-500 hover:bg-roxo sm:p-11" data-anim="zoom">
+            <strong class="mb-2.5 block font-titulo text-[clamp(2.6rem,5vw,4rem)] leading-none font-black tracking-[-0.04em] text-lima transition-transform duration-500 group-hover:scale-105" data-contar={n.n} data-prefixo={n.p} data-sufixo={n.s}>{n.p}{n.n.toLocaleString("pt-BR")}{n.s}</strong>
+            <span class="text-white/80">{n.t}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- HISTÓRIA -->
+  <section class="py-20 sm:py-32">
+    <div class="container-lavo grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
+      <div class="relative lg:order-2" data-anim="desfoque">
+        <div class="absolute -top-4 -right-4 -z-10 aspect-square w-[38%] rounded-full bg-lima" data-paralaxe="0.12" aria-hidden="true"></div>
+        <div class="absolute bottom-[6%] -left-5 -z-10 aspect-square w-[26%] rounded-full border-[10px] border-lilas" data-paralaxe="-0.1" aria-hidden="true"></div>
+        <Image src={fundadorFachada} alt="Fundador da Lavô em frente a uma loja da rede" widths={[480, 800, 1000]} sizes="(min-width: 1024px) 560px, 100vw" class="w-full drop-shadow-[0_30px_40px_rgb(43_15_48/0.25)]" />
+      </div>
+      <div>
+        <span class="eyebrow" data-anim="sobe">Nossa história</span>
+        <h2 class="text-[clamp(2rem,4.2vw,3.4rem)] leading-[1.08] font-extrabold" data-anim="sobe">Uma lavanderia moderna, do jeito que o Brasil merecia.</h2>
+        <p class="mt-4 text-lg text-tinta-suave" data-anim="sobe">A Lavô surgiu em 2019 com uma missão clara: transformar a forma como os brasileiros cuidam das suas roupas. Depois de muita pesquisa e de viagens para conhecer de perto as melhores lavanderias do mundo, nossos fundadores trouxeram para cá uma lavanderia moderna, prática e com a qualidade que você merece.</p>
+        <a class="link-seta mt-4" href="/nossa-historia" data-anim="sobe">Conheça a nossa história <Icone nome="seta" class="size-4.5" /></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRODUTOS -->
+  <section class="bg-nevoa py-20 sm:py-32">
+    <div class="container-lavo grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
+      <div>
+        <span class="eyebrow" data-anim="sobe">Produtos dosados automaticamente</span>
+        <TituloAnimado tag="h2" texto="Esqueça o *exagero.*" destaque="text-anil" class="text-[clamp(2rem,4.2vw,3.4rem)] leading-[1.08] font-extrabold" />
+        <p class="mt-4 text-lg text-tinta-suave" data-anim="sobe">Nossos equipamentos dosam automaticamente a quantidade ideal de OMO e Comfort para cada lavagem. O resultado são roupas limpas, sem desperdício e com o cuidado que elas merecem.</p>
+        <p class="mt-3 text-lg text-tinta-suave" data-anim="sobe">Os equipamentos também são calibrados para remover sujeira, odores e bactérias, para que suas peças saiam limpas e seguras.</p>
+      </div>
+      <div class="mx-auto max-w-md" data-anim="giro">
+        <Image src={produtos} alt="Galões de sabão OMO e amaciante Comfort usados nas máquinas Lavô" width={470} class="w-full animate-flutua" />
+      </div>
+    </div>
+  </section>
+
+  <!-- PROMO -->
+  {site.promo.ativa && (
+    <section class="pt-20 sm:pt-28">
+      <div class="container-lavo" data-anim="zoom">
+        <a href={site.promo.url} target="_blank" rel="noopener" class="group block overflow-hidden rounded-[32px] shadow-suave">
+          <Image src={promo} alt="Sorteio final Lavô: concorra a um BYD Mini 0 km e a 20 vouchers de R$ 500. Participe agora." widths={[640, 1024, 1600]} sizes="(min-width: 1280px) 1200px, 100vw" class="w-full transition-transform duration-700 group-hover:scale-[1.02]" />
+        </a>
+      </div>
+    </section>
+  )}
+
+  <!-- FRANQUEADO -->
+  <section class="py-20 sm:py-32">
+    <div class="container-lavo grid items-start gap-12 lg:grid-cols-2 lg:gap-20">
+      <div>
+        <span class="eyebrow" data-anim="sobe">Para quem quer empreender</span>
+        <h2 class="text-[clamp(2rem,4.2vw,3.4rem)] leading-[1.08] font-extrabold" data-anim="sobe">O que entregamos ao franqueado</h2>
+        <ul class="mt-6 grid gap-3 sm:columns-2 sm:block sm:space-y-3" data-cascata="60">
+          {entregamos.map((t) => (
+            <li class="flex break-inside-avoid gap-3.5" data-anim="sobe"><span class="mt-0.5 grid size-6 flex-none place-items-center rounded-full bg-lima text-roxo-noite"><Icone nome="escudo" class="size-3.5" /></span>{t}</li>
+          ))}
+        </ul>
+      </div>
+      <div class="overflow-hidden rounded-[32px] border border-roxo/12 bg-white shadow-sm" data-anim="direita" data-inclinar>
+        <Image src={bancoBrasil} alt="Parceria Lavô e Banco do Brasil" widths={[640, 1000]} sizes="(min-width: 1024px) 560px, 100vw" class="w-full" />
+        <div class="p-8 sm:p-10">
+          <span class="eyebrow">Taxas especiais</span>
+          <h3 class="text-2xl font-bold">Crédito com condições exclusivas</h3>
+          <p class="mt-3 text-tinta-suave">Somos parceiros do Banco do Brasil, que oferece linhas de crédito exclusivas e taxas muito competitivas para facilitar a implantação da sua unidade.</p>
+          <small class="mt-2 block text-tinta-suave">*Sujeito a análise de crédito.</small>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <FranquiaCTA />
+</Base>
