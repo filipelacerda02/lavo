@@ -5,6 +5,7 @@ import Icone from "@/components/Icone.astro";
 import TituloAnimado from "@/components/TituloAnimado.astro";
 import Onda from "@/components/Onda.astro";
 import FranquiaCTA from "@/components/FranquiaCTA.astro";
+import ComoFunciona from "@/components/ComoFunciona.astro";
 import { site } from "@/config/site";
 import clienteFachada from "@/assets/img/cliente-fachada.webp";
 import lojaInterior from "@/assets/img/loja-interior.webp";
@@ -14,13 +15,6 @@ import promo from "@/assets/img/promo-sorteio.webp";
 import bancoBrasil from "@/assets/img/banco-do-brasil.webp";
 
 const marquee = ["+700 lojas no Brasil", "+2 mil máquinas", "+600 mil clientes por mês", "+90 toneladas de roupa por dia", "53 milhões de litros de água economizados por mês", "70% de economia de energia", "1 loja nova a cada 36 horas"];
-const passos = [
-  { icone: "cesto", titulo: "Meça as roupas", texto: "Use o cesto medidor para saber quanto cabe em cada ciclo." },
-  { icone: "cartao", titulo: "Pague no totem", texto: "Pagamento rápido no totem de autoatendimento, sem atendente e sem fila." },
-  { icone: "maquina", titulo: "Coloque na máquina", texto: "Máquinas Speed Queen de uso profissional, prontas para grandes volumes." },
-  { icone: "toque", titulo: "Escolha o ciclo", texto: "Selecione o tipo de lavagem ou de secagem ideal para suas peças." },
-  { icone: "play", titulo: "Pressione INICIAR", texto: "Sabão e amaciante entram automaticamente. É só esperar." },
-] as const;
 const numeros = [
   { n: 700, p: "+", s: "", t: "lojas espalhadas pelo Brasil" },
   { n: 2000, p: "+", s: "", t: "máquinas em operação" },
@@ -88,36 +82,8 @@ const entregamos = ["Equipamentos de alta tecnologia", "Máquinas projetadas par
     </div>
   </div>
 
-  <!-- COMO FUNCIONA -->
-  <section class="relative bg-nevoa py-20 sm:py-32" id="como-funciona">
-    <div class="container-lavo">
-      <div class="mb-14 max-w-3xl">
-        <span class="eyebrow" data-anim="sobe">Como funciona</span>
-        <TituloAnimado tag="h2" texto="Cinco passos e sua roupa já está *girando.*" destaque="sublinhado is-visible" class="text-[clamp(2rem,4.2vw,3.4rem)] leading-[1.08] font-extrabold" />
-        <p class="mt-4 text-lg text-tinta-suave" data-anim="sobe" data-atraso="300">O processo é simples, intuitivo e feito para você não perder tempo.</p>
-      </div>
-      <div class="relative">
-        <svg class="pointer-events-none absolute top-[58px] left-[8%] hidden h-4 w-[84%] lg:block" viewBox="0 0 1000 16" preserveAspectRatio="none" aria-hidden="true" data-desenho>
-          <path d="M0 8 Q 125 0 250 8 T 500 8 T 750 8 T 1000 8" fill="none" stroke="#be94ff" stroke-width="3" stroke-dasharray="1000" stroke-linecap="round" />
-        </svg>
-        <ol class="relative grid gap-4 sm:grid-cols-2 lg:grid-cols-5" data-cascata="120">
-          {passos.map((p, i) => (
-            <li class:list={["card-lavo gira-hover", i === 4 && "border-roxo bg-roxo text-white sm:col-span-2 lg:col-span-1"]} data-anim="sobe" data-inclinar>
-              <span class:list={["mb-5 block font-titulo text-xs font-black tracking-[0.12em]", i === 4 ? "text-lima" : "text-anil"]}>PASSO {String(i + 1).padStart(2, "0")}</span>
-              <span class:list={["mb-5 grid size-16 place-items-center rounded-full", i === 4 ? "bg-lima text-roxo-noite" : "bg-lilas-claro text-roxo"]}><Icone nome={p.icone} class="size-7.5" /></span>
-              <h3 class="mb-1.5 text-lg font-bold">{p.titulo}</h3>
-              <p class:list={["text-[0.93rem]", i === 4 ? "text-white/80" : "text-tinta-suave"]}>{p.texto}</p>
-            </li>
-          ))}
-        </ol>
-      </div>
-      <div class="mt-8 flex flex-wrap items-center gap-3 font-titulo font-bold text-roxo" data-anim="sobe">
-        <span class="inline-flex items-center gap-2 rounded-full border border-roxo/12 bg-white px-4 py-2 text-sm"><Icone nome="relogio" class="size-4.5" />Lavagem: cerca de 35 min</span>
-        <span class="rounded-full border border-roxo/12 bg-white px-4 py-2 text-sm">Secagem: cerca de 45 min</span>
-        <span>Enquanto isso, aproveite para resolver outras coisas.</span>
-      </div>
-    </div>
-  </section>
+  <!-- COMO FUNCIONA (animação guiada pela rolagem) -->
+  <ComoFunciona />
 
   <!-- VANTAGENS -->
   <section class="py-20 sm:py-32">

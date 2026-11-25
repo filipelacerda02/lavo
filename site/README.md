@@ -131,6 +131,29 @@ Sem bibliotecas: `src/scripts/animacoes.ts` (~3 KB) + CSS. Use nos elementos:
 | `data-inclinar` | cartão com inclinação 3D |
 | `<TituloAnimado texto="… *destaque*">` | palavras entrando uma a uma |
 
+### "Como funciona": ciclo animado pela rolagem
+
+`src/components/ComoFunciona.astro` + `src/scripts/ciclo.ts`. A seção fica fixa na tela enquanto a rolagem conduz a ilustração (SVG próprio, sem imagens externas):
+
+| Rolagem | Etapa | Na tela |
+| --- | --- | --- |
+| 0–12% | Passo 01 | peças caem no cesto medidor |
+| 12–24% | Passo 02 | cartão encosta no totem, LED verde-lima libera a máquina |
+| 24–36% | Passo 03 | peças voam para o tambor e a porta fecha com trava |
+| 36–48% | Passo 04 | visor alterna os programas |
+| 48–62% | Passo 05 | card fica roxo, INICIAR é pressionado, sabão e amaciante entram |
+| 62–82% | Lavagem | água e espuma sobem, tambor acelera; pílula de 35 min vira barra com cronômetro |
+| 82–100% | Secagem | água escoa, brilho quente e vapor; porta destrava e aparece "Encontrar uma unidade" |
+
+- Um foco tracejado verde-lima desliza entre cesto, totem, porta e painel.
+- Depois do Passo 05 os cards viram uma barra compacta e a máquina cresce.
+- O botão verde do Passo 05 é clicável (mouse ou teclado) e rola sozinho pela lavagem e secagem. Qualquer rolagem, toque ou tecla interrompe.
+- **Celular:** os cards viram um carrossel sincronizado com a rolagem, com a máquina fixa abaixo.
+- **Notebook (telas baixas):** só o card ativo mostra a descrição.
+- **Sem JavaScript ou com movimento reduzido:** a seção aparece estática, com todos os cards e a máquina lavando.
+
+Para ajustar o ritmo, mude `FAIXAS` em `ciclo.ts` (limites de cada etapa) e a altura de `.ciclo.animado` em `global.css` (quanto maior, mais lenta a rolagem).
+
 Também há transições entre páginas (View Transitions), ondas de água animadas, a "porta da máquina" que segue o cursor, bolhas nos botões, a barra de progresso de leitura e o cabeçalho que se esconde ao rolar. O conteúdo nunca fica invisível sem JavaScript, e tudo desliga com movimento reduzido.
 
 ## Buscador de unidades

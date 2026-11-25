@@ -232,3 +232,90 @@
   .texto-legal th { @apply bg-nevoa font-titulo font-bold text-roxo; }
   .texto-legal .aviso { @apply rounded-2xl border border-lima bg-lima/15 p-4 text-sm; }
 }
+
+/* ================= Como funciona: ciclo animado pela rolagem ================= */
+@layer components {
+  .ciclo { @apply py-20 sm:py-28; }
+  .ciclo-cabeca { @apply max-w-3xl; }
+  .ciclo-trilho { @apply mt-8; }
+  .ciclo-cards { @apply grid gap-3 sm:grid-cols-2 lg:grid-cols-5; }
+  .ciclo-card {
+    @apply relative flex flex-col rounded-3xl border-2 border-roxo/10 bg-white p-5 text-tinta;
+    transition: background-color .5s var(--ease-mola), border-color .5s, box-shadow .5s, transform .5s var(--ease-mola), color .5s, padding .5s var(--ease-mola), opacity .5s;
+  }
+  .ciclo-num { @apply font-titulo text-xs font-black tracking-[0.12em] text-anil; }
+  .ciclo-check { @apply ml-auto grid size-6 scale-0 place-items-center rounded-full bg-lima text-roxo-noite transition-transform duration-500; }
+  .ciclo-detalhe { @apply grid grid-rows-[1fr] overflow-hidden transition-[grid-template-rows,opacity] duration-500; }
+  .ciclo-icone { @apply my-4 grid size-15 place-items-center rounded-full bg-lilas-claro text-roxo transition-colors duration-500; }
+  .ciclo-play { @apply cursor-pointer bg-lima text-roxo-noite shadow-[0_0_0_0_rgb(197_213_57/0.6)] hover:scale-105 focus-visible:outline-roxo; transition: transform .3s var(--ease-salto), box-shadow .3s; }
+  .ciclo-titulo { @apply mb-1 text-base leading-tight font-bold lg:text-[1.05rem]; }
+  .ciclo-card p { @apply text-tinta-suave; }
+
+  .ciclo-card[data-estado="ativo"] { @apply -translate-y-1.5 border-lilas shadow-suave; }
+  .ciclo-card[data-estado="ativo"] .ciclo-icone:not(.ciclo-play) { @apply bg-roxo text-lima; }
+  .ciclo-card[data-estado="feito"] .ciclo-check { @apply scale-100; }
+  .ciclo-card[data-card="4"][data-estado="ativo"], .ciclo-card[data-card="4"][data-estado="feito"] { @apply border-roxo bg-roxo text-white; }
+  .ciclo-card[data-card="4"][data-estado="ativo"] .ciclo-num, .ciclo-card[data-card="4"][data-estado="feito"] .ciclo-num { @apply text-lima; }
+  .ciclo-card[data-card="4"][data-estado="ativo"] p, .ciclo-card[data-card="4"][data-estado="feito"] p { @apply text-white/80; }
+  .ciclo-card[data-card="4"][data-estado="ativo"] .ciclo-play { animation: pulso-play 1.6s ease-out infinite; }
+  .ciclo-play[data-pressionado] { transform: scale(0.88); }
+
+  .ciclo-cena { @apply relative mx-auto mt-8 w-full max-w-3xl; }
+  .ciclo-svg { @apply mx-auto block h-auto max-h-[460px] w-full; }
+  .ciclo-legenda { @apply mt-2 text-center font-titulo text-sm font-bold text-roxo; }
+
+  .ciclo-base { @apply mt-6 flex flex-wrap items-center gap-3; }
+  .ciclo-pilula {
+    @apply relative flex items-center gap-3 overflow-hidden rounded-full border border-roxo/15 bg-white py-2 pr-4 pl-4 font-titulo text-sm font-bold text-roxo;
+  }
+  .ciclo-pilula-barra { @apply absolute inset-y-0 left-0 w-full bg-lima; transform-origin: 0 50%; transform: scaleX(var(--fill, 1)); }
+  .ciclo-frase { @apply font-titulo font-bold text-roxo transition-opacity duration-500; }
+  .ciclo-cta { @apply transition-[opacity,translate] duration-500; }
+
+  /* ---- modo animado (JS ativo e sem movimento reduzido) ---- */
+  .ciclo.animado { @apply py-0; height: 620vh; }
+  .ciclo.animado .ciclo-palco { @apply sticky top-0 h-svh overflow-hidden pt-6 pb-4 sm:pt-10 lg:pt-12; }
+  .ciclo.animado .ciclo-trilho { @apply mt-4 lg:mt-6; }
+  .ciclo.animado .ciclo-cena { @apply mt-2 flex min-h-0 flex-1 flex-col justify-center; }
+  .ciclo.animado .ciclo-svg { @apply max-h-full min-h-0 flex-1; }
+  .ciclo.animado .ciclo-base { @apply mt-2 justify-center; }
+  .ciclo.animado .ciclo-pilula-barra { transform: scaleX(var(--fill, 0)); }
+  .ciclo.animado:not([data-fase="secagem"]):not([data-fase="fim"]) .ciclo-frase { @apply font-semibold text-tinta-suave; }
+  .ciclo.animado:not([data-fase="fim"]) .ciclo-cta { @apply pointer-events-none translate-y-3 opacity-0; }
+  .ciclo.animado .ciclo-card:not([data-estado]) { @apply opacity-70; }
+  .ciclo.animado .ciclo-cabeca h2 { @apply text-[clamp(1.6rem,2.8vw,2.5rem)]!; }
+  .ciclo.animado .ciclo-card { @apply p-4; }
+  .ciclo.animado .ciclo-icone { @apply my-2.5 size-12; }
+  .ciclo.animado .ciclo-card p { @apply text-[0.84rem]; }
+
+  /* cards recolhidos numa barra compacta depois do passo 5 */
+  .ciclo.compacto .ciclo-detalhe { @apply grid-rows-[0fr] opacity-0; }
+  .ciclo.compacto .ciclo-card { @apply translate-y-0 rounded-2xl px-4 py-2.5 shadow-none; }
+  .ciclo.compacto .ciclo-titulo { @apply mb-0 text-sm; }
+
+  /* celular: carrossel sincronizado com a rolagem */
+  @media (max-width: 1023px) {
+    .ciclo.animado { height: 680vh; }
+    .ciclo.animado .ciclo-trilho { @apply -mx-4 overflow-hidden px-4 sm:-mx-6 sm:px-6; }
+    .ciclo.animado .ciclo-cards { @apply flex gap-3 transition-transform duration-500; transition-timing-function: var(--ease-mola); }
+    .ciclo.animado .ciclo-card { @apply w-[74%] flex-none sm:w-[46%]; }
+    .ciclo.animado .ciclo-icone { @apply my-2.5 size-12; }
+    .ciclo.animado .ciclo-base { @apply gap-2; }
+    .ciclo.animado .ciclo-pilula { @apply py-1.5 text-xs; }
+    .ciclo.animado .ciclo-frase { @apply w-full text-center text-xs; }
+    .ciclo.animado .ciclo-legenda { @apply text-xs; }
+    .ciclo.animado .ciclo-cta { @apply min-h-11 text-sm; }
+  }
+  /* notebooks (telas baixas): só o card ativo mostra a descrição, para a máquina ganhar espaço */
+  @media (max-height: 860px) and (min-width: 1024px) {
+    .ciclo.animado .ciclo-cabeca .eyebrow { @apply mb-1; }
+    .ciclo.animado .ciclo-icone { @apply my-2 size-10; }
+    .ciclo.animado .ciclo-card:not([data-estado="ativo"]) .ciclo-detalhe:last-child { @apply grid-rows-[0fr] opacity-0; }
+    .ciclo.animado .ciclo-cards { @apply items-start; }
+    .ciclo.animado .ciclo-cabeca h2 { @apply text-[clamp(1.5rem,2.3vw,2.1rem)]!; }
+    .ciclo.animado .ciclo-palco { @apply pt-5!; }
+    .ciclo.animado .ciclo-legenda { @apply mt-0 text-xs; }
+    .ciclo.animado.compacto .ciclo-cabeca .eyebrow { @apply hidden; }
+  }
+}
+@keyframes pulso-play { 0% { box-shadow: 0 0 0 0 rgb(197 213 57 / 0.7); } 100% { box-shadow: 0 0 0 18px rgb(197 213 57 / 0); } }
