@@ -1,196 +1,73 @@
 ---
 /**
- * "Como funciona": animação guiada pela rolagem.
- * Fase 1 (0–62%): os cinco passos (medir, pagar, colocar, escolher, iniciar).
- * Fase 2 (62–100%): lavagem (~35 min) e secagem (~45 min) acontecendo na máquina.
- * Sem JavaScript ou com movimento reduzido, a seção aparece estática (cards + ilustração).
+ * "Como funciona" — narrativa em duas metades guiada pela rolagem (GSAP ScrollTrigger).
+ * Esquerda: o texto de cada etapa aparece conforme a rolagem. Direita: a máquina executa a etapa.
+ * Sem JavaScript ou com movimento reduzido: tudo visível, em lista, com a ilustração estática.
  */
 import Icone from "./Icone.astro";
-import TituloAnimado from "./TituloAnimado.astro";
+import MaquinaRealista from "./MaquinaRealista.astro";
 
-const passos = [
-  { icone: "cesto", titulo: "Meça as roupas", texto: "Use o cesto medidor para saber quanto cabe em cada ciclo." },
-  { icone: "cartao", titulo: "Pague no totem", texto: "Pagamento rápido no totem de autoatendimento, sem atendente e sem fila." },
-  { icone: "maquina", titulo: "Coloque na máquina", texto: "Máquinas Speed Queen de uso profissional, prontas para grandes volumes." },
-  { icone: "toque", titulo: "Escolha o ciclo", texto: "Selecione o tipo de lavagem ou de secagem ideal para suas peças." },
-  { icone: "play", titulo: "Pressione INICIAR", texto: "Sabão e amaciante entram automaticamente. É só esperar." },
+const etapas = [
+  { rotulo: "01", titulo: "Meça as roupas", texto: "Use o cesto medidor para saber quanto cabe em cada ciclo. A marca de MÁX mostra o volume ideal para a lavagem render.", icone: "cesto" },
+  { rotulo: "02", titulo: "Pague no totem", texto: "Pagamento rápido no totem de autoatendimento, sem atendente e sem fila. Aproximou o cartão, a máquina é liberada.", icone: "cartao" },
+  { rotulo: "03", titulo: "Coloque na máquina", texto: "Máquinas Speed Queen de uso profissional, prontas para grandes volumes. Coloque as peças no tambor e feche a porta.", icone: "maquina" },
+  { rotulo: "04", titulo: "Escolha o ciclo", texto: "Selecione o tipo de lavagem ou de secagem ideal para suas peças. O tempo aparece no visor.", icone: "toque" },
+  { rotulo: "05", titulo: "Pressione INICIAR", texto: "Sabão e amaciante entram automaticamente, na medida certa. É só esperar.", icone: "play" },
+  { rotulo: "35 min", titulo: "Lavando", texto: "Água e espuma tomam conta do tambor, que gira e acelera até a centrifugação.", icone: "gota" },
+  { rotulo: "45 min", titulo: "Secando", texto: "Ar quente seca tudo de uma vez. Enquanto isso, aproveite para resolver outras coisas.", icone: "brilho" },
 ] as const;
-
-// furos do tambor (anéis concêntricos)
-const C = { x: 320, y: 290 };
-const furos: Array<{ x: number; y: number }> = [];
-for (const [raio, qtd] of [[28, 8], [52, 14], [76, 20]] as const) {
-  for (let i = 0; i < qtd; i++) {
-    const a = (i / qtd) * Math.PI * 2;
-    furos.push({ x: +(C.x + Math.cos(a) * raio).toFixed(1), y: +(C.y + Math.sin(a) * raio).toFixed(1) });
-  }
-}
-const pecasCesto = [
-  { x: 520, y: 428, cor: "#be94ff", rx: 22, ry: 13 },
-  { x: 560, y: 432, cor: "#c5d539", rx: 20, ry: 12 },
-  { x: 590, y: 422, cor: "#ffffff", rx: 18, ry: 12 },
-  { x: 540, y: 410, cor: "#5e5fa0", rx: 21, ry: 12 },
-  { x: 578, y: 404, cor: "#f2a7c3", rx: 18, ry: 11 },
-];
 ---
 <section id="como-funciona" class="ciclo relative bg-nevoa" data-ciclo aria-labelledby="titulo-como-funciona">
   <div class="ciclo-palco" data-palco>
-    <div class="container-lavo flex h-full flex-col">
-      <!-- Cabeçalho -->
-      <div class="ciclo-cabeca">
-        <span class="eyebrow" data-anim="sobe">Como funciona</span>
-        <TituloAnimado tag="h2" texto="Cinco passos e sua roupa já está *girando.*" destaque="sublinhado is-visible" class="text-[clamp(1.7rem,3.6vw,3rem)] leading-[1.08] font-extrabold" />
-        <span id="titulo-como-funciona" class="sr-only">Como funciona: cinco passos e sua roupa já está girando</span>
-      </div>
+    <div class="container-lavo ciclo-grade">
+      <!-- ===== Metade do texto ===== -->
+      <div class="ciclo-texto">
+        <span class="eyebrow">Como funciona</span>
+        <h2 id="titulo-como-funciona" class="ciclo-h2" data-titulo-ciclo>Cinco passos e sua roupa já está <span class="sublinhado is-visible">girando.</span></h2>
 
-      <!-- Cards -->
-      <div class="ciclo-trilho" data-trilho>
-        <ol class="ciclo-cards" data-cards>
-          {passos.map((p, i) => (
-            <li class="ciclo-card" data-card={i}>
-              <div class="flex items-center gap-3">
-                <span class="ciclo-num">PASSO {String(i + 1).padStart(2, "0")}</span>
-                <span class="ciclo-check" aria-hidden="true"><Icone nome="escudo" class="size-3.5" /></span>
-              </div>
-              <div class="ciclo-detalhe">
-                <div class="min-h-0">
-                  {i === 4 ? (
-                    <button type="button" class="ciclo-icone ciclo-play" data-iniciar aria-label="Pressionar INICIAR e ver a lavagem e a secagem">
-                      <Icone nome="play" class="size-7.5" />
-                    </button>
-                  ) : (
-                    <span class="ciclo-icone"><Icone nome={p.icone} class="size-7" /></span>
-                  )}
-                </div>
-              </div>
-              <h3 class="ciclo-titulo">{p.titulo}</h3>
-              <div class="ciclo-detalhe"><p class="min-h-0 text-[0.9rem] leading-snug">{p.texto}</p></div>
-            </li>
-          ))}
+        <ol class="ciclo-trilha" aria-hidden="true" data-trilha>
+          {etapas.map((e, i) => <li data-ponto={i}><span>{i < 5 ? e.rotulo : e.titulo}</span></li>)}
         </ol>
+
+        <div class="ciclo-paineis" data-paineis>
+          {etapas.map((e, i) => (
+            <article class="ciclo-painel" data-painel={i}>
+              <div class="flex items-center gap-4">
+                <span class:list={["ciclo-painel-icone", i === 4 && "ciclo-painel-icone--play"]}>
+                  {i === 4 ? (
+                    <button type="button" class="grid size-full place-items-center rounded-full" data-iniciar aria-label="Pressionar INICIAR e assistir à lavagem e à secagem">
+                      <Icone nome="play" class="size-8" />
+                    </button>
+                  ) : <Icone nome={e.icone} class="size-7" />}
+                </span>
+                <span class="ciclo-painel-rotulo">{i < 5 ? `Passo ${e.rotulo}` : `Cerca de ${e.rotulo}`}</span>
+              </div>
+              <h3 class="ciclo-painel-titulo" data-split>{e.titulo}</h3>
+              <p class="ciclo-painel-texto">{e.texto}</p>
+              {i === 4 && <p class="ciclo-dica" data-dica>Toque no play ou continue rolando.</p>}
+            </article>
+          ))}
+        </div>
+
+        <div class="ciclo-pilulas">
+          <div class="ciclo-pilula" data-pilula role="progressbar" aria-label="Lavagem: cerca de 35 minutos" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <span class="ciclo-pilula-barra" data-barra-pilula></span>
+            <span class="relative flex items-center gap-2"><Icone nome="relogio" class="size-4.5" />Lavagem: cerca de 35 min</span>
+            <span class="relative font-mono tabular-nums" data-tempo>35:00</span>
+          </div>
+          <div class="ciclo-pilula" data-pilula role="progressbar" aria-label="Secagem: cerca de 45 minutos" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <span class="ciclo-pilula-barra" data-barra-pilula></span>
+            <span class="relative flex items-center gap-2"><Icone nome="gota" class="size-4.5" />Secagem: cerca de 45 min</span>
+            <span class="relative font-mono tabular-nums" data-tempo>45:00</span>
+          </div>
+        </div>
+        <a href="/unidades" class="btn btn-roxo ciclo-cta" data-cta>Pronto! Encontrar uma unidade <Icone nome="pin" /></a>
       </div>
 
-      <!-- Máquina -->
-      <div class="ciclo-cena">
-        <svg viewBox="0 0 640 480" class="ciclo-svg" role="img" aria-labelledby="desc-maquina" data-svg>
-          <title id="desc-maquina">Ilustração: cesto medidor, totem de pagamento e lavadora profissional com a porta circular, mostrando o ciclo de lavagem e secagem.</title>
-          <defs>
-            <linearGradient id="cf-inox" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6f5f9" /><stop offset=".5" stop-color="#dcdbe3" /><stop offset="1" stop-color="#c2c0cb" /></linearGradient>
-            <linearGradient id="cf-cromo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" /><stop offset=".45" stop-color="#bdbbc6" /><stop offset="1" stop-color="#8c8996" /></linearGradient>
-            <linearGradient id="cf-agua" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fd0ff" stop-opacity=".85" /><stop offset="1" stop-color="#5e5fa0" stop-opacity=".75" /></linearGradient>
-            <radialGradient id="cf-quente"><stop offset="0" stop-color="#ffc47a" stop-opacity=".95" /><stop offset=".6" stop-color="#ff8a3d" stop-opacity=".45" /><stop offset="1" stop-color="#ff6a2b" stop-opacity="0" /></radialGradient>
-            <clipPath id="cf-vidro"><circle cx="320" cy="290" r="96" /></clipPath>
-          </defs>
-
-          <ellipse cx="330" cy="464" rx="300" ry="12" fill="#532458" opacity=".1" />
-
-          <!-- foco que desliza entre as etapas -->
-          <rect data-foco x="476" y="330" width="160" height="146" rx="22" fill="#c5d539" fill-opacity=".14" stroke="#c5d539" stroke-width="4" stroke-dasharray="10 8" />
-
-          <!-- Totem -->
-          <g data-totem>
-            <rect x="56" y="330" width="28" height="130" rx="6" fill="#3a1a40" />
-            <rect x="20" y="150" width="100" height="192" rx="18" fill="#532458" />
-            <rect x="32" y="166" width="76" height="60" rx="8" fill="#1c0920" />
-            <text data-tela-totem x="70" y="202" text-anchor="middle" font-family="Montserrat Variable, sans-serif" font-weight="800" font-size="16" fill="#be94ff">R$</text>
-            <rect x="38" y="246" width="64" height="44" rx="8" fill="#1c0920" />
-            <rect x="46" y="262" width="48" height="5" rx="2.5" fill="#3a1a40" />
-            <circle data-led-totem cx="70" cy="306" r="6" fill="#8a8494" />
-          </g>
-          <g data-cartao transform="translate(150 186) rotate(-24)">
-            <rect width="48" height="31" rx="5" fill="#be94ff" stroke="#532458" stroke-width="2" />
-            <rect x="0" y="7" width="48" height="6" fill="#532458" />
-            <rect x="6" y="19" width="12" height="7" rx="2" fill="#c5d539" />
-          </g>
-
-          <!-- Lavadora -->
-          <rect x="170" y="40" width="300" height="420" rx="24" fill="url(#cf-inox)" stroke="#a9a6b3" stroke-width="2" />
-          <path d="M170 64a24 24 0 0 1 24-24h252a24 24 0 0 1 24 24v62H170z" fill="#d2d0da" />
-          <line x1="170" y1="126" x2="470" y2="126" stroke="#a9a6b3" stroke-width="2" />
-          <rect x="186" y="58" width="74" height="38" rx="7" fill="#c3c1cb" stroke="#a9a6b3" />
-          <rect x="204" y="74" width="38" height="6" rx="3" fill="#9e9ba8" />
-          <rect data-visor-fundo x="282" y="56" width="120" height="44" rx="8" fill="#1c0920" />
-          <text data-visor x="342" y="84" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-weight="700" font-size="15" fill="#c5d539">INSIRA</text>
-          <circle data-led cx="440" cy="68" r="7" fill="#8a8494" />
-          <g data-trava fill="none" stroke="#6d6977" stroke-width="2.5" stroke-linecap="round">
-            <path data-trava-alca d="M433 96v-5a7 7 0 0 1 14 0v5" />
-            <rect x="430" y="96" width="20" height="14" rx="3" fill="#6d6977" stroke="none" data-trava-corpo />
-          </g>
-          <circle cx="410" cy="112" r="5" fill="#a9a6b3" />
-          <rect x="196" y="420" width="248" height="22" rx="8" fill="#cfcdd6" />
-
-          <!-- Escotilha: aro fixo e interior -->
-          <circle cx="320" cy="290" r="120" fill="url(#cf-cromo)" />
-          <circle cx="320" cy="290" r="104" fill="#2a2730" />
-          <g clip-path="url(#cf-vidro)">
-            <circle cx="320" cy="290" r="96" fill="#3a3742" />
-            <g data-tambor>
-              {furos.map((f) => <circle cx={f.x} cy={f.y} r="3.2" fill="#24212b" />)}
-              {[0, 120, 240].map((a) => <rect x="313" y="196" width="14" height="28" rx="6" fill="#5a5763" transform={`rotate(${a} 320 290)`} />)}
-            </g>
-            <g data-roupas-tambor opacity="0">
-              <ellipse cx="292" cy="344" rx="30" ry="16" fill="#be94ff" />
-              <ellipse cx="336" cy="356" rx="28" ry="14" fill="#c5d539" />
-              <ellipse cx="360" cy="332" rx="22" ry="13" fill="#ffffff" />
-              <ellipse cx="310" cy="322" rx="22" ry="12" fill="#5e5fa0" />
-              <ellipse cx="270" cy="318" rx="16" ry="10" fill="#f2a7c3" />
-            </g>
-            <g data-gotas opacity="0">
-              {[0, 1, 2, 3, 4, 5].map((i) => <circle cx={296 + (i % 3) * 14} cy={210 + i * 8} r="3.5" fill={i % 2 ? "#ffffff" : "#be94ff"} />)}
-            </g>
-            <g data-agua transform="translate(0 400)">
-              <path data-onda d="M120 0q20-9 40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0t40 0v240H120z" fill="url(#cf-agua)" />
-              <g data-espuma fill="#ffffff">
-                {[230, 258, 284, 312, 338, 366, 392, 410].map((x, i) => <circle cx={x} cy={i % 2 ? -4 : 0} r={7 + (i % 3) * 3} />)}
-              </g>
-            </g>
-            <circle data-brilho cx="320" cy="290" r="96" fill="url(#cf-quente)" opacity="0" />
-            <g data-vapor fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" opacity="0">
-              <path d="M290 330q-10-18 0-36t0-36" />
-              <path d="M322 340q-10-18 0-36t0-36" />
-              <path d="M354 330q-10-18 0-36t0-36" />
-            </g>
-          </g>
-
-          <!-- Peças no cesto (voam para o tambor no passo 3) -->
-          <g data-cesto>
-            <path d="M488 384h140l-16 78H504z" fill="#ece2ff" stroke="#532458" stroke-width="3" stroke-linejoin="round" />
-            {[516, 540, 564, 588].map((x) => <line x1={x} y1="390" x2={x - 2} y2="456" stroke="#be94ff" stroke-width="3" />)}
-            <g stroke="#532458" stroke-width="2"><line x1="620" y1="398" x2="610" y2="398" /><line x1="618" y1="418" x2="610" y2="418" /><line x1="616" y1="438" x2="610" y2="438" /></g>
-            <text x="600" y="394" text-anchor="end" font-family="Montserrat Variable, sans-serif" font-size="10" font-weight="800" fill="#532458">MÁX</text>
-          </g>
-          {pecasCesto.map((p, i) => <ellipse data-peca={i} cx={p.x} cy={p.y} rx={p.rx} ry={p.ry} fill={p.cor} stroke="#532458" stroke-width="2" />)}
-          <rect x="482" y="376" width="152" height="14" rx="7" fill="#be94ff" stroke="#532458" stroke-width="3" />
-
-          <!-- Fluxos de sabão e amaciante -->
-          <path data-fluxo="0" d="M214 96C206 140 236 160 296 178" fill="none" stroke="#be94ff" stroke-width="7" stroke-linecap="round" opacity="0" />
-          <path data-fluxo="1" d="M232 96C230 136 260 156 316 176" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" opacity="0" />
-
-          <!-- Porta (gira na dobradiça da esquerda) -->
-          <g data-porta>
-            <circle cx="320" cy="290" r="112" fill="none" stroke="url(#cf-cromo)" stroke-width="16" />
-            <circle cx="320" cy="290" r="96" fill="#d9ecff" fill-opacity=".12" stroke="#ffffff" stroke-opacity=".5" stroke-width="2" />
-            <path d="M262 236a80 80 0 0 1 70-24" fill="none" stroke="#ffffff" stroke-opacity=".55" stroke-width="7" stroke-linecap="round" />
-            <rect x="424" y="272" width="16" height="36" rx="7" fill="#8c8996" />
-          </g>
-        </svg>
-        <p class="ciclo-legenda" data-legenda aria-hidden="true">Role para ver o ciclo completo</p>
-      </div>
-
-      <!-- Pílulas de tempo + chamada final -->
-      <div class="ciclo-base">
-        <div class="ciclo-pilula" data-pilula="lavagem" role="progressbar" aria-label="Lavagem: cerca de 35 minutos" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-          <span class="ciclo-pilula-barra" data-barra-pilula></span>
-          <span class="relative flex items-center gap-2"><Icone nome="relogio" class="size-4.5" />Lavagem: cerca de 35 min</span>
-          <span class="relative font-mono tabular-nums" data-tempo>35:00</span>
-        </div>
-        <div class="ciclo-pilula" data-pilula="secagem" role="progressbar" aria-label="Secagem: cerca de 45 minutos" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-          <span class="ciclo-pilula-barra" data-barra-pilula></span>
-          <span class="relative flex items-center gap-2"><Icone nome="gota" class="size-4.5" />Secagem: cerca de 45 min</span>
-          <span class="relative font-mono tabular-nums" data-tempo>45:00</span>
-        </div>
-        <p class="ciclo-frase" data-frase>Enquanto isso, aproveite para resolver outras coisas.</p>
-        <a href="/unidades" class="btn btn-roxo ciclo-cta" data-cta>Encontrar uma unidade <Icone nome="pin" /></a>
+      <!-- ===== Metade da animação ===== -->
+      <div class="ciclo-cena" data-cena>
+        <div class="ciclo-cena-fundo" aria-hidden="true"></div>
+        <MaquinaRealista />
       </div>
     </div>
   </div>

@@ -1,271 +1,257 @@
 /**
- * Coreografia do "Como funciona", guiada pela rolagem.
- *
- *  0.00–0.12  Passo 01  cesto medidor recebe as peças
- *  0.12–0.24  Passo 02  cartão no totem, LED verde-lima libera a máquina
- *  0.24–0.36  Passo 03  peças voam para o tambor e a porta fecha
- *  0.36–0.48  Passo 04  visor alterna os programas
- *  0.48–0.62  Passo 05  INICIAR: sabão e amaciante entram
- *  0.62–0.82  Lavagem   água, espuma, tambor acelera; pílula 35 min
- *  0.82–1.00  Secagem   água escoa, calor e vapor; porta destrava; pílula 45 min
+ * "Como funciona" — coreografia com GSAP + ScrollTrigger (scrub) + SplitText + DrawSVG + MotionPath.
+ * A seção fica presa (pin) e a rolagem conduz uma timeline com rótulos:
+ *  p0 Medir · p1 Pagar · p2 Colocar · p3 Escolher · p4 Iniciar · lav Lavagem · sec Secagem · fim
  */
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { SplitText } from "gsap/SplitText";
+import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
+import { MotionPathPlugin } from "gsap/MotionPathPlugin";
+import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 
-const FAIXAS = [0, 0.12, 0.24, 0.36, 0.48, 0.62, 0.82, 1] as const;
-const LEGENDAS = [
-  "Meça as roupas no cesto medidor",
-  "Pague no totem: máquina liberada",
-  "Roupas no tambor, porta travada",
-  "Escolha o programa no visor",
-  "INICIAR: sabão e amaciante entram sozinhos",
-  "Lavando… o tambor acelera na centrifugação",
-  "Secando com ar quente",
-  "Pronto! Pode retirar suas roupas",
-];
+gsap.registerPlugin(ScrollTrigger, SplitText, DrawSVGPlugin, MotionPathPlugin, ScrollToPlugin);
+
+const CX = 410, CY = 380;
 const PROGRAMAS = ["NORMAL 35'", "PESADO 50'", "DELICADO 30'", "SECAR 45'", "NORMAL 35'"];
-
-const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
-const suave = (t: number) => t * t * (3 - 2 * t);
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-/** progresso local (0–1) da etapa i */
-const etapa = (p: number, i: number) => clamp((p - FAIXAS[i]!) / (FAIXAS[i + 1]! - FAIXAS[i]!));
+// início de cada etapa na timeline (em "segundos" de timeline; a rolagem é que manda)
+const T = { p0: 0, p1: 1, p2: 2, p3: 3, p4: 4, lav: 5, sec: 6.7, fim: 8.2, final: 8.7 };
+const INICIOS = [T.p0, T.p1, T.p2, T.p3, T.p4, T.lav, T.sec];
+// zonas do foco: x, y, largura, altura
+const ZONAS: Array<[number, number, number, number]> = [
+  [632, 440, 168, 210], // cesto
+  [26, 216, 172, 278], // totem
+  [252, 224, 316, 316], // porta
+  [362, 52, 152, 74], // visor
+  [242, 52, 120, 120], // dispensador
+  [252, 224, 316, 316], // lavagem
+  [252, 224, 316, 316], // secagem
+];
 const mmss = (min: number) => {
   const s = Math.max(0, Math.round(min * 60));
   return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 };
-
-// zonas do "foco" na ilustração (x, y, largura, altura)
-const ZONAS: Array<[number, number, number, number]> = [
-  [476, 330, 164, 146], // cesto
-  [10, 140, 120, 212], // totem
-  [194, 164, 252, 252], // escotilha
-  [274, 48, 186, 60], // visor
-  [178, 48, 286, 72], // painel (dispensador + iniciar)
-  [194, 164, 252, 252], // lavagem
-  [194, 164, 252, 252], // secagem
-];
+const clamp = gsap.utils.clamp(0, 1);
 
 function iniciar() {
   const encontrada = document.querySelector<HTMLElement>("[data-ciclo]");
   if (!encontrada) return;
   const secao: HTMLElement = encontrada;
-  const ctl = new AbortController();
-  const { signal } = ctl;
-  document.addEventListener("astro:before-swap", () => ctl.abort(), { once: true });
+  const q = <T extends Element>(s: string) => secao.querySelector<T>(s)!;
+  const qa = <T extends Element>(s: string) => gsap.utils.toArray<T>(secao.querySelectorAll(s));
 
-  const $ = <T extends Element>(s: string) => secao.querySelector<T>(s)!;
-  const $$ = <T extends Element>(s: string) => [...secao.querySelectorAll<T>(s)];
-  const cards = $$<HTMLElement>("[data-card]");
-  const listaCards = $<HTMLElement>("[data-cards]");
-  const trilho = $<HTMLElement>("[data-trilho]");
   const el = {
-    foco: $<SVGRectElement>("[data-foco]"),
-    cartao: $<SVGGElement>("[data-cartao]"),
-    telaTotem: $<SVGTextElement>("[data-tela-totem]"),
-    ledTotem: $<SVGCircleElement>("[data-led-totem]"),
-    led: $<SVGCircleElement>("[data-led]"),
-    visor: $<SVGTextElement>("[data-visor]"),
-    travaAlca: $<SVGPathElement>("[data-trava-alca]"),
-    travaCorpo: $<SVGRectElement>("[data-trava-corpo]"),
-    trava: $<SVGGElement>("[data-trava]"),
-    tambor: $<SVGGElement>("[data-tambor]"),
-    roupas: $<SVGGElement>("[data-roupas-tambor]"),
-    gotas: $<SVGGElement>("[data-gotas]"),
-    agua: $<SVGGElement>("[data-agua]"),
-    onda: $<SVGPathElement>("[data-onda]"),
-    espuma: $<SVGGElement>("[data-espuma]"),
-    brilho: $<SVGCircleElement>("[data-brilho]"),
-    vapor: $<SVGGElement>("[data-vapor]"),
-    porta: $<SVGGElement>("[data-porta]"),
-    pecas: $$<SVGEllipseElement>("[data-peca]"),
-    fluxos: $$<SVGPathElement>("[data-fluxo]"),
-    legenda: $<HTMLElement>("[data-legenda]"),
-    play: $<HTMLButtonElement>("[data-iniciar]"),
-    pilulas: $$<HTMLElement>("[data-pilula]"),
+    palco: q<HTMLElement>("[data-palco]"),
+    paineis: qa<HTMLElement>("[data-painel]"),
+    pontos: qa<HTMLElement>("[data-ponto]"),
+    pilulas: qa<HTMLElement>("[data-pilula]"),
+    cta: q<HTMLElement>("[data-cta]"),
+    play: q<HTMLButtonElement>("[data-iniciar]"),
+    foco: q<SVGRectElement>("[data-foco]"),
+    pecas: qa<SVGGElement>("[data-peca]"),
+    cartao: q<SVGGElement>("[data-cartao]"),
+    ledTotem: q<SVGCircleElement>("[data-led-totem]"),
+    telaTotem: q<SVGTextElement>("[data-tela-totem]"),
+    led: q<SVGCircleElement>("[data-led]"),
+    visor: q<SVGTextElement>("[data-visor]"),
+    porta: q<SVGGElement>("[data-porta]"),
+    alca: q<SVGPathElement>("[data-trava-alca]"),
+    trava: q<SVGRectElement>("[data-trava-corpo]"),
+    tambor: q<SVGGElement>("[data-tambor]"),
+    roupas: q<SVGGElement>("[data-roupas-tambor]"),
+    gotas: q<SVGGElement>("[data-gotas]"),
+    fluxos: qa<SVGPathElement>("[data-fluxo]"),
+    agua: q<SVGGElement>("[data-agua]"),
+    onda: q<SVGPathElement>("[data-onda]"),
+    onda2: q<SVGPathElement>("[data-onda2]"),
+    bolhas: q<SVGGElement>("[data-bolhas-agua]"),
+    espuma: q<SVGGElement>("[data-espuma]"),
+    brilho: q<SVGCircleElement>("[data-brilho]"),
+    vapor: q<SVGGElement>("[data-vapor]"),
   };
-  const origemPecas = el.pecas.map((e) => ({ x: Number(e.getAttribute("cx")), y: Number(e.getAttribute("cy")) }));
-  const comprimentoFluxo = el.fluxos.map((f) => f.getTotalLength());
-  el.fluxos.forEach((f, i) => (f.style.strokeDasharray = String(comprimentoFluxo[i])));
+  const origens = el.pecas.map((p) => {
+    const m = /translate\(([\d.]+)[ ,]+([\d.]+)\)/.exec(p.getAttribute("transform") ?? "")!;
+    return { x: Number(m[1]), y: Number(m[2]) };
+  });
 
-  let cardAtivoAnterior = -1;
-  function desenhar(p: number) {
-    const t = FAIXAS.slice(0, 7).map((_, i) => etapa(p, i));
-    const [t1, t2, t3, t4, t5, tl, ts] = t as [number, number, number, number, number, number, number];
-    const indice = p >= 1 ? 7 : Math.min(6, FAIXAS.findIndex((f, i) => p >= f && p < (FAIXAS[i + 1] ?? 2)));
-    const fase = indice <= 4 ? `passo-${indice + 1}` : indice === 5 ? "lavagem" : indice === 6 && ts < 0.92 ? "secagem" : "fim";
-    secao.dataset["fase"] = fase;
-    secao.classList.toggle("compacto", p >= FAIXAS[5]);
+  const ctx = gsap.context(() => {
+    const mm = gsap.matchMedia();
 
-    // ---- cards ----
-    cards.forEach((c, i) => {
-      const estado = i < Math.min(indice, 5) ? "feito" : i === indice ? "ativo" : "";
-      if (estado) c.dataset["estado"] = estado;
-      else delete c.dataset["estado"];
+    // ---------- movimento reduzido: cena estática e legível ----------
+    mm.add("(prefers-reduced-motion: reduce)", () => {
+      secao.classList.remove("animado");
+      gsap.set(el.pecas, { opacity: 0 });
+      gsap.set(el.roupas, { opacity: 1 });
+      gsap.set(el.agua, { y: 420 });
+      gsap.set(el.espuma, { opacity: 1 });
+      gsap.set(el.cartao, { opacity: 0 });
+      el.visor.textContent = "21:00";
+      el.pilulas.forEach((p) => { p.style.setProperty("--fill", "1"); p.querySelector("[data-tempo]")!.textContent = ""; });
     });
-    const ativo = Math.min(indice, 4);
-    if (ativo !== cardAtivoAnterior && window.matchMedia("(max-width: 1023px)").matches) {
-      const card = cards[ativo]!;
-      const max = listaCards.scrollWidth - trilho.clientWidth + 32;
-      const x = clamp(card.offsetLeft - (trilho.clientWidth - card.offsetWidth) / 2, 0, Math.max(0, max));
-      listaCards.style.transform = `translateX(${-x}px)`;
-    } else if (!window.matchMedia("(max-width: 1023px)").matches) {
-      listaCards.style.transform = "";
-    }
-    cardAtivoAnterior = ativo;
 
-    // ---- foco deslizante ----
-    const zi = Math.min(indice, 6);
-    const anterior = ZONAS[Math.max(0, zi - 1)]!;
-    const atual = ZONAS[zi]!;
-    const k = suave(clamp(t[zi]! / 0.3));
-    const [x, y, w, h] = atual.map((v, i) => lerp(anterior[i]!, v, zi === 0 ? 1 : k));
-    el.foco.setAttribute("x", x!.toFixed(1));
-    el.foco.setAttribute("y", y!.toFixed(1));
-    el.foco.setAttribute("width", w!.toFixed(1));
-    el.foco.setAttribute("height", h!.toFixed(1));
-    el.foco.style.opacity = String(fase === "fim" ? 0 : 1);
-    el.foco.style.strokeDashoffset = String(-p * 600);
+    // ---------- animação completa ----------
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      secao.classList.add("animado");
 
-    // ---- passo 1 e 3: peças caem no cesto e depois voam para o tambor ----
-    el.pecas.forEach((peca, i) => {
-      const o = origemPecas[i]!;
-      const queda = suave(clamp(t1 * 1.6 - i * 0.14));
-      const voo = suave(clamp((t3 - i * 0.08) / 0.55));
-      const px = lerp(o.x, 320, voo);
-      const py = lerp(o.y - 150 * (1 - queda), 316, voo) - Math.sin(Math.PI * voo) * 90;
-      const escala = lerp(1, 0.55, voo);
-      peca.setAttribute("transform", `translate(${(px - o.x).toFixed(1)} ${(py - o.y).toFixed(1)}) translate(${o.x} ${o.y}) scale(${escala.toFixed(3)}) translate(${-o.x} ${-o.y})`);
-      peca.style.opacity = String(queda * (voo > 0.85 ? 1 - (voo - 0.85) / 0.15 : 1));
+      // estado inicial
+      gsap.set(el.paineis, { autoAlpha: 0 });
+      gsap.set(el.paineis[0]!, { autoAlpha: 1 });
+      gsap.set(el.porta, { scaleX: 0.16, svgOrigin: "262 380" });
+      gsap.set(el.cartao, { x: 200, y: 300, rotation: -22, transformOrigin: "50% 50%", opacity: 0 });
+      gsap.set(el.agua, { y: 520 });
+      gsap.set(el.foco, { opacity: 1 });
+      gsap.set(el.alca, { y: -6 });
+      el.pecas.forEach((p, i) => gsap.set(p, { x: origens[i]!.x, y: origens[i]!.y - 200, opacity: 0, scale: 1, transformOrigin: "50% 50%" }));
+      gsap.set(el.fluxos, { drawSVG: "0%", opacity: 1 });
+      gsap.set(el.cta, { autoAlpha: 0, y: 16 });
+
+      const titulos = el.paineis.map((p) => new SplitText(p.querySelector("[data-split]"), { type: "words", mask: "words" }));
+
+      const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
+      Object.entries(T).forEach(([nome, t]) => tl.addLabel(nome, t));
+
+      // troca de painéis de texto: o anterior sobe e some, o novo entra palavra por palavra
+      el.paineis.forEach((painel, i) => {
+        if (i === 0) return;
+        const inicio = INICIOS[i]!;
+        tl.to(el.paineis[i - 1]!, { autoAlpha: 0, y: -40, duration: 0.3, ease: "power2.in" }, inicio)
+          .fromTo(painel, { autoAlpha: 0, y: 0 }, { autoAlpha: 1, duration: 0.01 }, inicio + 0.25)
+          .from(titulos[i]!.words, { yPercent: 110, duration: 0.4, stagger: 0.05 }, inicio + 0.25)
+          .from(painel.querySelectorAll(".ciclo-painel-texto, .ciclo-painel-icone, .ciclo-painel-rotulo, .ciclo-dica"), { y: 24, opacity: 0, duration: 0.4, stagger: 0.06 }, inicio + 0.3);
+      });
+
+      // foco deslizante
+      ZONAS.forEach(([x, y, w, h], i) => {
+        tl.to(el.foco, { attr: { x, y, width: w, height: h }, duration: 0.35, ease: "power3.inOut" }, INICIOS[i]! + (i ? 0.05 : 0));
+      });
+      tl.to(el.foco, { attr: { "stroke-dashoffset": -400 }, duration: T.final, ease: "none" }, 0);
+
+      // 01 — peças caem no cesto
+      el.pecas.forEach((p, i) => {
+        tl.to(p, { y: origens[i]!.y, opacity: 1, duration: 0.45, ease: "bounce.out" }, 0.1 + i * 0.1);
+      });
+
+      // 02 — cartão no totem, LEDs verde-lima
+      tl.to(el.cartao, { opacity: 1, duration: 0.15 }, T.p1)
+        .to(el.cartao, { x: 72, y: 367, rotation: 0, duration: 0.5, ease: "power3.out" }, T.p1 + 0.1)
+        .to([el.ledTotem, el.led], { attr: { fill: "#c5d539" }, duration: 0.15 }, T.p1 + 0.62)
+        .to(el.cartao, { opacity: 0, y: 330, duration: 0.25 }, T.p2 - 0.05);
+
+      // 03 — peças voam para o tambor (MotionPath) e a porta fecha
+      el.pecas.forEach((p, i) => {
+        const o = origens[i]!;
+        tl.to(p, {
+          motionPath: { path: [{ x: o.x, y: o.y }, { x: (o.x + CX) / 2 + 40, y: 230 - i * 8 }, { x: CX + (i - 2) * 14, y: CY + 30 }], curviness: 1.4 },
+          scale: 0.5, duration: 0.55, ease: "power1.inOut",
+        }, T.p2 + 0.05 + i * 0.07)
+          .to(p, { opacity: 0, duration: 0.1 }, T.p2 + 0.55 + i * 0.07);
+      });
+      tl.to(el.roupas, { opacity: 1, duration: 0.2 }, T.p2 + 0.6)
+        .to(el.porta, { scaleX: 1, duration: 0.3, ease: "power2.in" }, T.p2 + 0.68)
+        .to(el.alca, { y: 0, duration: 0.1 }, T.p2 + 0.95)
+        .to([el.alca, el.trava], { attr: { stroke: "#532458", fill: (i: number) => (i ? "#532458" : "none") }, duration: 0.1 }, T.p2 + 0.95);
+
+      // 05 — sabão e amaciante
+      tl.to(el.fluxos, { drawSVG: "100%", duration: 0.45, stagger: 0.12, ease: "power1.in" }, T.p4 + 0.35)
+        .to(el.gotas, { opacity: 1, duration: 0.1 }, T.p4 + 0.75)
+        .to(el.fluxos, { opacity: 0, duration: 0.2 }, T.lav + 0.15)
+        .to(el.gotas, { opacity: 0, duration: 0.2 }, T.lav + 0.3);
+
+      // LAVAGEM — água sobe, espuma, tambor acelera até centrifugar
+      tl.to(el.agua, { y: 404, duration: 0.6, ease: "power2.out" }, T.lav)
+        .to(el.espuma, { opacity: 1, duration: 0.4 }, T.lav + 0.2)
+        .fromTo(el.tambor, { rotation: 0 }, { rotation: 360 * 6, svgOrigin: `${CX} ${CY}`, duration: T.sec - T.lav, ease: "power3.in" }, T.lav)
+        .fromTo(el.roupas, { rotation: 0 }, { rotation: 360 * 5.6, svgOrigin: `${CX} ${CY}`, duration: T.sec - T.lav, ease: "power3.in" }, T.lav);
+
+      // SECAGEM — água escoa, calor e vapor, tambor gira devagar
+      tl.to(el.agua, { y: 540, duration: 0.35, ease: "power2.in" }, T.sec)
+        .to(el.espuma, { opacity: 0, duration: 0.2 }, T.sec)
+        .to(el.brilho, { opacity: 1, duration: 0.4 }, T.sec + 0.25)
+        .to(el.vapor, { opacity: 0.85, duration: 0.4 }, T.sec + 0.35)
+        .to(el.tambor, { rotation: `+=${360 * 4}`, svgOrigin: `${CX} ${CY}`, duration: T.fim - T.sec, ease: "none" }, T.sec)
+        .to(el.roupas, { rotation: `+=${360 * 4}`, svgOrigin: `${CX} ${CY}`, duration: T.fim - T.sec, ease: "none" }, T.sec)
+        .to([el.brilho, el.vapor], { opacity: 0, duration: 0.3 }, T.fim - 0.2);
+
+      // FIM — porta destrava e abre um pouco, chamada para ação
+      tl.to(el.alca, { y: -6, duration: 0.1 }, T.fim)
+        .to(el.porta, { scaleX: 0.62, duration: 0.3, ease: "back.out(1.6)" }, T.fim + 0.05)
+        .to(el.foco, { opacity: 0, duration: 0.2 }, T.fim)
+        .to(el.cta, { autoAlpha: 1, y: 0, duration: 0.3 }, T.fim + 0.1)
+        .to({}, { duration: T.final - T.fim - 0.4 });
+
+      // textos dinâmicos (visor, totem, trilha, pílulas)
+      const pontosEstado = (indice: number) =>
+        el.pontos.forEach((p, i) => (p.dataset["estado"] = i < indice ? "feito" : i === indice ? "ativo" : ""));
+      tl.eventCallback("onUpdate", () => {
+        const t = tl.time();
+        const indice = t >= T.fim ? 7 : Math.max(0, INICIOS.findLastIndex((i) => t >= i));
+        secao.dataset["fase"] = ["medir", "pagar", "colocar", "escolher", "iniciar", "lavagem", "secagem", "fim"][indice]!;
+        pontosEstado(indice);
+        const pago = t >= T.p1 + 0.62;
+        el.telaTotem.textContent = pago ? "OK ✓" : "R$";
+        el.telaTotem.setAttribute("fill", pago ? "#c5d539" : "#be94ff");
+        const tl1 = clamp((t - T.lav) / (T.sec - T.lav));
+        const ts = clamp((t - T.sec) / (T.fim - T.sec));
+        let visor = pago ? "LIBERADA" : "INSIRA";
+        if (t >= T.p2) visor = t >= T.p2 + 0.95 ? "PORTA OK" : "ABERTA";
+        if (t >= T.p3) visor = PROGRAMAS[Math.min(PROGRAMAS.length - 1, Math.floor(((t - T.p3) / 1) * PROGRAMAS.length))]!;
+        if (t >= T.p4) visor = t < T.p4 + 0.35 ? "INICIAR ▶" : "35:00";
+        if (t >= T.lav) visor = mmss(35 * (1 - tl1));
+        if (t >= T.sec) visor = mmss(45 * (1 - ts));
+        if (t >= T.fim) visor = "PRONTO";
+        el.visor.textContent = visor;
+        [tl1, ts].forEach((v, i) => {
+          const pil = el.pilulas[i]!;
+          pil.style.setProperty("--fill", v.toFixed(3));
+          pil.setAttribute("aria-valuenow", String(Math.round(v * 100)));
+          pil.querySelector("[data-tempo]")!.textContent = mmss((i ? 45 : 35) * (1 - v));
+        });
+        el.play.toggleAttribute("data-pressionado", t > T.p4 + 0.2 && t < T.p4 + 0.4);
+      });
+
+      // presa na tela durante ~7 telas de rolagem
+      const st = ScrollTrigger.create({
+        trigger: secao,
+        pin: el.palco,
+        start: "top top",
+        end: () => `+=${window.innerHeight * 7}`,
+        scrub: 0.7,
+        animation: tl,
+        anticipatePin: 1,
+        invalidateOnRefresh: true,
+        onToggle: (self) => ambiente.forEach((a) => (self.isActive ? a.play() : a.pause())),
+      });
+
+      // vida contínua (independente da rolagem): ondas, bolhas e vapor
+      const ambiente = [
+        gsap.to(el.onda, { x: -100, duration: 2.4, ease: "none", repeat: -1, paused: true }),
+        gsap.to(el.onda2, { x: -100, duration: 1.7, ease: "none", repeat: -1, paused: true }),
+        gsap.fromTo(el.bolhas.children, { y: 40, opacity: 0 }, { y: -90, opacity: 1, duration: 2.2, ease: "power1.out", stagger: { each: 0.28, repeat: -1 }, paused: true }),
+        gsap.fromTo(el.vapor.children, { y: 20 }, { y: -40, duration: 2.6, ease: "sine.inOut", stagger: { each: 0.4, repeat: -1, yoyo: true }, paused: true }),
+        gsap.fromTo(el.gotas, { y: -10 }, { y: 40, duration: 0.6, ease: "none", repeat: -1, paused: true }),
+      ];
+
+      // botão INICIAR: rola sozinho pela lavagem e secagem (qualquer rolagem do usuário interrompe)
+      el.play.addEventListener("click", () => {
+        const inicio = st.start + (st.end - st.start) * (T.p4 + 0.45) / T.final;
+        const destino = st.end;
+        const atual = Math.max(window.scrollY, inicio);
+        const duracao = 7 * ((destino - atual) / (destino - inicio || 1));
+        if (window.lavoLenis) {
+          window.lavoLenis.scrollTo(atual, { immediate: true });
+          window.lavoLenis.scrollTo(destino, { duration: Math.max(duracao, 1.5), easing: (x: number) => 0.5 - 0.5 * Math.cos(Math.PI * x), lock: false });
+        } else {
+          window.scrollTo({ top: atual, behavior: "instant" });
+          gsap.to(window, { scrollTo: { y: destino, autoKill: true }, duration: Math.max(duracao, 1.5), ease: "sine.inOut" });
+        }
+      });
+
+      return () => titulos.forEach((s) => s.revert());
     });
-    el.roupas.style.opacity = String(clamp((t3 - 0.55) / 0.3));
+  }, secao);
 
-    // ---- passo 2: cartão encosta no leitor ----
-    const pag = suave(clamp(t2 / 0.6));
-    el.cartao.setAttribute("transform", `translate(${lerp(150, 46, pag).toFixed(1)} ${lerp(186, 252, pag).toFixed(1)}) rotate(${lerp(-24, 0, pag).toFixed(1)})`);
-    el.cartao.style.opacity = String(t2 > 0.95 || p >= FAIXAS[2] ? Math.max(0, 1 - (p - FAIXAS[2]) * 20) : clamp(t1 * 3));
-    const pago = p >= FAIXAS[1] + 0.06;
-    el.ledTotem.setAttribute("fill", pago ? "#c5d539" : "#8a8494");
-    el.telaTotem.textContent = pago ? "OK ✓" : "R$";
-    el.telaTotem.setAttribute("fill", pago ? "#c5d539" : "#be94ff");
-    el.led.setAttribute("fill", pago ? "#c5d539" : "#8a8494");
-
-    // ---- porta: aberta → fecha no fim do passo 3 → destrava no fim ----
-    const fechamento = suave(clamp((t3 - 0.6) / 0.4));
-    const abertura = fase === "fim" ? suave(clamp((ts - 0.9) / 0.1)) : 0;
-    const escalaPorta = lerp(0.16, 1, fechamento) - abertura * 0.42;
-    el.porta.setAttribute("transform", `translate(202 0) scale(${escalaPorta.toFixed(3)} 1) translate(-202 0)`);
-    const travada = fechamento >= 1 && fase !== "fim";
-    el.travaAlca.setAttribute("transform", travada ? "" : "translate(0 -5)");
-    el.trava.setAttribute("stroke", travada ? "#532458" : "#6d6977");
-    el.travaCorpo.setAttribute("fill", travada ? "#532458" : "#6d6977");
-
-    // ---- visor ----
-    let visor = "INSIRA";
-    if (pago) visor = "LIBERADA";
-    if (p >= FAIXAS[2]) visor = fechamento >= 1 ? "PORTA OK" : "ABERTA";
-    if (p >= FAIXAS[3]) visor = PROGRAMAS[Math.min(PROGRAMAS.length - 1, Math.floor(t4 * PROGRAMAS.length))]!;
-    if (p >= FAIXAS[4]) visor = t5 < 0.35 ? "INICIAR ▶" : "35:00";
-    if (p >= FAIXAS[5]) visor = mmss(35 * (1 - tl));
-    if (p >= FAIXAS[6]) visor = mmss(45 * (1 - ts));
-    if (fase === "fim") visor = "PRONTO";
-    el.visor.textContent = visor;
-
-    // ---- passo 5: botão pressionado e fluxos de sabão/amaciante ----
-    if (t5 > 0.2 && t5 < 0.4) el.play.dataset["pressionado"] = "";
-    else delete el.play.dataset["pressionado"];
-    el.fluxos.forEach((f, i) => {
-      const desenho = suave(clamp((t5 - 0.35 - i * 0.1) / 0.4));
-      f.style.strokeDashoffset = String(comprimentoFluxo[i]! * (1 - desenho));
-      f.style.opacity = String(p >= FAIXAS[5] ? Math.max(0, 1 - tl * 6) : desenho > 0 ? 1 : 0);
-    });
-    el.gotas.style.opacity = String(t5 > 0.6 && tl < 0.2 ? 1 : 0);
-    el.gotas.setAttribute("transform", `translate(0 ${((p * 4000) % 60).toFixed(1)})`);
-
-    // ---- lavagem e secagem ----
-    const nivel = p < FAIXAS[5] ? 0 : p < FAIXAS[6] ? suave(clamp(tl / 0.35)) * 110 : 110 * (1 - suave(clamp(ts / 0.2)));
-    el.agua.setAttribute("transform", `translate(${(-((p * 3000) % 80)).toFixed(1)} ${(388 - nivel).toFixed(1)})`);
-    el.espuma.style.opacity = String(p < FAIXAS[6] ? clamp(tl / 0.3) : Math.max(0, 1 - ts * 6));
-    const angulo =
-      p < FAIXAS[5] ? 0 : p < FAIXAS[6] ? 360 * (tl * 4 + Math.pow(tl, 3) * 12) : 360 * 16 + 360 * ts * 7;
-    el.tambor.setAttribute("transform", `rotate(${angulo.toFixed(1)} 320 290)`);
-    el.roupas.setAttribute("transform", `rotate(${(angulo * 0.92).toFixed(1)} 320 290)`);
-    const calor = p >= FAIXAS[6] ? suave(clamp((ts - 0.1) / 0.3)) * (1 - suave(clamp((ts - 0.82) / 0.12))) : 0;
-    el.brilho.style.opacity = String(calor);
-    el.vapor.style.opacity = String(calor * 0.8);
-    el.vapor.setAttribute("transform", `translate(0 ${(-((p * 2400) % 70)).toFixed(1)})`);
-
-    // ---- pílulas e legenda ----
-    const preencher = (pil: HTMLElement, v: number, total: number) => {
-      pil.style.setProperty("--fill", v.toFixed(3));
-      pil.setAttribute("aria-valuenow", String(Math.round(v * 100)));
-      pil.querySelector("[data-tempo]")!.textContent = mmss(total * (1 - v));
-    };
-    preencher(el.pilulas[0]!, tl, 35);
-    preencher(el.pilulas[1]!, ts, 45);
-    el.legenda.textContent =
-      indice === 2 && fechamento < 1 ? "Colocando as roupas no tambor" : LEGENDAS[fase === "fim" ? 7 : Math.min(indice, 6)]!;
-  }
-
-  // ---------- modo estático (sem animação) ----------
-  const reduzir = window.matchMedia("(prefers-reduced-motion: reduce)");
-  if (reduzir.matches) {
-    secao.classList.remove("animado");
-    desenhar(0.7);
-    secao.classList.remove("compacto");
-    el.pilulas.forEach((pil) => {
-      pil.style.setProperty("--fill", "1");
-      pil.querySelector("[data-tempo]")!.textContent = "";
-    });
-    el.legenda.textContent = "Lavando: sabão e amaciante entram sozinhos";
-    return;
-  }
-
-  // ---------- modo animado ----------
-  secao.classList.add("animado");
-  const progresso = () => {
-    const r = secao.getBoundingClientRect();
-    const total = secao.offsetHeight - window.innerHeight;
-    return total > 0 ? clamp(-r.top / total) : 0;
-  };
-  let agendado = false;
-  const atualizar = () => {
-    agendado = false;
-    desenhar(progresso());
-  };
-  const agendar = () => {
-    if (!agendado) {
-      agendado = true;
-      requestAnimationFrame(atualizar);
-    }
-  };
-  window.addEventListener("scroll", agendar, { passive: true, signal });
-  window.addEventListener("resize", agendar, { passive: true, signal });
-  atualizar();
-
-  // ---------- botão INICIAR: rolagem automática pela lavagem e secagem ----------
-  let rolando = 0;
-  const cancelar = () => cancelAnimationFrame(rolando);
-  ["wheel", "touchstart", "keydown", "pointerdown"].forEach((ev) => window.addEventListener(ev, cancelar, { passive: true, signal }));
-  el.play.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const topoSecao = secao.getBoundingClientRect().top + window.scrollY;
-    const total = secao.offsetHeight - window.innerHeight;
-    const destino = topoSecao + total;
-    const inicioY = Math.max(window.scrollY, topoSecao + total * (FAIXAS[4] + 0.04));
-    const duracao = 8000 * ((destino - inicioY) / (total * (1 - FAIXAS[4])));
-    const t0 = performance.now();
-    // "instant": o CSS do site usa scroll-behavior smooth, que amorteceria cada quadro
-    window.scrollTo({ top: inicioY, behavior: "instant" });
-    cancelAnimationFrame(rolando);
-    const passo = (agora: number) => {
-      const k = clamp((agora - t0) / Math.max(duracao, 1500));
-      window.scrollTo({ top: lerp(inicioY, destino, 0.5 - 0.5 * Math.cos(Math.PI * k)), behavior: "instant" });
-      if (k < 1) rolando = requestAnimationFrame(passo);
-    };
-    // o próprio clique dispara "pointerdown": inicia no próximo quadro para não se cancelar
-    requestAnimationFrame(() => (rolando = requestAnimationFrame(passo)));
-  }, { signal });
+  document.addEventListener("astro:before-swap", () => ctx.revert(), { once: true });
 }
 
 document.addEventListener("astro:page-load", iniciar);
-
 export {};

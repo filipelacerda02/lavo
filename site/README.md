@@ -10,7 +10,7 @@ site/
 │  ├─ layouts/         layout base (SEO, View Transitions) e layout de textos legais
 │  ├─ scripts/         animações, consentimento (CMP), localizador de unidades, observabilidade
 │  ├─ styles/          Tailwind v4 + tokens da marca + sistema de animações
-│  ├─ data/unidades.tsv  base das 681 unidades (engine original)
+│  ├─ data/unidades.tsv  base das 676 unidades (engine original)
 │  └─ config/site.ts   dados da empresa, encarregado (DPO), promoções
 ├─ functions/api/      backend na borda: consentimento, titular (LGPD), métricas
 ├─ borda/util.ts       criptografia AES-256-GCM, HMAC, limites, Turnstile, logs estruturados
@@ -131,30 +131,55 @@ Sem bibliotecas: `src/scripts/animacoes.ts` (~3 KB) + CSS. Use nos elementos:
 | `data-inclinar` | cartão com inclinação 3D |
 | `<TituloAnimado texto="… *destaque*">` | palavras entrando uma a uma |
 
-### "Como funciona": ciclo animado pela rolagem
+### Bibliotecas de animação (gratuitas)
 
-`src/components/ComoFunciona.astro` + `src/scripts/ciclo.ts`. A seção fica fixa na tela enquanto a rolagem conduz a ilustração (SVG próprio, sem imagens externas):
-
-| Rolagem | Etapa | Na tela |
+| Ferramenta | Licença | Uso no site |
 | --- | --- | --- |
-| 0–12% | Passo 01 | peças caem no cesto medidor |
-| 12–24% | Passo 02 | cartão encosta no totem, LED verde-lima libera a máquina |
-| 24–36% | Passo 03 | peças voam para o tambor e a porta fecha com trava |
-| 36–48% | Passo 04 | visor alterna os programas |
-| 48–62% | Passo 05 | card fica roxo, INICIAR é pressionado, sabão e amaciante entram |
-| 62–82% | Lavagem | água e espuma sobem, tambor acelera; pílula de 35 min vira barra com cronômetro |
-| 82–100% | Secagem | água escoa, brilho quente e vapor; porta destrava e aparece "Encontrar uma unidade" |
+| [GSAP](https://gsap.com) 3.15 + ScrollTrigger, SplitText, DrawSVG, MotionPath, ScrollTo | Gratuita, inclusive para uso comercial (Webflow tornou todos os plugins gratuitos) | Seção "Como funciona" e transições entre páginas |
+| [Lenis](https://lenis.darkroom.engineering) | MIT | Rolagem suave sincronizada ao ScrollTrigger (`src/scripts/suave.ts`) |
 
-- Um foco tracejado verde-lima desliza entre cesto, totem, porta e painel.
-- Depois do Passo 05 os cards viram uma barra compacta e a máquina cresce.
-- O botão verde do Passo 05 é clicável (mouse ou teclado) e rola sozinho pela lavagem e secagem. Qualquer rolagem, toque ou tecla interrompe.
-- **Celular:** os cards viram um carrossel sincronizado com a rolagem, com a máquina fixa abaixo.
-- **Notebook (telas baixas):** só o card ativo mostra a descrição.
-- **Sem JavaScript ou com movimento reduzido:** a seção aparece estática, com todos os cards e a máquina lavando.
+Outras ferramentas gratuitas avaliadas, que podem ser usadas no futuro:
+- **Lottie / LottieFiles:** animações vetoriais prontas em JSON (`@lottiefiles/dotlottie-web`, MIT).
+- **Motion:** animações declarativas (motion.dev, MIT).
+- **Anime.js v4:** biblioteca leve (MIT).
+- **Haikei e Get Waves:** geradores gratuitos de ondas e blobs em SVG.
 
-Para ajustar o ritmo, mude `FAIXAS` em `ciclo.ts` (limites de cada etapa) e a altura de `.ciclo.animado` em `global.css` (quanto maior, mais lenta a rolagem).
+Tudo é empacotado no próprio site (sem CDN externo), o que mantém a CSP estrita.
 
-Também há transições entre páginas (View Transitions), ondas de água animadas, a "porta da máquina" que segue o cursor, bolhas nos botões, a barra de progresso de leitura e o cabeçalho que se esconde ao rolar. O conteúdo nunca fica invisível sem JavaScript, e tudo desliga com movimento reduzido.
+### "Como funciona": duas metades guiadas pela rolagem
+
+`src/components/ComoFunciona.astro`, `src/components/MaquinaRealista.astro` e `src/scripts/ciclo.ts`.
+
+A seção fica presa na tela por cerca de 7 telas de rolagem (GSAP ScrollTrigger com `scrub`):
+- **À esquerda:** o texto de cada etapa entra palavra por palavra (SplitText), com a trilha 01 → 05 → Lavando → Secando e as pílulas de tempo.
+- **À direita:** a ilustração executa a etapa.
+- **No celular:** o texto fica na parte de cima e a máquina na de baixo.
+
+| Etapa | Animação |
+| --- | --- |
+| 01 Meça | peças caem no cesto medidor com quique |
+| 02 Pague | cartão com chip encosta no leitor por aproximação, LEDs verde-lima, tela "OK ✓" |
+| 03 Coloque | peças voam em arco para o tambor (MotionPath), a porta cromada fecha e trava |
+| 04 Escolha | visor LCD alterna os programas |
+| 05 INICIAR | sabão e amaciante desenham o caminho até o tambor (DrawSVG) |
+| Lavagem | água com ondas e bolhas sobe, espuma, tambor acelera até centrifugar, cronômetro de 35 min |
+| Secagem | água escoa, brilho quente e vapor, cronômetro de 45 min, porta destrava, aparece o botão "Encontrar uma unidade" |
+
+A ilustração é um SVG feito à mão com técnicas de acabamento realista: aço escovado (`feTurbulence`), aro cromado com reflexos, borracha de vedação, tambor côncavo perfurado com pás, vidro com reflexos, tecidos com volume e dobras, espuma em bolhas, sombras e brilho no visor.
+
+O botão de play do Passo 05 rola sozinho até o fim em cerca de 7 segundos. Qualquer rolagem do usuário interrompe. Com movimento reduzido ou sem JavaScript, a seção vira uma lista com a máquina fixa ao lado.
+
+Ritmo: ajuste `T` (início de cada etapa) em `ciclo.ts` e o `end` do ScrollTrigger (`innerHeight * 7`).
+
+### Transição entre páginas
+
+`src/components/Transicao.astro` e `src/scripts/transicao.ts`:
+- **Ao sair de uma página:** a água sobe cobrindo a tela, as bolhas sobem e a "porta da máquina" aparece com água girando e o logo.
+- **Ao entrar** (inclusive no primeiro carregamento): as bolhas estouram de baixo para cima e a água sai pelo topo.
+
+A transição está integrada ao ClientRouter do Astro (`astro:before-preparation` e `astro:page-load`). Tem uma trava de segurança em CSS que esconde a cobertura se o JavaScript falhar, e é desligada com movimento reduzido.
+
+Também há ondas de água animadas, a "porta da máquina" que segue o cursor, bolhas nos botões, a barra de progresso de leitura e o cabeçalho que se esconde ao rolar. O conteúdo nunca fica invisível sem JavaScript, e tudo desliga com movimento reduzido.
 
 ## Buscador de unidades
 

@@ -1,0 +1,221 @@
+---
+/**
+ * Ilustração vetorial "realista" da cena de autoatendimento:
+ * totem de pagamento, lavadora profissional (inox escovado, aro cromado, borracha de vedação,
+ * tambor perfurado, vidro com reflexos) e cesto medidor.
+ * As partes animadas têm atributos data-* usados pelo GSAP (src/scripts/ciclo.ts).
+ * Centro da escotilha: (410, 380). Dobradiça da porta: x = 262.
+ */
+const CX = 410, CY = 380;
+const pecas = [
+  { x: 668, y: 548, cor: ["#d9c2ff", "#9a6be0"], d: "M-30 2c-2-14 14-22 30-20s32 6 30 18-14 16-30 16-28-2-30-14z", dobra: "M-18 -2c10 4 24 4 34-2" },
+  { x: 712, y: 554, cor: ["#e8f07a", "#a9b81f"], d: "M-26 4c-4-12 10-22 26-20s30 8 28 18-16 14-30 14-22-2-24-12z", dobra: "M-14 2c8-6 20-6 28 0" },
+  { x: 748, y: 544, cor: ["#ffffff", "#c9c6d6"], d: "M-22 2c0-12 12-18 24-16s22 8 20 18-14 12-26 10-18-2-18-12z", dobra: "M-12 -2c6 5 16 5 22 0" },
+  { x: 690, y: 528, cor: ["#8f90d6", "#4a4b8c"], d: "M-28 0c0-12 14-20 30-18s28 8 26 18-14 14-28 14-28-2-28-14z", dobra: "M-16 0c8 4 20 4 30-2" },
+  { x: 730, y: 520, cor: ["#ffc6da", "#e07ea5"], d: "M-22 2c-2-10 10-18 24-16s22 6 20 16-12 12-24 12-18-2-20-12z", dobra: "M-10 0c6 4 14 4 20 0" },
+];
+const furos: Array<[number, number]> = [];
+for (let r = 22; r <= 108; r += 14) {
+  const n = Math.round((2 * Math.PI * r) / 15);
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + (r % 28 ? 0.2 : 0);
+    furos.push([+(CX + Math.cos(a) * r).toFixed(1), +(CY + Math.sin(a) * r).toFixed(1)]);
+  }
+}
+const bolhasEspuma = [ [312,0,14],[338,-6,18],[366,2,13],[392,-8,20],[420,0,15],[446,-5,19],[472,1,14],[498,-4,16],[350,10,10],[408,12,11],[460,10,10],[326,-16,9],[384,-22,10],[436,-20,9],[486,-14,8] ];
+---
+<svg viewBox="0 0 800 700" class="maquina" role="img" aria-labelledby="titulo-maquina" data-svg>
+  <title id="titulo-maquina">Ilustração: totem de pagamento, lavadora profissional de aço inox com porta circular e cesto medidor com roupas.</title>
+  <defs>
+    <!-- materiais -->
+    <linearGradient id="m-inox" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbfbfd" /><stop offset=".35" stop-color="#e3e2e9" /><stop offset=".7" stop-color="#cfced8" /><stop offset="1" stop-color="#b6b4c1" />
+    </linearGradient>
+    <linearGradient id="m-lateral" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#a3a0ae" /><stop offset="1" stop-color="#77748a" /></linearGradient>
+    <linearGradient id="m-painel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9d8e0" /><stop offset="1" stop-color="#b3b1bd" /></linearGradient>
+    <linearGradient id="m-brilho-v" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0" /><stop offset=".5" stop-color="#fff" stop-opacity=".55" /><stop offset="1" stop-color="#fff" stop-opacity="0" /></linearGradient>
+    <linearGradient id="m-cromo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" /><stop offset=".22" stop-color="#d6d4de" /><stop offset=".48" stop-color="#8d8a99" /><stop offset=".62" stop-color="#f4f3f8" /><stop offset=".85" stop-color="#9e9bab" /><stop offset="1" stop-color="#6f6c7d" />
+    </linearGradient>
+    <radialGradient id="m-borracha" cx=".5" cy=".5" r=".5"><stop offset=".78" stop-color="#2a2830" /><stop offset=".92" stop-color="#121116" /><stop offset="1" stop-color="#3b3942" /></radialGradient>
+    <radialGradient id="m-tambor" cx=".5" cy=".46" r=".55"><stop offset="0" stop-color="#d5d3dc" /><stop offset=".55" stop-color="#9895a3" /><stop offset=".9" stop-color="#4d4a56" /><stop offset="1" stop-color="#2a2830" /></radialGradient>
+    <linearGradient id="m-pa" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8a8796" /><stop offset=".5" stop-color="#e9e8ef" /><stop offset="1" stop-color="#7a7787" /></linearGradient>
+    <radialGradient id="m-vidro" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#e9f4ff" stop-opacity=".22" /><stop offset=".7" stop-color="#9fc6ee" stop-opacity=".12" /><stop offset="1" stop-color="#5e5fa0" stop-opacity=".28" /></radialGradient>
+    <linearGradient id="m-agua" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9e0ff" stop-opacity=".9" /><stop offset=".4" stop-color="#7fb2ea" stop-opacity=".82" /><stop offset="1" stop-color="#4b4c96" stop-opacity=".88" /></linearGradient>
+    <linearGradient id="m-agua2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#dff1ff" stop-opacity=".7" /><stop offset="1" stop-color="#7fb2ea" stop-opacity="0" /></linearGradient>
+    <radialGradient id="m-bolha" cx=".35" cy=".3" r=".7"><stop offset="0" stop-color="#ffffff" /><stop offset=".55" stop-color="#f4f1fb" /><stop offset="1" stop-color="#c9c2dc" /></radialGradient>
+    <radialGradient id="m-bolha-ar" cx=".35" cy=".3" r=".65"><stop offset="0" stop-color="#ffffff" stop-opacity=".95" /><stop offset=".5" stop-color="#ffffff" stop-opacity=".15" /><stop offset="1" stop-color="#ffffff" stop-opacity=".6" /></radialGradient>
+    <radialGradient id="m-quente" cx=".5" cy=".55" r=".55"><stop offset="0" stop-color="#ffd59a" stop-opacity=".95" /><stop offset=".55" stop-color="#ff9a4d" stop-opacity=".5" /><stop offset="1" stop-color="#ff7a33" stop-opacity="0" /></radialGradient>
+    <linearGradient id="m-totem" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7a3a82" /><stop offset=".55" stop-color="#532458" /><stop offset="1" stop-color="#34123a" /></linearGradient>
+    <linearGradient id="m-tela" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2b1433" /><stop offset="1" stop-color="#0d0610" /></linearGradient>
+    <linearGradient id="m-cartao" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d9c2ff" /><stop offset=".6" stop-color="#9a6be0" /><stop offset="1" stop-color="#532458" /></linearGradient>
+    <linearGradient id="m-cesto" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9dcff" /><stop offset="1" stop-color="#b48ef3" /></linearGradient>
+    <linearGradient id="m-sabao" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d6bdff" /><stop offset="1" stop-color="#8f5fe0" /></linearGradient>
+    <linearGradient id="m-amaciante" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff" /><stop offset="1" stop-color="#bfe2ff" /></linearGradient>
+    <pattern id="m-furos" width="13" height="13" patternUnits="userSpaceOnUse"><circle cx="6.5" cy="6.5" r="2.1" fill="#2c2a33" /><circle cx="6" cy="6" r="1" fill="#000" opacity=".35" /></pattern>
+    <pattern id="m-furos-cesto" width="22" height="16" patternUnits="userSpaceOnUse"><rect x="4" y="4" width="14" height="6" rx="3" fill="#7d4fc9" opacity=".45" /></pattern>
+
+    <!-- filtros (aplicados só em partes estáticas, para não pesar a animação) -->
+    <filter id="m-escovado" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.006 0.9" numOctaves="2" seed="7" result="ruido" />
+      <feColorMatrix in="ruido" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .14 0" />
+      <feComposite in2="SourceGraphic" operator="in" />
+    </filter>
+    <filter id="m-sombra" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="9" /></filter>
+    <filter id="m-glow" x="-30%" y="-60%" width="160%" height="220%"><feGaussianBlur stdDeviation="2.2" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+    <filter id="m-vapor" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" /></filter>
+    <filter id="m-elevacao" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#2b0f30" flood-opacity=".28" /></filter>
+    <clipPath id="m-clip-vidro"><circle cx={CX} cy={CY} r="118" /></clipPath>
+  </defs>
+
+  <!-- piso e sombras -->
+  <ellipse cx="420" cy="652" rx="370" ry="20" fill="#532458" opacity=".16" filter="url(#m-sombra)" />
+
+  <!-- foco que desliza entre as etapas -->
+  <rect data-foco x="640" y="440" width="156" height="200" rx="26" fill="#c5d539" fill-opacity=".12" stroke="#c5d539" stroke-width="4" stroke-dasharray="12 9" opacity="0" />
+
+  <!-- ===== Totem ===== -->
+  <g data-totem filter="url(#m-elevacao)">
+    <ellipse cx="110" cy="640" rx="56" ry="10" fill="#3a1a40" opacity=".5" />
+    <rect x="94" y="460" width="32" height="180" rx="8" fill="url(#m-totem)" />
+    <rect x="98" y="460" width="6" height="180" rx="3" fill="#fff" opacity=".18" />
+    <rect x="38" y="228" width="144" height="250" rx="26" fill="url(#m-totem)" />
+    <rect x="46" y="236" width="10" height="234" rx="5" fill="#fff" opacity=".14" />
+    <rect x="54" y="250" width="112" height="92" rx="12" fill="url(#m-tela)" stroke="#1c0920" stroke-width="3" />
+    <text data-tela-totem x="110" y="292" text-anchor="middle" font-family="Montserrat Variable, sans-serif" font-weight="800" font-size="20" fill="#be94ff" filter="url(#m-glow)">R$</text>
+    <rect x="76" y="306" width="68" height="20" rx="10" fill="#c5d539" opacity=".85" />
+    <text x="110" y="320" text-anchor="middle" font-family="Montserrat Variable, sans-serif" font-weight="800" font-size="10" fill="#1c0920">PAGAR</text>
+    <path d="M60 254l40 0-36 40z" fill="#fff" opacity=".07" />
+    <rect x="68" y="360" width="84" height="62" rx="12" fill="#150818" stroke="#0a040c" stroke-width="2" />
+    <g fill="none" stroke="#be94ff" stroke-width="2.4" stroke-linecap="round" opacity=".8"><path d="M104 380a12 12 0 0 1 0 22" /><path d="M110 375a19 19 0 0 1 0 32" /><path d="M116 370a26 26 0 0 1 0 42" /></g>
+    <circle cx="98" cy="391" r="3" fill="#be94ff" />
+    <circle data-led-totem cx="110" cy="448" r="8" fill="#8a8494" />
+  </g>
+  <!-- cartão -->
+  <g data-cartao transform="translate(200 300) rotate(-22)">
+    <rect width="76" height="48" rx="7" fill="url(#m-cartao)" stroke="#3d1745" stroke-width="1.5" />
+    <rect x="10" y="14" width="16" height="12" rx="2.5" fill="#d4dd6a" stroke="#8d9a1c" />
+    <path d="M14 18h8M14 22h8" stroke="#8d9a1c" stroke-width="1" />
+    <rect x="10" y="34" width="40" height="4" rx="2" fill="#fff" opacity=".55" />
+    <path d="M0 8L76 0v14L0 24z" fill="#fff" opacity=".12" />
+  </g>
+
+  <!-- ===== Lavadora ===== -->
+  <g filter="url(#m-elevacao)">
+    <path d="M590 52l38 22v548l-38 18z" fill="url(#m-lateral)" />
+    <rect x="230" y="40" width="360" height="600" rx="26" fill="url(#m-inox)" />
+  </g>
+  <rect x="230" y="40" width="360" height="600" rx="26" fill="#ffffff" filter="url(#m-escovado)" opacity=".9" />
+  <rect x="262" y="40" width="60" height="600" fill="url(#m-brilho-v)" opacity=".5" />
+  <!-- painel de controle -->
+  <path d="M230 66a26 26 0 0 1 26-26h308a26 26 0 0 1 26 26v104H230z" fill="url(#m-painel)" />
+  <path d="M230 170h360" stroke="#8d8a99" stroke-width="2" />
+  <path d="M230 172h360" stroke="#ffffff" stroke-width="1.5" opacity=".7" />
+  <!-- dispensador -->
+  <rect x="252" y="62" width="100" height="56" rx="9" fill="#c6c4cf" stroke="#9e9bab" />
+  <rect x="252" y="62" width="100" height="18" rx="9" fill="#fff" opacity=".35" />
+  <rect x="276" y="96" width="52" height="10" rx="5" fill="#8d8a99" />
+  <g fill="#6f6c7d" font-family="Montserrat Variable, sans-serif" font-size="8" font-weight="800"><text x="262" y="78">I</text><text x="296" y="78">II</text><text x="330" y="78">✿</text></g>
+  <!-- visor LCD -->
+  <rect x="372" y="62" width="132" height="56" rx="10" fill="#0d0610" stroke="#57545f" stroke-width="3" />
+  <text data-visor x="438" y="97" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-weight="700" font-size="17" fill="#c5d539" filter="url(#m-glow)">INSIRA</text>
+  <path d="M376 66l60 0-52 48h-8z" fill="#fff" opacity=".06" />
+  <!-- botões -->
+  {[392, 422, 452, 482].map((x) => (<g><circle cx={x} cy="142" r="10" fill="#8d8a99" /><circle cx={x} cy="141" r="8" fill="url(#m-inox)" /></g>))}
+  <!-- trava -->
+  <g data-trava>
+    <path data-trava-alca d="M356 138v-6a8 8 0 0 1 16 0v6" fill="none" stroke="#6d6977" stroke-width="3" stroke-linecap="round" />
+    <rect data-trava-corpo x="352" y="137" width="24" height="17" rx="4" fill="#6d6977" />
+  </g>
+  <!-- leitor de cartão/moedas da máquina -->
+  <rect x="520" y="60" width="52" height="96" rx="10" fill="#2a2730" stroke="#14121a" stroke-width="2" />
+  <rect x="532" y="74" width="28" height="5" rx="2.5" fill="#0d0c10" />
+  <g fill="none" stroke="#9e9bab" stroke-width="2" stroke-linecap="round"><path d="M542 98a8 8 0 0 1 0 14" /><path d="M547 94a14 14 0 0 1 0 22" /></g>
+  <circle data-led cx="546" cy="138" r="7" fill="#8a8494" />
+  <!-- placa e rodapé -->
+  <rect x="356" y="560" width="108" height="26" rx="13" fill="#532458" />
+  <text x="410" y="578" text-anchor="middle" font-family="Montserrat Variable, sans-serif" font-weight="900" font-size="13" fill="#c5d539" letter-spacing="1">LAVÔ</text>
+  <rect x="252" y="600" width="316" height="24" rx="10" fill="#c3c1cb" />
+  <rect x="252" y="600" width="316" height="6" rx="3" fill="#fff" opacity=".5" />
+  <rect x="258" y="290" width="18" height="44" rx="5" fill="url(#m-cromo)" />
+  <rect x="258" y="426" width="18" height="44" rx="5" fill="url(#m-cromo)" />
+
+  <!-- ===== Escotilha (parte fixa) ===== -->
+  <circle cx={CX} cy={CY} r="152" fill="#8d8a99" opacity=".35" />
+  <circle cx={CX} cy={CY} r="140" fill="url(#m-borracha)" />
+  <g clip-path="url(#m-clip-vidro)">
+    <circle cx={CX} cy={CY} r="118" fill="url(#m-tambor)" />
+    <g data-tambor>
+      <circle cx={CX} cy={CY} r="112" fill="url(#m-furos)" opacity=".85" />
+      {furos.map(([x, y]) => <circle cx={x} cy={y} r="1.6" fill="#1c1a21" opacity=".55" />)}
+      {[0, 120, 240].map((a) => (
+        <path d={`M${CX - 12} ${CY - 118}h24l-6 34h-12z`} fill="url(#m-pa)" stroke="#5e5b69" stroke-width="1.5" transform={`rotate(${a} ${CX} ${CY})`} />
+      ))}
+      <circle cx={CX} cy={CY} r="18" fill="#b9b7c3" stroke="#77748a" stroke-width="2" />
+    </g>
+    <circle cx={CX} cy={CY} r="117" fill="none" stroke="#1c1a21" stroke-width="10" opacity=".55" />
+    <g data-roupas-tambor opacity="0">
+      <path d="M340 436c-6-20 18-34 42-30s40 14 36 30-26 22-46 20-28-6-32-20z" fill="#b48ef3" />
+      <path d="M350 424c14 8 34 8 50 0" stroke="#7a4fc9" stroke-width="3" fill="none" opacity=".6" />
+      <path d="M404 452c-2-18 18-28 38-24s32 12 28 26-22 18-40 16-24-4-26-18z" fill="#cfdc4a" />
+      <path d="M412 444c10 6 26 6 40-2" stroke="#93a11a" stroke-width="3" fill="none" opacity=".6" />
+      <path d="M432 410c0-14 16-20 30-16s22 12 18 22-16 14-28 12-20-6-20-18z" fill="#f6f4fb" />
+      <path d="M362 398c2-12 18-18 32-14s22 10 18 20-18 12-30 10-22-4-20-16z" fill="#7778c0" />
+      <path d="M316 400c0-10 12-16 24-12s16 10 12 18-12 10-22 8-14-6-14-14z" fill="#f4a9c6" />
+    </g>
+    <g data-gotas opacity="0">
+      {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => <ellipse cx={378 + (i % 4) * 16} cy={250 + Math.floor(i / 4) * 22} rx="3.2" ry="5" fill={i % 2 ? "#ffffff" : "#c9a6ff"} />)}
+    </g>
+    <g data-agua transform="translate(0 520)">
+      <path data-onda d="M200 6q25-12 50 0t50 0t50 0t50 0t50 0t50 0t50 0t50 0t50 0t50 0v300H200z" fill="url(#m-agua)" />
+      <path data-onda2 d="M180 14q25-10 50 0t50 0t50 0t50 0t50 0t50 0t50 0t50 0t50 0t50 0v40H180z" fill="url(#m-agua2)" />
+      <g data-bolhas-agua>
+        {[[330,70,5],[372,110,4],[418,60,6],[452,96,4],[486,74,5],[356,150,3],[404,140,4],[440,170,3]].map(([x,y,r]) => <circle cx={x} cy={y} r={r} fill="url(#m-bolha-ar)" stroke="#fff" stroke-opacity=".6" />)}
+      </g>
+      <g data-espuma opacity="0">
+        {bolhasEspuma.map(([x, y, r]) => <circle cx={x} cy={y} r={r} fill="url(#m-bolha)" />)}
+        {bolhasEspuma.slice(0, 8).map(([x, y, r]) => <circle cx={x! - r! * 0.35} cy={y! - r! * 0.4} r={r! * 0.22} fill="#fff" />)}
+      </g>
+    </g>
+    <circle data-brilho cx={CX} cy={CY} r="118" fill="url(#m-quente)" opacity="0" />
+    <g data-vapor fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round" opacity="0" filter="url(#m-vapor)">
+      <path d="M370 440q-14-24 0-48t0-48" /><path d="M412 452q-14-24 0-48t0-48" /><path d="M454 440q-14-24 0-48t0-48" />
+    </g>
+  </g>
+
+  <!-- fluxos de sabão e amaciante -->
+  <path data-fluxo="0" d="M286 118C276 170 318 214 384 244" fill="none" stroke="url(#m-sabao)" stroke-width="9" stroke-linecap="round" opacity="0" />
+  <path data-fluxo="1" d="M312 118C308 166 344 206 404 240" fill="none" stroke="url(#m-amaciante)" stroke-width="7" stroke-linecap="round" opacity="0" />
+
+  <!-- ===== Porta (gira na dobradiça da esquerda) ===== -->
+  <g data-porta>
+    <circle cx={CX} cy={CY} r="138" fill="none" stroke="#5e5b69" stroke-width="4" opacity=".6" />
+    <circle cx={CX} cy={CY} r="128" fill="none" stroke="url(#m-cromo)" stroke-width="24" />
+    <path d={`M${CX - 110} ${CY - 62}a128 128 0 0 1 96-80`} fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".85" />
+    <path d={`M${CX + 118} ${CY + 30}a128 128 0 0 1-70 92`} fill="none" stroke="#4d4a56" stroke-width="5" stroke-linecap="round" opacity=".5" />
+    <circle cx={CX} cy={CY} r="116" fill="url(#m-vidro)" stroke="#ffffff" stroke-opacity=".55" stroke-width="2" />
+    <circle cx={CX} cy={CY} r="104" fill="none" stroke="#ffffff" stroke-opacity=".18" stroke-width="3" />
+    <path d={`M${CX - 78} ${CY - 50}a96 96 0 0 1 84-52`} fill="none" stroke="#ffffff" stroke-opacity=".6" stroke-width="10" stroke-linecap="round" />
+    <path d={`M${CX - 86} ${CY - 18}a96 96 0 0 1 10-22`} fill="none" stroke="#ffffff" stroke-opacity=".45" stroke-width="6" stroke-linecap="round" />
+    <path d={`M${CX + 40} ${CY + 82}a96 96 0 0 0 46-40`} fill="none" stroke="#ffffff" stroke-opacity=".25" stroke-width="5" stroke-linecap="round" />
+    <rect x={CX + 128} y={CY - 30} width="22" height="60" rx="10" fill="url(#m-cromo)" stroke="#6f6c7d" stroke-width="1.5" />
+  </g>
+
+  <!-- ===== Cesto medidor ===== -->
+  <g data-cesto>
+    <path d="M642 500h150l-18 136H660z" fill="url(#m-cesto)" stroke="#532458" stroke-width="3" stroke-linejoin="round" />
+    <path d="M648 508h138l-15 120H664z" fill="url(#m-furos-cesto)" />
+    <path d="M650 500l10 136h12l-8-136z" fill="#fff" opacity=".35" />
+    <g stroke="#532458" stroke-width="2.5" stroke-linecap="round"><path d="M782 524h-14" /><path d="M780 552h-10" /><path d="M778 580h-14" /><path d="M776 608h-10" /></g>
+    <text x="762" y="528" text-anchor="end" font-family="Montserrat Variable, sans-serif" font-size="11" font-weight="900" fill="#532458">MÁX</text>
+  </g>
+  {pecas.map((p, i) => (
+    <g data-peca={i} transform={`translate(${p.x} ${p.y})`}>
+      <defs><radialGradient id={`m-peca-${i}`} cx=".35" cy=".3" r=".8"><stop offset="0" stop-color={p.cor[0]} /><stop offset="1" stop-color={p.cor[1]} /></radialGradient></defs>
+      <path d={p.d} fill={`url(#m-peca-${i})`} stroke="#3d1745" stroke-opacity=".35" stroke-width="1.5" />
+      <path d={p.dobra} fill="none" stroke="#3d1745" stroke-opacity=".3" stroke-width="2" stroke-linecap="round" />
+    </g>
+  ))}
+  <rect x="634" y="490" width="166" height="18" rx="9" fill="#b48ef3" stroke="#532458" stroke-width="3" />
+  <rect x="640" y="492" width="154" height="5" rx="2.5" fill="#fff" opacity=".55" />
+</svg>

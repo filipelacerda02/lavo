@@ -157,10 +157,8 @@
 .tambor { transform-origin: center; transform-box: fill-box; }
 
 /* Transições entre páginas (View Transitions API) */
-::view-transition-old(root) { animation: 0.35s var(--ease-mola) both sai; }
-::view-transition-new(root) { animation: 0.5s var(--ease-mola) both entra; }
-@keyframes sai { to { opacity: 0; transform: translateY(-12px); } }
-@keyframes entra { from { opacity: 0; transform: translateY(16px); } }
+/* a troca de página é coberta pela transição de água/bolhas (src/scripts/transicao.ts) */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
@@ -233,89 +231,136 @@
   .texto-legal .aviso { @apply rounded-2xl border border-lima bg-lima/15 p-4 text-sm; }
 }
 
-/* ================= Como funciona: ciclo animado pela rolagem ================= */
+/* ================= Como funciona: duas metades guiadas pela rolagem (GSAP) ================= */
 @layer components {
   .ciclo { @apply py-20 sm:py-28; }
-  .ciclo-cabeca { @apply max-w-3xl; }
-  .ciclo-trilho { @apply mt-8; }
-  .ciclo-cards { @apply grid gap-3 sm:grid-cols-2 lg:grid-cols-5; }
-  .ciclo-card {
-    @apply relative flex flex-col rounded-3xl border-2 border-roxo/10 bg-white p-5 text-tinta;
-    transition: background-color .5s var(--ease-mola), border-color .5s, box-shadow .5s, transform .5s var(--ease-mola), color .5s, padding .5s var(--ease-mola), opacity .5s;
+  .ciclo-grade { @apply grid items-center gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14; }
+  .ciclo-h2 { @apply text-[clamp(1.9rem,3.6vw,3.1rem)] leading-[1.06] font-extrabold; }
+  .ciclo-trilha { @apply hidden; }
+  .ciclo-paineis { @apply mt-8 grid gap-4; }
+  .ciclo-painel { @apply rounded-3xl border border-roxo/10 bg-white p-6; }
+  .ciclo-painel-icone { @apply grid size-14 flex-none place-items-center rounded-full bg-roxo text-lima shadow-suave; }
+  .ciclo-painel-icone--play { @apply bg-lima text-roxo-noite; }
+  .ciclo-painel-icone--play button { @apply cursor-pointer transition-transform duration-300 hover:scale-110; }
+  .ciclo-painel-rotulo { @apply font-titulo text-xs font-black tracking-[0.14em] text-anil uppercase; }
+  .ciclo-painel-titulo { @apply mt-4 font-titulo text-2xl leading-tight font-extrabold text-roxo; }
+  .ciclo-painel-texto { @apply mt-2 text-[1.02rem] leading-relaxed text-tinta-suave; }
+  .ciclo-dica { @apply mt-3 font-titulo text-sm font-bold text-anil; }
+  .ciclo-pilulas { @apply mt-6 flex flex-wrap gap-2.5; }
+  .ciclo-pilula { @apply relative flex items-center gap-3 overflow-hidden rounded-full border border-roxo/15 bg-white px-4 py-2 font-titulo text-sm font-bold text-roxo; }
+  .ciclo-pilula-barra { @apply absolute inset-y-0 left-0 w-full origin-left bg-lima; transform: scaleX(var(--fill, 1)); }
+  .ciclo-cta { @apply mt-6; }
+  .ciclo-cena { @apply relative mx-auto w-full max-w-[720px]; }
+  .ciclo-cena-fundo { @apply absolute inset-[6%] -z-0 rounded-full bg-[radial-gradient(circle,rgb(190_148_255/0.45),rgb(190_148_255/0)_68%)]; }
+  .maquina { @apply relative block h-auto w-full; }
+
+  .ciclo:not(.animado) .ciclo-dica { @apply hidden; }
+  .ciclo:not(.animado) .ciclo-cena { @apply lg:sticky lg:top-28 lg:self-start; }
+
+  /* ---- modo animado: a seção fica presa enquanto a rolagem conduz a história ---- */
+  .ciclo.animado { @apply py-0; }
+  .ciclo.animado .ciclo-palco { @apply flex h-svh items-center overflow-hidden; }
+  .ciclo.animado .ciclo-grade { @apply h-full w-full py-6 lg:py-10; }
+  .ciclo.animado .ciclo-texto { @apply flex flex-col justify-center; }
+  .ciclo.animado .ciclo-trilha {
+    @apply mt-6 flex flex-wrap gap-1.5;
   }
-  .ciclo-num { @apply font-titulo text-xs font-black tracking-[0.12em] text-anil; }
-  .ciclo-check { @apply ml-auto grid size-6 scale-0 place-items-center rounded-full bg-lima text-roxo-noite transition-transform duration-500; }
-  .ciclo-detalhe { @apply grid grid-rows-[1fr] overflow-hidden transition-[grid-template-rows,opacity] duration-500; }
-  .ciclo-icone { @apply my-4 grid size-15 place-items-center rounded-full bg-lilas-claro text-roxo transition-colors duration-500; }
-  .ciclo-play { @apply cursor-pointer bg-lima text-roxo-noite shadow-[0_0_0_0_rgb(197_213_57/0.6)] hover:scale-105 focus-visible:outline-roxo; transition: transform .3s var(--ease-salto), box-shadow .3s; }
-  .ciclo-titulo { @apply mb-1 text-base leading-tight font-bold lg:text-[1.05rem]; }
-  .ciclo-card p { @apply text-tinta-suave; }
-
-  .ciclo-card[data-estado="ativo"] { @apply -translate-y-1.5 border-lilas shadow-suave; }
-  .ciclo-card[data-estado="ativo"] .ciclo-icone:not(.ciclo-play) { @apply bg-roxo text-lima; }
-  .ciclo-card[data-estado="feito"] .ciclo-check { @apply scale-100; }
-  .ciclo-card[data-card="4"][data-estado="ativo"], .ciclo-card[data-card="4"][data-estado="feito"] { @apply border-roxo bg-roxo text-white; }
-  .ciclo-card[data-card="4"][data-estado="ativo"] .ciclo-num, .ciclo-card[data-card="4"][data-estado="feito"] .ciclo-num { @apply text-lima; }
-  .ciclo-card[data-card="4"][data-estado="ativo"] p, .ciclo-card[data-card="4"][data-estado="feito"] p { @apply text-white/80; }
-  .ciclo-card[data-card="4"][data-estado="ativo"] .ciclo-play { animation: pulso-play 1.6s ease-out infinite; }
-  .ciclo-play[data-pressionado] { transform: scale(0.88); }
-
-  .ciclo-cena { @apply relative mx-auto mt-8 w-full max-w-3xl; }
-  .ciclo-svg { @apply mx-auto block h-auto max-h-[460px] w-full; }
-  .ciclo-legenda { @apply mt-2 text-center font-titulo text-sm font-bold text-roxo; }
-
-  .ciclo-base { @apply mt-6 flex flex-wrap items-center gap-3; }
-  .ciclo-pilula {
-    @apply relative flex items-center gap-3 overflow-hidden rounded-full border border-roxo/15 bg-white py-2 pr-4 pl-4 font-titulo text-sm font-bold text-roxo;
+  .ciclo.animado .ciclo-trilha li {
+    @apply relative overflow-hidden rounded-full border border-roxo/15 bg-white px-3 py-1 font-titulo text-[0.72rem] font-extrabold text-tinta-suave transition-colors duration-300;
   }
-  .ciclo-pilula-barra { @apply absolute inset-y-0 left-0 w-full bg-lima; transform-origin: 0 50%; transform: scaleX(var(--fill, 1)); }
-  .ciclo-frase { @apply font-titulo font-bold text-roxo transition-opacity duration-500; }
-  .ciclo-cta { @apply transition-[opacity,translate] duration-500; }
-
-  /* ---- modo animado (JS ativo e sem movimento reduzido) ---- */
-  .ciclo.animado { @apply py-0; height: 620vh; }
-  .ciclo.animado .ciclo-palco { @apply sticky top-0 h-svh overflow-hidden pt-6 pb-4 sm:pt-10 lg:pt-12; }
-  .ciclo.animado .ciclo-trilho { @apply mt-4 lg:mt-6; }
-  .ciclo.animado .ciclo-cena { @apply mt-2 flex min-h-0 flex-1 flex-col justify-center; }
-  .ciclo.animado .ciclo-svg { @apply max-h-full min-h-0 flex-1; }
-  .ciclo.animado .ciclo-base { @apply mt-2 justify-center; }
+  .ciclo.animado .ciclo-trilha li[data-estado="feito"] { @apply border-lima bg-lima text-roxo-noite; }
+  .ciclo.animado .ciclo-trilha li[data-estado="ativo"] { @apply border-roxo bg-roxo text-white; }
+  .ciclo.animado .ciclo-paineis { @apply relative mt-6 block min-h-[230px]; }
+  .ciclo.animado .ciclo-painel { @apply absolute inset-x-0 top-0 border-0 bg-transparent p-0; visibility: hidden; }
+  .ciclo.animado .ciclo-painel-titulo { @apply text-[clamp(1.8rem,3.4vw,2.9rem)]; }
+  .ciclo.animado .ciclo-painel-texto { @apply max-w-md text-[clamp(1rem,1.3vw,1.15rem)]; }
+  .ciclo.animado .ciclo-cta { @apply invisible self-start opacity-0; }
   .ciclo.animado .ciclo-pilula-barra { transform: scaleX(var(--fill, 0)); }
-  .ciclo.animado:not([data-fase="secagem"]):not([data-fase="fim"]) .ciclo-frase { @apply font-semibold text-tinta-suave; }
-  .ciclo.animado:not([data-fase="fim"]) .ciclo-cta { @apply pointer-events-none translate-y-3 opacity-0; }
-  .ciclo.animado .ciclo-card:not([data-estado]) { @apply opacity-70; }
-  .ciclo.animado .ciclo-cabeca h2 { @apply text-[clamp(1.6rem,2.8vw,2.5rem)]!; }
-  .ciclo.animado .ciclo-card { @apply p-4; }
-  .ciclo.animado .ciclo-icone { @apply my-2.5 size-12; }
-  .ciclo.animado .ciclo-card p { @apply text-[0.84rem]; }
+  .ciclo.animado .ciclo-cena { @apply flex h-full max-w-none items-center justify-center; }
+  .ciclo.animado .maquina { @apply max-h-full; }
 
-  /* cards recolhidos numa barra compacta depois do passo 5 */
-  .ciclo.compacto .ciclo-detalhe { @apply grid-rows-[0fr] opacity-0; }
-  .ciclo.compacto .ciclo-card { @apply translate-y-0 rounded-2xl px-4 py-2.5 shadow-none; }
-  .ciclo.compacto .ciclo-titulo { @apply mb-0 text-sm; }
-
-  /* celular: carrossel sincronizado com a rolagem */
   @media (max-width: 1023px) {
-    .ciclo.animado { height: 680vh; }
-    .ciclo.animado .ciclo-trilho { @apply -mx-4 overflow-hidden px-4 sm:-mx-6 sm:px-6; }
-    .ciclo.animado .ciclo-cards { @apply flex gap-3 transition-transform duration-500; transition-timing-function: var(--ease-mola); }
-    .ciclo.animado .ciclo-card { @apply w-[74%] flex-none sm:w-[46%]; }
-    .ciclo.animado .ciclo-icone { @apply my-2.5 size-12; }
-    .ciclo.animado .ciclo-base { @apply gap-2; }
-    .ciclo.animado .ciclo-pilula { @apply py-1.5 text-xs; }
-    .ciclo.animado .ciclo-frase { @apply w-full text-center text-xs; }
-    .ciclo.animado .ciclo-legenda { @apply text-xs; }
-    .ciclo.animado .ciclo-cta { @apply min-h-11 text-sm; }
+    .ciclo.animado .ciclo-grade { @apply grid-rows-[auto_minmax(0,1fr)] content-stretch gap-2 py-4; }
+    .ciclo.animado .ciclo-texto { @apply justify-start; }
+    .ciclo.animado .ciclo-h2 { @apply text-[1.35rem]; }
+    .ciclo.animado .eyebrow { @apply mb-1; }
+    .ciclo.animado .ciclo-trilha { @apply mt-3 flex-nowrap overflow-hidden; }
+    .ciclo.animado .ciclo-trilha li { @apply px-2 text-[0.62rem]; }
+    .ciclo.animado .ciclo-paineis { @apply mt-3 min-h-[148px]; }
+    .ciclo.animado .ciclo-painel-icone { @apply size-11; }
+    .ciclo.animado .ciclo-painel-titulo { @apply mt-2 text-[1.45rem]; }
+    .ciclo.animado .ciclo-painel-texto { @apply mt-1 text-[0.92rem] leading-snug; }
+    .ciclo.animado .ciclo-dica { @apply mt-1 text-xs; }
+    .ciclo.animado .ciclo-pilulas { @apply mt-2 gap-1.5; }
+    .ciclo.animado .ciclo-pilula { @apply px-3 py-1 text-[0.7rem]; }
+    .ciclo.animado .ciclo-cta { @apply mt-2.5 min-h-10 px-5 text-sm; }
+    .ciclo.animado .ciclo-cena { @apply min-h-0; }
   }
-  /* notebooks (telas baixas): só o card ativo mostra a descrição, para a máquina ganhar espaço */
-  @media (max-height: 860px) and (min-width: 1024px) {
-    .ciclo.animado .ciclo-cabeca .eyebrow { @apply mb-1; }
-    .ciclo.animado .ciclo-icone { @apply my-2 size-10; }
-    .ciclo.animado .ciclo-card:not([data-estado="ativo"]) .ciclo-detalhe:last-child { @apply grid-rows-[0fr] opacity-0; }
-    .ciclo.animado .ciclo-cards { @apply items-start; }
-    .ciclo.animado .ciclo-cabeca h2 { @apply text-[clamp(1.5rem,2.3vw,2.1rem)]!; }
-    .ciclo.animado .ciclo-palco { @apply pt-5!; }
-    .ciclo.animado .ciclo-legenda { @apply mt-0 text-xs; }
-    .ciclo.animado.compacto .ciclo-cabeca .eyebrow { @apply hidden; }
+  @media (max-height: 820px) and (min-width: 1024px) {
+    .ciclo.animado .ciclo-paineis { @apply min-h-[200px]; }
+    .ciclo.animado .ciclo-h2 { @apply text-[clamp(1.6rem,2.6vw,2.3rem)]; }
   }
 }
-@keyframes pulso-play { 0% { box-shadow: 0 0 0 0 rgb(197 213 57 / 0.7); } 100% { box-shadow: 0 0 0 18px rgb(197 213 57 / 0); } }
+
+/* ================= Transição entre páginas ================= */
+.transicao { position: fixed; inset: 0; z-index: 200; pointer-events: none; visibility: hidden; }
+.js .transicao.inicial { visibility: visible; animation: transicao-seguranca 0s 3s forwards; }
+@keyframes transicao-seguranca { to { visibility: hidden; } }
+.transicao-agua { position: absolute; inset: 0; background: radial-gradient(1200px 700px at 50% 40%, #6b2f72, #532458 55%, #2b0f30); }
+.transicao-onda { position: absolute; left: 0; width: 100%; height: 120px; fill: #532458; }
+.transicao-onda--topo { top: -118px; fill: #5c2862; }
+.transicao-onda--base { bottom: -118px; fill: #3a1640; }
+.transicao-bolha {
+  position: absolute; border-radius: 50%;
+  background: radial-gradient(circle at 32% 30%, rgb(255 255 255 / .95), rgb(255 255 255 / .18) 38%, rgb(190 148 255 / .18) 70%, rgb(255 255 255 / .55));
+  border: 1px solid rgb(255 255 255 / .45); box-shadow: inset -4px -6px 10px rgb(190 148 255 / .25);
+}
+.transicao-porta { position: absolute; left: 50%; top: 50%; width: 168px; height: 168px; margin: -84px 0 0 -84px; display: grid; place-items: center; }
+.transicao-anel { position: absolute; inset: 0; border-radius: 50%; border: 10px solid #c5d539; border-right-color: transparent; border-bottom-color: rgb(197 213 57 / .35); animation: giro .9s linear infinite; }
+.transicao-redemoinho { position: absolute; inset: 18px; border-radius: 50%; background: conic-gradient(from 0deg, #be94ff, #5e5fa0, #9fd0ff, #be94ff, #5e5fa0, #be94ff); box-shadow: inset 0 0 0 6px rgb(255 255 255 / .85), inset 0 10px 30px rgb(43 15 48 / .6); animation: giro 1.4s linear infinite reverse; }
+.transicao-logo { position: relative; width: 76px; height: 76px; border-radius: 18px; box-shadow: 0 10px 30px rgb(0 0 0 / .35); }
+@media (prefers-reduced-motion: reduce) { .transicao, .js .transicao.inicial { display: none; } }
+.tb-x3 { left: 3%; }
+.tb-x7 { left: 7%; }
+.tb-x11 { left: 11%; }
+.tb-x18 { left: 18%; }
+.tb-x22 { left: 22%; }
+.tb-x29 { left: 29%; }
+.tb-x33 { left: 33%; }
+.tb-x40 { left: 40%; }
+.tb-x44 { left: 44%; }
+.tb-x48 { left: 48%; }
+.tb-x55 { left: 55%; }
+.tb-x59 { left: 59%; }
+.tb-x66 { left: 66%; }
+.tb-x70 { left: 70%; }
+.tb-x81 { left: 81%; }
+.tb-x85 { left: 85%; }
+.tb-x92 { left: 92%; }
+.tb-x96 { left: 96%; }
+.tb-y18 { top: 18%; }
+.tb-y20 { top: 20%; }
+.tb-y22 { top: 22%; }
+.tb-y24 { top: 24%; }
+.tb-y26 { top: 26%; }
+.tb-y37 { top: 37%; }
+.tb-y39 { top: 39%; }
+.tb-y41 { top: 41%; }
+.tb-y43 { top: 43%; }
+.tb-y54 { top: 54%; }
+.tb-y56 { top: 56%; }
+.tb-y58 { top: 58%; }
+.tb-y60 { top: 60%; }
+.tb-y71 { top: 71%; }
+.tb-y73 { top: 73%; }
+.tb-y75 { top: 75%; }
+.tb-y77 { top: 77%; }
+.tb-y79 { top: 79%; }
+.tb-t34 { width: 34px; height: 34px; }
+.tb-t58 { width: 58px; height: 58px; }
+.tb-t40 { width: 40px; height: 40px; }
+.tb-t46 { width: 46px; height: 46px; }
+.tb-t18 { width: 18px; height: 18px; }
+.tb-t22 { width: 22px; height: 22px; }
+.tb-t26 { width: 26px; height: 26px; }
+.tb-t30 { width: 30px; height: 30px; }

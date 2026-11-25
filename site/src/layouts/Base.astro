@@ -4,6 +4,7 @@ import "@/styles/global.css";
 import Cabecalho from "@/components/Cabecalho.astro";
 import Rodape from "@/components/Rodape.astro";
 import Consentimento from "@/components/Consentimento.astro";
+import Transicao from "@/components/Transicao.astro";
 import Icone from "@/components/Icone.astro";
 import { site, linkWhats } from "@/config/site";
 import imagemPadrao from "@/assets/img/loja-interior.webp";
@@ -77,8 +78,11 @@ const jsonLd = {
     </aside>
 
     <Consentimento />
+    <Transicao />
 
     <script>
+      import "@/scripts/transicao";
+      import "@/scripts/suave";
       import "@/scripts/animacoes";
       import "@/scripts/observabilidade";
     </script>

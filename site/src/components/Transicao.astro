@@ -1,0 +1,26 @@
+---
+/**
+ * Transição entre páginas: a água sobe cobrindo a tela (com bolhas), a "porta da máquina"
+ * com água girando aparece no centro e, na página nova, a água sobe e sai pelo topo
+ * enquanto as bolhas estouram. Controlada por src/scripts/transicao.ts (GSAP).
+ */
+const bolhas = Array.from({ length: 18 }, (_, i) => ({
+  x: (i * 37 + 11) % 100,
+  y: 18 + ((i * 53) % 70),
+  t: [18, 26, 34, 46, 58, 22, 30, 40][i % 8],
+}));
+---
+<div class="transicao inicial" data-transicao aria-hidden="true" transition:persist>
+  <div class="transicao-agua" data-agua-transicao>
+    <svg class="transicao-onda transicao-onda--topo" viewBox="0 0 1440 120" preserveAspectRatio="none"><path d="M0 120V60c120-40 240-40 360 0s240 40 360 0 240-40 360 0 240 40 360 0v60z" /></svg>
+    <svg class="transicao-onda transicao-onda--base" viewBox="0 0 1440 120" preserveAspectRatio="none"><path d="M0 0v60c120 40 240 40 360 0s240-40 360 0 240 40 360 0 240-40 360 0V0z" /></svg>
+    {bolhas.map((b) => (
+      <span class={`transicao-bolha tb-x${b.x} tb-y${b.y} tb-t${b.t}`} data-bolha-transicao></span>
+    ))}
+    <div class="transicao-porta" data-porta-transicao>
+      <span class="transicao-anel"></span>
+      <span class="transicao-redemoinho"></span>
+      <img src="/logo.png" alt="" width="76" height="76" class="transicao-logo" />
+    </div>
+  </div>
+</div>
