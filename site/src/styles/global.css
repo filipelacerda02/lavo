@@ -41,6 +41,9 @@
 @layer base {
   html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
   body { @apply bg-white font-texto text-tinta antialiased; overflow-x: clip; }
+  /* No celular, overflow no <body> não impede o "layout viewport" de alargar: o corte precisa
+     estar em elementos internos (clip não cria contexto de rolagem, então sticky/pin continuam funcionando). */
+  main, footer, header, aside { overflow-x: clip; }
   h1, h2, h3, h4 { @apply font-titulo tracking-tight text-balance; }
   ::selection { background: var(--color-lima); color: var(--color-roxo-noite); }
   :focus-visible { outline: 3px solid var(--color-lima); outline-offset: 3px; border-radius: 6px; }
@@ -303,7 +306,7 @@
 }
 
 /* ================= Transição entre páginas ================= */
-.transicao { position: fixed; inset: 0; z-index: 200; pointer-events: none; visibility: hidden; }
+.transicao { position: fixed; inset: 0; z-index: 200; pointer-events: none; visibility: hidden; overflow: hidden; }
 .js .transicao.inicial { visibility: visible; animation: transicao-seguranca 0s 3s forwards; }
 @keyframes transicao-seguranca { to { visibility: hidden; } }
 .transicao-agua { position: absolute; inset: 0; background: radial-gradient(1200px 700px at 50% 40%, #6b2f72, #532458 55%, #2b0f30); }
