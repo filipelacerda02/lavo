@@ -1,0 +1,12 @@
+---
+/**
+ * Cata-vento do logo da VRX redesenhado em SVG: seis pás triangulares, a primeira em laranja.
+ * Usado como decoração, no "eyebrow", na transição entre páginas e no favicon.
+ */
+import { PA, ANGULOS } from "@/config/catavento";
+interface Props { class?: string; laranja?: string; cor?: string }
+const { class: classe = "size-10", laranja = "#ec6608", cor = "currentColor" } = Astro.props;
+---
+<svg class={classe} viewBox="-240 -240 480 480" aria-hidden="true" focusable="false">
+  {ANGULOS.map((a, i) => <path d={PA} transform={`rotate(${a})`} fill={i === 0 ? laranja : cor} />)}
+</svg>

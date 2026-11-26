@@ -1,0 +1,104 @@
+---
+import Icone from "./Icone.astro";
+const categorias = [
+  { id: "essenciais", nome: "Essenciais", desc: "Necessários para o site funcionar, para guardar a sua escolha de privacidade e a sua lista de orçamento. Não podem ser desligados.", fixo: true },
+  { id: "funcionais", nome: "Funcionais", desc: "Conteúdo de terceiros incorporado, como o mapa do Google. O Google pode coletar dados de navegação ao exibir o mapa.", fixo: false },
+  { id: "analiticos", nome: "Analíticos", desc: "Estatísticas de visitas para melhorar o site (Google Analytics), com IP anonimizado.", fixo: false },
+  { id: "marketing", nome: "Marketing", desc: "Medição de campanhas e anúncios (Meta Pixel).", fixo: false },
+];
+---
+<div id="consentimento" transition:persist data-consentimento>
+  <section role="region" aria-label="Aviso de privacidade" hidden data-banner
+    class="fixed inset-x-3 bottom-3 z-[70] mx-auto max-w-3xl rounded-3xl border border-carvao/10 bg-white p-4 shadow-forte sm:inset-x-6 sm:bottom-6 sm:p-6">
+    <div class="flex items-start gap-4">
+      <span class="hidden size-12 flex-none place-items-center rounded-2xl bg-laranja-claro text-laranja-escuro sm:grid"><Icone nome="cookie" class="size-6" /></span>
+      <div class="min-w-0">
+        <h2 class="mb-1 text-lg font-bold text-grafite-noite">Sua privacidade importa</h2>
+        <p class="text-[0.88rem] leading-relaxed text-tinta-suave sm:text-[0.92rem]">
+          Usamos o essencial para o site funcionar. Com a sua permissão, também usamos ferramentas de terceiros para mapa, estatísticas e marketing. Nada disso é carregado sem o seu aceite.{" "}<a class="font-semibold text-laranja-escuro underline" href="/cookies">Saiba mais</a>
+        </p>
+        <div class="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-2.5">
+          <button type="button" class="btn btn-grafite min-h-11 px-3 text-sm sm:px-5" data-acao="todos">Aceitar todos</button>
+          <button type="button" class="btn btn-grafite min-h-11 px-3 text-sm sm:px-5" data-acao="essenciais">Só essenciais</button>
+          <button type="button" class="btn btn-contorno col-span-2 min-h-11 px-5 text-sm" data-acao="personalizar">Personalizar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <dialog data-painel aria-labelledby="titulo-preferencias"
+    class="m-auto w-[min(640px,calc(100%-24px))] rounded-3xl p-0 shadow-forte backdrop:bg-carvao/60 backdrop:backdrop-blur-sm">
+    <form method="dialog" class="p-6 sm:p-8" data-form-preferencias>
+      <div class="mb-5 flex items-start justify-between gap-4">
+        <div>
+          <h2 id="titulo-preferencias" class="text-2xl font-bold text-grafite-noite">Preferências de privacidade</h2>
+          <p class="mt-1 text-sm text-tinta-suave">Escolha o que podemos usar. Você pode mudar quando quiser pelo link no rodapé.</p>
+        </div>
+        <button type="button" class="grid size-10 flex-none place-items-center rounded-full bg-nevoa text-grafite-noite" aria-label="Fechar" data-acao="fechar"><Icone nome="fechar" class="size-5" /></button>
+      </div>
+      <ul class="divide-y divide-carvao/10">
+        {categorias.map((c) => (
+          <li class="flex items-start justify-between gap-5 py-4">
+            <div>
+              <label for={`cat-${c.id}`} class="font-titulo font-semibold text-tinta">{c.nome}</label>
+              <p id={`desc-${c.id}`} class="mt-0.5 text-sm text-tinta-suave">{c.desc}</p>
+            </div>
+            <input id={`cat-${c.id}`} name={c.id} type="checkbox" role="switch" aria-describedby={`desc-${c.id}`}
+              checked={c.fixo} disabled={c.fixo}
+              class="peer relative mt-1 h-7 w-12 flex-none cursor-pointer appearance-none rounded-full bg-carvao/25 transition-colors before:absolute before:top-1 before:left-1 before:size-5 before:rounded-full before:bg-white before:shadow before:transition-transform checked:bg-laranja-escuro checked:before:translate-x-5 disabled:cursor-not-allowed disabled:opacity-60" />
+          </li>
+        ))}
+      </ul>
+      <div class="mt-6 flex flex-wrap gap-2.5">
+        <button type="button" class="btn btn-laranja min-h-11 px-5 text-sm" data-acao="salvar">Salvar escolhas</button>
+        <button type="button" class="btn btn-grafite min-h-11 px-5 text-sm" data-acao="todos">Aceitar todos</button>
+        <button type="button" class="btn btn-grafite min-h-11 px-5 text-sm" data-acao="essenciais">Somente essenciais</button>
+      </div>
+    </form>
+  </dialog>
+</div>
+
+<script>
+  import { obterConsentimento, salvarConsentimento, type Categoria } from "@/scripts/consentimento";
+
+  const raiz = document.querySelector<HTMLElement>("[data-consentimento]")!;
+  const banner = raiz.querySelector<HTMLElement>("[data-banner]")!;
+  const painel = raiz.querySelector<HTMLDialogElement>("[data-painel]")!;
+  const form = raiz.querySelector<HTMLFormElement>("[data-form-preferencias]")!;
+  const cats: Categoria[] = ["funcionais", "analiticos", "marketing"];
+
+  function decidir(valores: Record<Categoria, boolean>, origem: string) {
+    salvarConsentimento(valores, origem);
+    banner.hidden = true;
+    if (painel.open) painel.close();
+  }
+  const todos = (v: boolean) => Object.fromEntries(cats.map((c) => [c, v])) as Record<Categoria, boolean>;
+
+  function abrirPainel() {
+    const atual = obterConsentimento();
+    for (const c of cats) {
+      const el = form.elements.namedItem(c) as HTMLInputElement | null;
+      if (el) el.checked = atual?.categorias[c] ?? false;
+    }
+    painel.showModal();
+  }
+
+  raiz.addEventListener("click", (e) => {
+    const acao = (e.target as Element).closest<HTMLElement>("[data-acao]")?.dataset["acao"];
+    if (acao === "todos") decidir(todos(true), "aceitar_todos");
+    else if (acao === "essenciais") decidir(todos(false), "somente_essenciais");
+    else if (acao === "personalizar") abrirPainel();
+    else if (acao === "fechar") painel.close();
+    else if (acao === "salvar") {
+      const v = Object.fromEntries(cats.map((c) => [c, (form.elements.namedItem(c) as HTMLInputElement).checked])) as Record<Categoria, boolean>;
+      decidir(v, "personalizado");
+    }
+  });
+
+  // Links "Preferências de cookies" em qualquer página
+  document.addEventListener("click", (e) => {
+    if ((e.target as Element).closest("[data-abrir-consentimento]")) { e.preventDefault(); abrirPainel(); }
+  });
+
+  if (!obterConsentimento()) banner.hidden = false;
+</script>

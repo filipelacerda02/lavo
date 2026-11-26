@@ -1,0 +1,187 @@
+---
+import { Image } from "astro:assets";
+import Base from "@/layouts/Base.astro";
+import Icone from "@/components/Icone.astro";
+import Catavento from "@/components/Catavento.astro";
+import TituloAnimado from "@/components/TituloAnimado.astro";
+import ProdutoCard from "@/components/ProdutoCard.astro";
+import Jornada from "@/components/Jornada.astro";
+import Faq from "@/components/Faq.astro";
+import Logo from "@/components/Logo.astro";
+import { site, linkWhats } from "@/config/site";
+import { produtos } from "@/data/produtos";
+import { faqJsonLd } from "@/data/faq";
+import linha from "@/assets/img/linha-speed-queen.png";
+import allianceSq from "@/assets/img/alliance-speed-queen.png";
+
+const faixa = [...produtos.map((p) => `${p.modelo} · ${p.descricao}`), "Speed Queen", "Alliance Laundry Systems"];
+const motivos = [
+  { icone: "fabrica", titulo: "Equipamentos de nível industrial", texto: "Nossas máquinas são projetadas para uso intenso e contínuo. Elas garantem maior durabilidade e menos paradas para manutenção, o que significa mais lucro para o seu negócio." },
+  { icone: "grafico", titulo: "Eficiência que gera lucro", texto: "Oferecemos modelos com tecnologia de ponta que otimizam o consumo de água, energia e insumos. Menos custos operacionais para você, mais competitividade no mercado." },
+] as const;
+const listaProdutos = {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  name: "Equipamentos Speed Queen distribuídos pela VRX",
+  itemListElement: produtos.map((p, i) => ({
+    "@type": "ListItem",
+    position: i + 1,
+    item: { "@type": "Product", name: `Speed Queen ${p.modelo}`, description: p.descricao, brand: { "@type": "Brand", name: "Speed Queen" }, url: `${site.url}/produtos#${p.id}` },
+  })),
+};
+---
+<Base titulo="VRX Laundry Supply | Seja dono da sua lavanderia sem complicação" descricao="Distribuidor homologado Alliance Laundry Systems: lavadoras e secadoras Speed Queen de nível industrial. Peça seu orçamento pelo WhatsApp ou pelo site." dadosEstruturados={[listaProdutos, faqJsonLd]}>
+
+  <!-- HERO -->
+  <section class="relative overflow-hidden bg-white pt-10 pb-20 sm:pt-16 sm:pb-28" data-hero>
+    <div class="pas-fundo top-[-6%] right-[-22%] size-[640px] sm:right-[-12%] lg:size-[860px]" aria-hidden="true" data-paralaxe="0.12">
+      <Catavento class="size-full animate-giro-lento" laranja="#f9e0cd" />
+    </div>
+    <div class="container-vrx relative grid items-center gap-12 lg:grid-cols-[1.02fr_0.98fr]">
+      <div>
+        <div data-anim="sobe">
+          <Image src={allianceSq} alt="Distribuidor homologado Alliance Laundry Systems e Speed Queen" width={200} densities={[1, 2]} loading="eager" class="mb-7 h-auto w-[200px]" />
+        </div>
+        <TituloAnimado texto="Seja dono da sua *lavanderia* sem complicação" class="text-[clamp(2.5rem,6vw,4.9rem)] leading-[1.02] font-bold text-grafite-noite" />
+        <p class="mt-6 max-w-[34em] text-[clamp(1.05rem,1.5vw,1.25rem)] text-tinta-suave" data-anim="sobe" data-atraso="500">
+          Um modelo de negócio simples, prático e lucrativo para você começar a empreender com <strong class="font-semibold text-grafite-noite">segurança e apoio total.</strong>
+        </p>
+        <div class="mt-9 flex flex-wrap gap-3" data-anim="sobe" data-atraso="650">
+          <a class="btn btn-laranja" href={linkWhats("Olá! Quero falar sobre equipamentos para lavanderia.")} target="_blank" rel="noopener" data-ima><Icone nome="whats" class="size-5" />Fale conosco<span class="sr-only"> pelo WhatsApp (abre em nova aba)</span></a>
+          <a class="btn btn-contorno" href="/produtos">Ver produtos <Icone nome="seta" /></a>
+        </div>
+      </div>
+
+      <div class="relative mx-auto w-full max-w-[560px]" data-anim="zoom" data-atraso="250">
+        <div class="absolute inset-[8%] rounded-full bg-[radial-gradient(circle,#f4f4f4_0%,#ececeb_55%,rgb(236_236_235/0)_72%)]" aria-hidden="true"></div>
+        <div class="relative transition-transform duration-700 ease-out" data-flutua-cursor>
+          <Image src={linha} alt="Linha de lavadoras e secadoras Speed Queen brancas: lavadora frontal, secadora frontal e conjunto empilhado" widths={[400, 560, 800, 1080]} sizes="(min-width: 1024px) 560px, 92vw" loading="eager" fetchpriority="high" class="relative h-auto w-full" />
+        </div>
+        <div class="absolute bottom-[10%] -left-[2%] flex animate-flutua items-center gap-3 rounded-[22px] bg-white px-4 py-3 shadow-suave sm:-left-[6%]">
+          <span class="icone-redondo size-11"><Icone nome="escudo" class="size-5.5" /></span>
+          <span class="font-titulo leading-tight"><strong class="block text-lg font-bold text-grafite-noite">3 anos</strong><span class="text-xs font-medium text-tinta-suave">de garantia para peças</span></span>
+        </div>
+        <div class="absolute top-[6%] -right-[1%] flex animate-flutua items-center gap-3 rounded-[22px] bg-grafite-noite px-4 py-3 text-white shadow-suave [animation-delay:-4s]">
+          <Icone nome="tecnico" class="size-6 text-[#ffb27a]" />
+          <span class="font-titulo text-xs leading-tight font-medium">Técnicos autorizados<br /><strong class="text-sm font-bold">em todo o país</strong></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAIXA COM OS MODELOS -->
+  <div class="overflow-hidden border-y border-carvao/10 bg-grafite-noite py-4 text-white" aria-label="Modelos disponíveis">
+    <div class="flex w-max animate-rolar hover:[animation-play-state:paused]">
+      {[0, 1].map((k) => (
+        <ul class="flex" aria-hidden={k === 1 ? "true" : undefined}>
+          {faixa.map((m) => (
+            <li class="flex items-center gap-6 pr-6 font-titulo text-[clamp(1rem,1.8vw,1.25rem)] font-semibold whitespace-nowrap">
+              {m}<Catavento class="size-5 text-white/50" />
+            </li>
+          ))}
+        </ul>
+      ))}
+    </div>
+  </div>
+
+  <!-- PRODUTOS -->
+  <section class="relative overflow-hidden bg-nevoa py-20 sm:py-28" aria-labelledby="titulo-produtos">
+    <div class="container-vrx">
+      <div class="mb-12 flex flex-wrap items-end justify-between gap-6">
+        <div>
+          <span class="eyebrow" data-anim="sobe"><Catavento class="size-5" />Linha Speed Queen</span>
+          <TituloAnimado tag="h2" id="titulo-produtos" texto="Conheça alguns de *nossos produtos*" class="text-[clamp(2rem,4.2vw,3.4rem)] leading-[1.06] font-bold text-grafite-noite" />
+        </div>
+        <a class="link-seta" href="/produtos" data-anim="sobe">Ver o catálogo completo <Icone nome="seta" /></a>
+      </div>
+      <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" data-cascata="80">
+        {produtos.map((p) => <div data-anim="sobe"><ProdutoCard produto={p} botao={false} /></div>)}
+      </div>
+      <div class="mt-12 text-center" data-anim="sobe">
+        <a class="btn btn-laranja" href={linkWhats("Olá! Quero saber mais sobre os equipamentos Speed Queen.")} target="_blank" rel="noopener" data-ima>Entre agora em contato<span class="sr-only"> pelo WhatsApp (abre em nova aba)</span> <Icone nome="seta" /></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- POR QUE COMPRAR DE NÓS -->
+  <section class="on-dark relative overflow-hidden bg-grafite-escuro py-20 text-white sm:py-28" aria-labelledby="titulo-porque">
+    <div class="pointer-events-none absolute -top-32 -left-40 size-[620px] text-white/[0.07]" aria-hidden="true" data-paralaxe="0.1">
+      <Catavento class="size-full animate-giro-lento" laranja="rgb(236 102 8 / 0.25)" />
+    </div>
+    <div class="container-vrx relative grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]">
+      <div class="gira-hover" data-anim="esquerda">
+        <Logo variante="branco" largura={420} class="mx-auto h-auto w-full max-w-[420px]" alt="VRX Laundry Supply" />
+      </div>
+      <div>
+        <span class="eyebrow" data-anim="sobe"><Catavento class="size-5" />Porque comprar de nós</span>
+        <TituloAnimado tag="h2" id="titulo-porque" texto="O investimento *inteligente* para a sua operação." class="text-[clamp(2rem,4vw,3.2rem)] leading-[1.06] font-bold" />
+        <div class="mt-10 grid gap-5 sm:grid-cols-2" data-cascata="120">
+          {motivos.map((m) => (
+            <article class="rounded-3xl border border-white/15 bg-white/[0.07] p-7 backdrop-blur-sm transition-colors duration-500 hover:bg-white/[0.12]" data-anim="sobe">
+              <span class="icone-redondo mb-5"><Icone nome={m.icone} class="size-7" /></span>
+              <h3 class="text-xl font-semibold">{m.titulo}</h3>
+              <p class="mt-2 leading-relaxed text-white/85">{m.texto}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- JORNADA (storytelling guiado pela rolagem) -->
+  <Jornada />
+
+  <!-- GARANTIA EM NÚMEROS -->
+  <section class="bg-white py-20 sm:py-28" aria-labelledby="titulo-garantia">
+    <div class="container-vrx grid items-center gap-12 lg:grid-cols-2">
+      <div>
+        <span class="eyebrow" data-anim="sobe"><Catavento class="size-5" />Suporte e garantia</span>
+        <TituloAnimado tag="h2" id="titulo-garantia" texto="Apoio do pedido *ao pós-venda.*" class="text-[clamp(2rem,4vw,3.2rem)] leading-[1.06] font-bold text-grafite-noite" />
+        <p class="mt-5 max-w-xl text-lg text-tinta-suave" data-anim="sobe">A VRX, em conjunto com a Alliance do Brasil, possui uma relação de técnicos autorizados em todas as regiões do país. E os equipamentos saem de fábrica com garantia.</p>
+        <a class="link-seta mt-8" href="/suporte-e-garantia" data-anim="sobe">Como funciona a garantia <Icone nome="seta" /></a>
+      </div>
+      <div class="grid gap-5 sm:grid-cols-2" data-cascata="120">
+        <div class="card-vrx" data-anim="sobe">
+          <span class="icone-redondo mb-6"><Icone nome="tecnico" class="size-7" /></span>
+          <p class="font-titulo text-6xl leading-none font-bold text-grafite-noite"><span data-contar="1">1</span> <span class="text-3xl">ano</span></p>
+          <p class="mt-3 text-tinta-suave">de garantia de fábrica para <strong class="text-tinta">mão de obra</strong></p>
+        </div>
+        <div class="card-vrx" data-anim="sobe">
+          <span class="icone-redondo mb-6"><Icone nome="chave" class="size-7" /></span>
+          <p class="font-titulo text-6xl leading-none font-bold text-grafite-noite"><span data-contar="3">3</span> <span class="text-3xl">anos</span></p>
+          <p class="mt-3 text-tinta-suave">de garantia de fábrica para <strong class="text-tinta">peças</strong></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="relative overflow-hidden bg-nevoa py-20 sm:py-28" aria-labelledby="titulo-faq">
+    <div class="container-vrx max-w-4xl">
+      <div class="mb-10 text-center">
+        <span class="eyebrow" data-anim="sobe"><Catavento class="size-5" />FAQ</span>
+        <TituloAnimado tag="h2" id="titulo-faq" texto="Principais *dúvidas*" class="text-[clamp(2rem,4vw,3.2rem)] leading-[1.06] font-bold text-grafite-noite" />
+      </div>
+      <Faq />
+    </div>
+  </section>
+
+  <!-- CONTATO -->
+  <section class="bg-white py-20 sm:py-24" aria-labelledby="titulo-contato">
+    <div class="container-vrx">
+      <div class="relative overflow-hidden rounded-[36px] bg-laranja-escuro px-6 py-14 text-white sm:px-14 on-dark" data-anim="zoom">
+        <div class="pointer-events-none absolute -right-24 -bottom-32 size-[420px] text-white/[0.12]" aria-hidden="true"><Catavento class="size-full animate-giro" laranja="rgb(255 255 255 / 0.3)" /></div>
+        <div class="relative grid items-center gap-8 lg:grid-cols-[1.2fr_0.8fr]">
+          <div>
+            <h2 id="titulo-contato" class="text-[clamp(1.9rem,3.6vw,3rem)] leading-[1.08] font-bold">Pronto para montar a sua lavanderia?</h2>
+            <p class="mt-3 max-w-xl text-lg text-white/90">Monte a sua lista de equipamentos e peça o orçamento, ou fale direto com a VRX pelo WhatsApp.</p>
+          </div>
+          <div class="flex flex-wrap gap-3 lg:justify-end">
+            <a class="btn btn-branco" href="/orcamento" data-ima>Pedir orçamento <Icone nome="seta" /></a>
+            <a class="btn btn-contorno" href={linkWhats()} target="_blank" rel="noopener"><Icone nome="whats" class="size-5" />WhatsApp<span class="sr-only"> (abre em nova aba)</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>

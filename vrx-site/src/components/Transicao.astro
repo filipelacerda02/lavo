@@ -1,0 +1,28 @@
+---
+/**
+ * Transição entre páginas com a marca da VRX: as seis pás do cata-vento giram e se fecham como um
+ * diafragma, cobrindo a tela; o logo aparece no centro. Na página nova, o cata-vento gira e se abre,
+ * revelando o conteúdo. Controlada por src/scripts/transicao.ts (GSAP).
+ * Trava de segurança: sem JavaScript a cobertura nem aparece; se o JS falhar, some sozinha em 3 s (CSS).
+ */
+import logoBranco from "@/assets/img/logo-vrx-branco.png";
+import { getImage } from "astro:assets";
+const logo = await getImage({ src: logoBranco, width: 440, format: "webp" });
+// seis setores de 60° (cobrem o plano inteiro) com as cores do cata-vento; o primeiro é laranja
+const R = 2400;
+const setores = Array.from({ length: 6 }, (_, i) => {
+  const a1 = ((i * 60 - 90) * Math.PI) / 180;
+  const a2 = (((i + 1) * 60 - 90 + 0.6) * Math.PI) / 180;
+  const p = (a: number) => `${(Math.cos(a) * R).toFixed(1)} ${(Math.sin(a) * R).toFixed(1)}`;
+  return { d: `M0 0 L${p(a1)} L${p(a2)} Z`, cor: ["#ec6608", "#62635f", "#797a76", "#575854", "#6b6c68", "#4c4d4a"][i]! };
+});
+---
+<div class="transicao inicial" data-transicao aria-hidden="true" transition:persist>
+  <svg class="transicao-pas" viewBox="-500 -500 1000 1000" preserveAspectRatio="xMidYMid slice">
+    {setores.map((s) => <path class="transicao-pa" d={s.d} fill={s.cor} data-pa-transicao />)}
+  </svg>
+  <div class="transicao-centro" data-centro-transicao>
+    <img src={logo.src} alt="" width="220" height="100" class="transicao-logo" />
+    <span class="transicao-barra"></span>
+  </div>
+</div>

@@ -1,0 +1,138 @@
+---
+import Base from "@/layouts/Base.astro";
+import PaginaHero from "@/components/PaginaHero.astro";
+import Icone from "@/components/Icone.astro";
+import { site } from "@/config/site";
+const tipos = [
+  ["confirmacao_acesso", "Confirmar se vocês têm dados meus e acessá-los"],
+  ["correcao", "Corrigir dados incompletos ou errados"],
+  ["eliminacao", "Excluir meus dados"],
+  ["portabilidade", "Receber meus dados (portabilidade)"],
+  ["revogacao", "Revogar um consentimento"],
+  ["oposicao", "Me opor a um tratamento"],
+  ["informacao", "Saber com quem meus dados foram compartilhados"],
+] as const;
+const chaveTurnstile = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
+---
+<Base titulo="Seus direitos (LGPD) | VRX Laundry Supply" descricao="Exerça os seus direitos de titular de dados pessoais: acesso, correção, exclusão, portabilidade e revogação de consentimento.">
+  <PaginaHero eyebrow="LGPD" titulo="Seus dados, *suas regras*" texto="Use este formulário para exercer os seus direitos previstos no art. 18 da LGPD. Pedimos só o necessário para identificar e responder o seu pedido." />
+
+  <section class="bg-white py-16 sm:py-24">
+    <div class="container-vrx grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+      <form id="form-titular" class="rounded-[32px] border border-carvao/10 bg-white p-6 shadow-suave sm:p-10" novalidate data-anim="esquerda" data-turnstile={chaveTurnstile}>
+        <h2 class="mb-6 text-2xl font-bold text-grafite-noite">Faça o seu pedido</h2>
+        <div class="grid gap-5">
+          <div>
+            <label for="nome" class="rotulo">Nome completo <span aria-hidden="true">*</span></label>
+            <input id="nome" name="nome" required maxlength="120" autocomplete="name" class="campo" aria-describedby="erro-nome" />
+            <p id="erro-nome" class="erro-campo" aria-live="polite"></p>
+          </div>
+          <div>
+            <label for="email" class="rotulo">E-mail para resposta <span aria-hidden="true">*</span></label>
+            <input id="email" name="email" type="email" required maxlength="160" autocomplete="email" class="campo" aria-describedby="erro-email" />
+            <p id="erro-email" class="erro-campo" aria-live="polite"></p>
+          </div>
+          <div>
+            <label for="tipo" class="rotulo">O que você quer fazer? <span aria-hidden="true">*</span></label>
+            <select id="tipo" name="tipo" required class="campo" aria-describedby="erro-tipo">
+              <option value="">Selecione</option>
+              {tipos.map(([v, t]) => <option value={v}>{t}</option>)}
+            </select>
+            <p id="erro-tipo" class="erro-campo" aria-live="polite"></p>
+          </div>
+          <div>
+            <label for="mensagem" class="rotulo">Detalhes (opcional)</label>
+            <textarea id="mensagem" name="mensagem" maxlength="1000" rows="4" class="campo" aria-describedby="dica-mensagem"></textarea>
+            <p id="dica-mensagem" class="mt-1 text-sm text-tinta-suave">Não envie documentos ou dados sensíveis aqui. Se precisarmos confirmar a sua identidade, pediremos por e-mail.</p>
+          </div>
+          <div id="turnstile-titular"></div>
+          <button type="submit" class="btn btn-laranja justify-self-start" data-ima>Enviar pedido <Icone nome="seta" /></button>
+          <div id="resultado" tabindex="-1" role="status" aria-live="polite" class="rounded-2xl p-4 font-semibold empty:hidden"></div>
+        </div>
+      </form>
+
+      <aside class="space-y-5" data-anim="direita" aria-label="Informações sobre o pedido">
+        <div class="card-vrx">
+          <span class="icone-redondo mb-4"><Icone nome="cadeado" class="size-6" /></span>
+          <h2 class="mb-2 text-lg font-semibold">Como tratamos o seu pedido</h2>
+          <ul class="list-disc space-y-1.5 pl-5 text-[0.95rem] text-tinta-suave">
+            <li>O pedido é guardado com criptografia AES-256 e só o encarregado tem acesso.</li>
+            <li>Você recebe um número de protocolo na hora.</li>
+            <li>Respondemos em até 15 dias pelo e-mail informado.</li>
+            <li>Usamos esses dados só para atender o pedido.</li>
+          </ul>
+        </div>
+        <div class="card-vrx">
+          <span class="icone-redondo mb-4 bg-grafite-noite shadow-none"><Icone nome="mentor" class="size-6" /></span>
+          <h2 class="mb-2 text-lg font-semibold">Encarregado de dados (DPO)</h2>
+          <p class="text-[0.95rem] text-tinta-suave">{site.encarregado.nome}<br />{site.encarregado.email}</p>
+        </div>
+        <div class="card-vrx">
+          <span class="icone-redondo mb-4 bg-laranja-claro text-laranja-escuro shadow-none"><Icone nome="cookie" class="size-6" /></span>
+          <h2 class="mb-2 text-lg font-semibold">Só quer mudar os cookies?</h2>
+          <p class="mb-3 text-[0.95rem] text-tinta-suave">Você pode revogar ou alterar o consentimento agora mesmo, sem formulário.</p>
+          <button type="button" class="btn btn-contorno min-h-11 px-5 text-sm" data-abrir-consentimento>Preferências de cookies</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+</Base>
+
+<script>
+  import { montarTurnstile } from "@/scripts/turnstile";
+
+  function iniciar() {
+    const form = document.getElementById("form-titular") as HTMLFormElement | null;
+    if (!form) return;
+    const resultado = document.getElementById("resultado")!;
+    const botao = form.querySelector<HTMLButtonElement>("button[type=submit]")!;
+    const desafio = montarTurnstile("#turnstile-titular", form.dataset["turnstile"]);
+    const estilo = (classes: string[]) => (resultado.className = ["rounded-2xl p-4 font-semibold empty:hidden", ...classes].join(" "));
+
+    const erro = (campo: string, msg: string) => {
+      const el = document.getElementById(`erro-${campo}`);
+      const input = form.elements.namedItem(campo) as HTMLInputElement | null;
+      if (el) el.textContent = msg;
+      input?.setAttribute("aria-invalid", msg ? "true" : "false");
+      return !msg;
+    };
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      resultado.textContent = "";
+      const dados = Object.fromEntries(new FormData(form)) as Record<string, string>;
+      const ok = [
+        erro("nome", (dados["nome"] ?? "").trim().length < 3 ? "Informe o seu nome completo." : ""),
+        erro("email", /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((dados["email"] ?? "").trim()) ? "" : "Informe um e-mail válido."),
+        erro("tipo", dados["tipo"] ? "" : "Escolha o tipo de pedido."),
+      ].every(Boolean);
+      if (!ok) return (form.querySelector('[aria-invalid="true"]') as HTMLElement | null)?.focus();
+      if (desafio.ativo && !desafio.token()) {
+        resultado.textContent = "Confirme a verificação de segurança acima.";
+        estilo(["bg-laranja-claro", "text-laranja-noite"]);
+        return;
+      }
+      botao.disabled = true;
+      try {
+        const r = await fetch("/api/titular", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ nome: dados["nome"], email: dados["email"], tipo: dados["tipo"], mensagem: dados["mensagem"] ?? "", turnstile: desafio.token() }),
+        });
+        const j = (await r.json().catch(() => ({}))) as { protocolo?: string; erro?: string };
+        if (!r.ok || !j.protocolo) throw new Error(j.erro || "Não foi possível enviar agora. Tente novamente em alguns minutos.");
+        form.reset();
+        resultado.textContent = `Pedido recebido. Seu protocolo é ${j.protocolo}. Guarde este número: responderemos em até 15 dias no e-mail informado.`;
+        estilo(["bg-[#e5f6ec]", "text-[#0d5a2f]"]);
+        resultado.focus();
+      } catch (err) {
+        resultado.textContent = (err as Error).message;
+        estilo(["bg-red-50", "text-red-800"]);
+      } finally {
+        botao.disabled = false;
+        desafio.reiniciar();
+      }
+    });
+  }
+  document.addEventListener("astro:page-load", iniciar);
+</script>

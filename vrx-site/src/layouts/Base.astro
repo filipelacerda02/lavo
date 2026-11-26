@@ -1,0 +1,101 @@
+---
+import { ClientRouter } from "astro:transitions";
+import "@/styles/global.css";
+import Cabecalho from "@/components/Cabecalho.astro";
+import Rodape from "@/components/Rodape.astro";
+import Consentimento from "@/components/Consentimento.astro";
+import Transicao from "@/components/Transicao.astro";
+import Icone from "@/components/Icone.astro";
+import { site, linkWhats } from "@/config/site";
+import imagemPadrao from "@/assets/img/og-vrx.jpg";
+import { getImage } from "astro:assets";
+
+interface Props {
+  titulo: string;
+  descricao: string;
+  imagem?: ImageMetadata;
+  semIndice?: boolean;
+  /** JSON-LD adicional da página (ex.: lista de produtos, FAQ) */
+  dadosEstruturados?: Record<string, unknown>[];
+}
+const { titulo, descricao, imagem = imagemPadrao, semIndice = false, dadosEstruturados = [] } = Astro.props;
+const canonica = new URL(Astro.url.pathname, Astro.site ?? site.url).href;
+const og = await getImage({ src: imagem, width: 1200, format: "jpeg" });
+const ogUrl = new URL(og.src, Astro.site ?? site.url).href;
+
+// Só publica no JSON-LD dados que existem de verdade (nada de "PREENCHER")
+const real = (v: string) => (v.startsWith("PREENCHER") ? undefined : v);
+const organizacao = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "@id": `${site.url}/#organizacao`,
+  name: site.nome,
+  alternateName: "VRX Equipamentos",
+  legalName: real(site.razaoSocial),
+  taxID: real(site.cnpj),
+  url: site.url,
+  logo: new URL("/logo.png", site.url).href,
+  email: site.email,
+  sameAs: [site.instagram],
+  description: site.descricao,
+  contactPoint: [{ "@type": "ContactPoint", contactType: "sales", telephone: `+${site.whatsapp}`, email: site.email, availableLanguage: "Portuguese", areaServed: "BR" }],
+};
+const jsonLd = [organizacao, ...dadosEstruturados];
+---
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{titulo}</title>
+    <meta name="description" content={descricao} />
+    <link rel="canonical" href={canonica} />
+    {semIndice && <meta name="robots" content="noindex" />}
+    <meta name="theme-color" content="#ffffff" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:site_name" content={site.nome} />
+    <meta property="og:title" content={titulo} />
+    <meta property="og:description" content={descricao} />
+    <meta property="og:url" content={canonica} />
+    <meta property="og:image" content={ogUrl} />
+    <meta property="og:image:alt" content="Lavadoras e secadoras Speed Queen distribuídas pela VRX" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/logo.png" type="image/png" sizes="512x512" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <script is:inline src="/js/flag.js"></script>
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd.length === 1 ? jsonLd[0] : jsonLd)} />
+    <ClientRouter fallback="swap" />
+  </head>
+  <body class="flex min-h-dvh flex-col">
+    <a href="#conteudo" class="sr-only z-[100] rounded-lg bg-laranja-escuro px-4 py-2 font-semibold text-white focus:not-sr-only focus:fixed focus:top-2 focus:left-2">Ir para o conteúdo</a>
+    <div class="progresso-leitura fixed inset-x-0 top-0 z-[60] h-1 bg-laranja" aria-hidden="true" transition:persist></div>
+
+    <Cabecalho />
+
+    <main id="conteudo" class="flex-1" tabindex="-1">
+      <slot />
+    </main>
+
+    <Rodape />
+
+    <aside aria-label="Contato rápido" transition:persist>
+      <a href={linkWhats()} target="_blank" rel="noopener" aria-label="Fale com a VRX pelo WhatsApp (abre em nova aba)" data-ima
+        class="fixed right-5 bottom-5 z-40 grid size-15 place-items-center rounded-full bg-[#128c4b] text-white shadow-[0_12px_30px_-6px_rgb(18_140_75/0.6)] transition-transform duration-300 hover:scale-110">
+        <Icone nome="whats" class="size-8" />
+      </a>
+    </aside>
+
+    <Consentimento />
+    <Transicao />
+
+    <script>
+      import "@/scripts/transicao";
+      import "@/scripts/suave";
+      import "@/scripts/animacoes";
+      import "@/scripts/observabilidade";
+    </script>
+  </body>
+</html>

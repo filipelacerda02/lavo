@@ -1,0 +1,9 @@
+---
+import { Image } from "astro:assets";
+import grafite from "@/assets/img/logo-vrx-grafite.png";
+import branco from "@/assets/img/logo-vrx-branco.png";
+interface Props { variante?: "grafite" | "branco"; class?: string; largura?: number; alt?: string; eager?: boolean }
+const { variante = "grafite", class: classe = "", largura = 150, alt = "VRX Laundry Supply", eager = false } = Astro.props;
+const src = variante === "branco" ? branco : grafite;
+---
+<Image src={src} alt={alt} width={largura} densities={[1, 2]} loading={eager ? "eager" : "lazy"} class={classe} />

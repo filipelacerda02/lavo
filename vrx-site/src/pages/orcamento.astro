@@ -1,0 +1,109 @@
+---
+import { Image } from "astro:assets";
+import Base from "@/layouts/Base.astro";
+import PaginaHero from "@/components/PaginaHero.astro";
+import Icone from "@/components/Icone.astro";
+import MapaConsentido from "@/components/MapaConsentido.astro";
+import { site, linkWhats } from "@/config/site";
+import { produtos } from "@/data/produtos";
+
+const UFS = ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
+const temEndereco = !site.endereco.startsWith("PREENCHER");
+const chaveTurnstile = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "";
+---
+<Base titulo="Pedir orçamento | VRX Laundry Supply" descricao="Peça o orçamento de lavadoras e secadoras Speed Queen para a sua lavanderia. Escolha os equipamentos e receba o contato da VRX.">
+  <PaginaHero eyebrow="Orçamento" titulo="Monte a sua lista e *peça o orçamento*" texto="Escolha os equipamentos, deixe um contato e a VRX retorna com a proposta. Se preferir, envie a mesma lista pelo WhatsApp." />
+
+  <section class="bg-white py-14 sm:py-20">
+    <div class="container-vrx grid gap-10 lg:grid-cols-[1.15fr_0.85fr]">
+      <form id="form-orcamento" class="rounded-[32px] border border-carvao/10 bg-white p-6 shadow-suave sm:p-10" novalidate data-anim="esquerda" data-turnstile={chaveTurnstile}>
+        <h2 class="mb-1 text-2xl font-bold text-grafite-noite">Seus dados para contato</h2>
+        <p class="mb-7 text-sm text-tinta-suave">Campos com <span aria-hidden="true">*</span><span class="sr-only">asterisco</span> são obrigatórios. Pedimos só o necessário para responder o seu pedido.</p>
+
+        <fieldset class="mb-8">
+          <legend class="rotulo mb-3 text-base">Equipamentos de interesse</legend>
+          <div class="grid gap-2.5 sm:grid-cols-2">
+            {produtos.map((p) => (
+              <label class="group flex cursor-pointer items-center gap-3 rounded-2xl border-2 border-carvao/10 bg-nevoa p-2.5 pr-4 transition-colors has-[:checked]:border-laranja-escuro has-[:checked]:bg-laranja-claro/60">
+                <input type="checkbox" name="produtos" value={p.id} class="size-5 flex-none accent-[#b84a06]" data-produto-opcao />
+                <Image src={p.imagem} alt="" width={56} densities={[1, 2]} class="h-auto w-14 flex-none rounded-xl" />
+                <span class="min-w-0 leading-tight"><strong class="block font-titulo font-semibold text-grafite-noite">{p.modelo}</strong><span class="text-sm text-tinta-suave">{p.descricao}</span></span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <div class="grid gap-5 sm:grid-cols-2">
+          <div class="sm:col-span-2">
+            <label for="nome" class="rotulo">Nome <span aria-hidden="true">*</span></label>
+            <input id="nome" name="nome" required maxlength="120" autocomplete="name" class="campo" aria-describedby="erro-nome" />
+            <p id="erro-nome" class="erro-campo" aria-live="polite"></p>
+          </div>
+          <div>
+            <label for="telefone" class="rotulo">WhatsApp ou telefone <span aria-hidden="true">*</span></label>
+            <input id="telefone" name="telefone" type="tel" required maxlength="20" autocomplete="tel" inputmode="tel" placeholder="(00) 00000-0000" class="campo" aria-describedby="erro-telefone" />
+            <p id="erro-telefone" class="erro-campo" aria-live="polite"></p>
+          </div>
+          <div>
+            <label for="email" class="rotulo">E-mail (opcional)</label>
+            <input id="email" name="email" type="email" maxlength="160" autocomplete="email" class="campo" aria-describedby="erro-email" />
+            <p id="erro-email" class="erro-campo" aria-live="polite"></p>
+          </div>
+          <div>
+            <label for="cidade" class="rotulo">Cidade da lavanderia (opcional)</label>
+            <input id="cidade" name="cidade" maxlength="80" autocomplete="address-level2" class="campo" />
+          </div>
+          <div>
+            <label for="uf" class="rotulo">Estado (opcional)</label>
+            <select id="uf" name="uf" class="campo" autocomplete="address-level1">
+              <option value="">Selecione</option>
+              {UFS.map((u) => <option value={u}>{u}</option>)}
+            </select>
+          </div>
+          <div class="sm:col-span-2">
+            <label for="mensagem" class="rotulo">Conte um pouco do seu projeto (opcional)</label>
+            <textarea id="mensagem" name="mensagem" maxlength="1000" rows="4" class="campo" aria-describedby="dica-mensagem"></textarea>
+            <p id="dica-mensagem" class="mt-1 text-sm text-tinta-suave">Por exemplo: se a loja é nova ou já existe e quantas máquinas você imagina. Não envie documentos nem dados sensíveis.</p>
+          </div>
+        </div>
+
+        <div id="turnstile-orcamento" class="mt-6"></div>
+        <p class="mt-6 text-sm text-tinta-suave">Ao enviar, você concorda que a VRX use estes dados só para responder o seu orçamento, como explica a <a class="font-semibold text-laranja-escuro underline" href="/privacidade">Política de privacidade</a>.</p>
+        <div class="mt-6 flex flex-wrap items-center gap-3">
+          <button type="submit" class="btn btn-laranja" data-ima>Enviar pedido de orçamento <Icone nome="seta" /></button>
+          <a class="btn btn-whats" href={linkWhats("Olá! Quero um orçamento.")} target="_blank" rel="noopener" data-whats-orcamento><Icone nome="whats" class="size-5" />Enviar pelo WhatsApp<span class="sr-only"> (abre em nova aba)</span></a>
+        </div>
+        <div id="resultado-orcamento" tabindex="-1" role="status" aria-live="polite" class="mt-6 rounded-2xl p-4 font-semibold empty:hidden"></div>
+      </form>
+
+      <aside class="space-y-5" data-anim="direita" aria-label="Outras formas de contato">
+        <div class="card-vrx">
+          <span class="icone-redondo mb-5 bg-[#128c4b] shadow-none"><Icone nome="whats" class="size-7" /></span>
+          <h2 class="mb-1 text-lg font-semibold">WhatsApp</h2>
+          <p class="mb-4 text-tinta-suave">Fale direto com o comercial da VRX.</p>
+          <a class="link-seta" href={linkWhats()} target="_blank" rel="noopener">{site.whatsappExibicao}<span class="sr-only"> (abre em nova aba)</span> <Icone nome="seta" /></a>
+        </div>
+        <div class="card-vrx">
+          <span class="icone-redondo mb-5"><Icone nome="email" class="size-7" /></span>
+          <h2 class="mb-1 text-lg font-semibold">E-mail</h2>
+          <p class="mb-4 text-tinta-suave">Para propostas e informações comerciais.</p>
+          <a class="link-seta break-all" href={`mailto:${site.email}`}>{site.email}</a>
+        </div>
+        <div class="card-vrx">
+          <span class="icone-redondo mb-5 bg-grafite-noite shadow-none"><Icone nome="instagram" class="size-7" /></span>
+          <h2 class="mb-1 text-lg font-semibold">Instagram</h2>
+          <p class="mb-4 text-tinta-suave">Acompanhe as novidades da VRX.</p>
+          <a class="link-seta" href={site.instagram} target="_blank" rel="noopener">@vrxequipamentos<span class="sr-only"> (abre em nova aba)</span> <Icone nome="seta" /></a>
+        </div>
+        {temEndereco && <MapaConsentido endereco={site.endereco} />}
+        <div class="rounded-3xl bg-nevoa p-6 text-sm text-tinta-suave">
+          <p class="flex items-start gap-3"><Icone nome="cadeado" class="mt-0.5 size-5 flex-none text-laranja-escuro" />O pedido é enviado por conexão segura, guardado com criptografia e usado só para responder você.</p>
+        </div>
+      </aside>
+    </div>
+  </section>
+</Base>
+
+<script>
+  import "@/scripts/orcamento";
+</script>

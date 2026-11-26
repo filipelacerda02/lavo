@@ -1,0 +1,17 @@
+---
+import TituloAnimado from "./TituloAnimado.astro";
+import Catavento from "./Catavento.astro";
+interface Props { eyebrow: string; titulo: string; texto: string }
+const { eyebrow, titulo, texto } = Astro.props;
+---
+<section class="relative overflow-hidden border-b border-carvao/8 bg-nevoa pt-14 pb-20 sm:pt-20 sm:pb-24">
+  <div class="pas-fundo -top-24 -right-28 size-[520px] sm:size-[640px]" aria-hidden="true" data-paralaxe="0.1">
+    <Catavento class="size-full animate-giro-lento" laranja="#f6d3ba" />
+  </div>
+  <div class="container-vrx relative">
+    <span class="eyebrow" data-anim="sobe"><Catavento class="size-5" />{eyebrow}</span>
+    <TituloAnimado texto={titulo} class="max-w-4xl text-[clamp(2.3rem,5.2vw,4.2rem)] leading-[1.06] font-bold text-grafite-noite" />
+    <p class="mt-6 max-w-2xl text-[clamp(1.05rem,1.4vw,1.2rem)] text-tinta-suave" data-anim="sobe" data-atraso="350">{texto}</p>
+    <slot />
+  </div>
+</section>

@@ -1,0 +1,17 @@
+---
+/** Título cujas palavras entram uma a uma. Use *asteriscos* para destacar trechos. */
+interface Props { texto: string; tag?: "h1" | "h2"; class?: string; destaque?: string; id?: string }
+const { texto, tag: Tag = "h1", class: classe = "", destaque = "destaque", id } = Astro.props;
+let i = 0;
+const partes = texto.split(/(\*[^*]+\*)/).filter(Boolean).map((p) => {
+  const marcado = p.startsWith("*");
+  return { marcado, palavras: p.replace(/\*/g, "").split(/\s+/).filter(Boolean).map((w) => ({ w, i: i++ })) };
+});
+---
+<Tag id={id} class:list={["titulo-animado", classe]} aria-label={texto.replace(/\*/g, "")}>
+  {partes.map((parte) => (
+    <span class={parte.marcado ? destaque : undefined} aria-hidden="true">
+      {parte.palavras.map(({ w, i }) => (<><span class="palavra"><span class={`pal-${Math.min(i, 19)}`}>{w}</span></span>{" "}</>))}
+    </span>
+  ))}
+</Tag>

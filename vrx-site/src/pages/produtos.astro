@@ -1,0 +1,62 @@
+---
+import Base from "@/layouts/Base.astro";
+import PaginaHero from "@/components/PaginaHero.astro";
+import ProdutoCard from "@/components/ProdutoCard.astro";
+import Icone from "@/components/Icone.astro";
+import { site, linkWhats } from "@/config/site";
+import { produtos, grupos } from "@/data/produtos";
+
+const lista = {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  name: "Catálogo VRX: lavadoras e secadoras Speed Queen",
+  itemListElement: produtos.map((p, i) => ({
+    "@type": "ListItem",
+    position: i + 1,
+    item: { "@type": "Product", name: `Speed Queen ${p.modelo}`, description: p.descricao, brand: { "@type": "Brand", name: "Speed Queen" }, url: `${site.url}/produtos#${p.id}` },
+  })),
+};
+---
+<Base titulo="Produtos Speed Queen | VRX Laundry Supply" descricao="Lavadoras e secadoras Speed Queen de nível industrial: SFNN, SWNN, SDEN e SDGN, SSEN, SSG030 e STEWX. Monte a sua lista e peça o orçamento." dadosEstruturados={[lista]}>
+  <PaginaHero eyebrow="Catálogo" titulo="Equipamentos *Speed Queen* para a sua lavanderia" texto="Lavadoras e secadoras de nível industrial, projetadas para uso intenso e contínuo. Filtre por tipo, adicione à sua lista e peça o orçamento de uma vez." />
+
+  <section class="bg-white py-14 sm:py-20" aria-labelledby="titulo-catalogo">
+    <div class="container-vrx">
+      <h2 id="titulo-catalogo" class="sr-only">Catálogo de equipamentos</h2>
+      <div class="so-js mb-8 flex-wrap items-center justify-between gap-4" data-anim="sobe">
+        <div class="flex flex-wrap gap-2" role="group" aria-label="Filtrar por tipo">
+          {grupos.map((g, i) => <button type="button" class="filtro" aria-pressed={i === 0 ? "true" : "false"} data-filtro={g.id}>{g.rotulo}</button>)}
+        </div>
+        <p class="font-titulo text-sm font-medium text-tinta-suave" aria-live="polite" data-contagem>{produtos.length} equipamentos</p>
+      </div>
+
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" data-cascata="80" data-catalogo>
+        {produtos.map((p, i) => <div id={p.id} class="scroll-mt-28" data-anim="sobe" data-item={p.grupo}><ProdutoCard produto={p} titulo="h3" carregar={i < 3 ? "eager" : "lazy"} /></div>)}
+      </div>
+
+      <p class="mt-10 max-w-3xl text-sm text-tinta-suave">As imagens são ilustrativas. Especificações, versões e condições comerciais de cada modelo são informadas no orçamento.</p>
+    </div>
+  </section>
+
+  <!-- barra da lista de orçamento (aparece quando há itens) -->
+  <div class="pointer-events-none fixed inset-x-3 bottom-24 z-40 flex justify-center sm:bottom-6" data-barra-lista hidden>
+    <div class="pointer-events-auto flex max-w-xl flex-1 flex-wrap items-center justify-between gap-3 rounded-full bg-grafite-noite py-2 pr-2 pl-5 text-white shadow-forte">
+      <p class="flex items-center gap-2 font-titulo text-sm font-medium" aria-live="polite"><Icone nome="lista" class="size-5 text-[#ffb27a]" /><span data-total-lista>0 itens</span> na sua lista</p>
+      <a class="btn btn-laranja min-h-11 px-5 text-sm" href="/orcamento">Pedir orçamento <Icone nome="seta" /></a>
+    </div>
+  </div>
+
+  <section class="bg-nevoa py-16 sm:py-20" aria-labelledby="titulo-duvida">
+    <div class="container-vrx flex flex-wrap items-center justify-between gap-6">
+      <div>
+        <h2 id="titulo-duvida" class="text-[clamp(1.6rem,3vw,2.4rem)] font-bold text-grafite-noite">Não sabe qual escolher?</h2>
+        <p class="mt-2 text-lg text-tinta-suave">Conte como será a sua operação e a VRX ajuda a montar o conjunto ideal.</p>
+      </div>
+      <a class="btn btn-whats" href={linkWhats("Olá! Quero ajuda para escolher os equipamentos da minha lavanderia.")} target="_blank" rel="noopener" data-ima><Icone nome="whats" class="size-5" />Falar no WhatsApp<span class="sr-only"> (abre em nova aba)</span></a>
+    </div>
+  </section>
+</Base>
+
+<script>
+  import "@/scripts/catalogo";
+</script>

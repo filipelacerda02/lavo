@@ -1,0 +1,77 @@
+---
+import Icone from "./Icone.astro";
+import Logo from "./Logo.astro";
+import { navegacao } from "@/config/site";
+const atual = Astro.url.pathname.replace(/\.html$/, "").replace(/\/$/, "") || "/";
+const itens = navegacao.filter((n) => n.href !== "/orcamento");
+---
+<header id="cabecalho" class="sticky top-0 z-50 border-b border-transparent bg-white/95 backdrop-blur-xl transition-[transform,box-shadow,border-color] duration-500" data-cabecalho>
+  <div class="container-vrx flex h-20 items-center justify-between gap-6">
+    <a href="/" class="gira-hover flex flex-none items-center no-underline" aria-label="VRX Laundry Supply, página inicial">
+      <Logo largura={132} alt="" eager class="h-auto w-[132px] transition-transform duration-500 hover:scale-[1.03]" />
+    </a>
+
+    <nav id="menu" aria-label="Principal"
+      class="invisible fixed inset-x-0 top-20 flex -translate-y-3 flex-col gap-1 border-b border-carvao/10 bg-white p-4 opacity-0 shadow-suave transition-all duration-300 lg:visible lg:static lg:flex-row lg:items-center lg:translate-y-0 lg:border-0 lg:bg-transparent lg:p-0 lg:opacity-100 lg:shadow-none data-[aberto]:visible data-[aberto]:translate-y-0 data-[aberto]:opacity-100">
+      {itens.map((item) => (
+        <a href={item.href} aria-current={atual === item.href ? "page" : undefined}
+          class="relative rounded-full px-4 py-3 font-titulo text-[1.05rem] font-medium text-tinta no-underline transition-colors hover:bg-nevoa hover:text-laranja-escuro lg:py-2.5 lg:text-[0.95rem] aria-[current=page]:bg-laranja-claro aria-[current=page]:text-laranja-noite">
+          {item.rotulo}
+        </a>
+      ))}
+      <a class="btn btn-laranja mt-2 lg:hidden" href="/orcamento" aria-current={atual === "/orcamento" ? "page" : undefined}>Pedir orçamento</a>
+    </nav>
+
+    <div class="flex items-center gap-2.5">
+      <a class="btn btn-laranja hidden min-h-11 px-6 text-[0.9rem] lg:inline-flex" href="/orcamento" data-ima aria-current={atual === "/orcamento" ? "page" : undefined}>Orçamento <Icone nome="seta" /></a>
+      <button type="button" class="grid size-11.5 place-items-center rounded-full bg-nevoa text-grafite-noite lg:hidden" aria-controls="menu" aria-expanded="false" aria-label="Abrir menu" data-botao-menu>
+        <Icone nome="menu" class="size-5.5" />
+      </button>
+    </div>
+  </div>
+</header>
+
+<script>
+  function iniciarCabecalho() {
+    const cab = document.querySelector<HTMLElement>("[data-cabecalho]");
+    const botao = document.querySelector<HTMLButtonElement>("[data-botao-menu]");
+    const menu = document.getElementById("menu");
+    if (!cab || !botao || !menu) return;
+    // remove os ouvintes globais ao trocar de página (navegação com View Transitions)
+    const ctl = new AbortController();
+    const { signal } = ctl;
+    document.addEventListener("astro:before-swap", () => ctl.abort(), { once: true });
+
+    const fechar = () => {
+      delete menu.dataset["aberto"];
+      botao.setAttribute("aria-expanded", "false");
+      botao.setAttribute("aria-label", "Abrir menu");
+    };
+    botao.addEventListener("click", () => {
+      const abrir = !("aberto" in menu.dataset);
+      if (abrir) menu.dataset["aberto"] = "";
+      else delete menu.dataset["aberto"];
+      botao.setAttribute("aria-expanded", String(abrir));
+      botao.setAttribute("aria-label", abrir ? "Fechar menu" : "Abrir menu");
+      if (abrir) menu.querySelector("a")?.focus();
+    });
+    menu.addEventListener("click", (e) => { if ((e.target as Element).closest("a")) fechar(); });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && "aberto" in menu.dataset) { fechar(); botao.focus(); }
+    }, { signal });
+
+    // Some ao rolar para baixo, volta ao rolar para cima
+    let ultimo = window.scrollY;
+    const aoRolar = () => {
+      const y = window.scrollY;
+      cab.classList.toggle("shadow-suave", y > 8);
+      cab.classList.toggle("border-carvao/10", y > 8);
+      const esconder = y > 420 && y > ultimo && !("aberto" in menu.dataset) && !cab.contains(document.activeElement);
+      cab.classList.toggle("-translate-y-full", esconder);
+      ultimo = y;
+    };
+    window.addEventListener("scroll", aoRolar, { passive: true, signal });
+    aoRolar();
+  }
+  document.addEventListener("astro:page-load", iniciarCabecalho);
+</script>

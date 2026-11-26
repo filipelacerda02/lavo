@@ -1,0 +1,15 @@
+---
+import Base from "./Base.astro";
+import PaginaHero from "@/components/PaginaHero.astro";
+interface Props { titulo: string; descricao: string; eyebrow: string; tituloHero: string; resumo: string; atualizado?: string }
+const { titulo, descricao, eyebrow, tituloHero, resumo, atualizado } = Astro.props;
+---
+<Base titulo={titulo} descricao={descricao}>
+  <PaginaHero eyebrow={eyebrow} titulo={tituloHero} texto={resumo} />
+  <section class="py-16 sm:py-24">
+    <div class="container-vrx">
+      {atualizado && <p class="mb-8 font-titulo text-sm font-semibold text-laranja-escuro" data-anim="sobe">Última atualização: {atualizado}</p>}
+      <article class="texto-legal" data-anim="sobe"><slot /></article>
+    </div>
+  </section>
+</Base>

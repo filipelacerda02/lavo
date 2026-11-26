@@ -1,0 +1,34 @@
+---
+interface Props { nome: keyof typeof caminhos; class?: string; titulo?: string }
+const caminhos = {
+  seta: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+  fechar: '<path d="M6 6l12 12M18 6L6 18"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  mais: '<path d="M12 5v14M5 12h14"/>',
+  lavadora: '<rect x="4" y="2.5" width="16" height="19" rx="2.5"/><path d="M7.5 6h.01M10.5 6h6"/><g class="catavento-giro"><circle cx="12" cy="13.5" r="4.5"/><path d="M9 14.5c1.5 1 4.5 1 6-.5"/></g>',
+  secadora: '<rect x="4" y="2.5" width="16" height="19" rx="2.5"/><path d="M7.5 6h.01M10.5 6h6"/><circle cx="12" cy="13.5" r="4.5"/><path d="M10.5 11.5c-.8 1 .8 2-.1 3M13.5 11.5c-.8 1 .8 2-.1 3"/>',
+  conjunto: '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M5 12h14"/><circle cx="12" cy="7" r="2.6"/><circle cx="12" cy="17" r="2.6"/>',
+  lista: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>',
+  documento: '<path d="M14 2.5H6.5A2 2 0 0 0 4.5 4.5v15a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V8z"/><path d="M14 2.5V8h5.5M8 13h8M8 17h5"/>',
+  planta: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h7v12M10 14h11M15 3v6h6"/>',
+  chave: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.2L3.5 17.3a1.8 1.8 0 0 0 2.6 2.6l5.8-5.8a4 4 0 0 0 5.2-5.4l-2.6 2.6-2.4-.4-.4-2.4z"/>',
+  escudo: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
+  gota: '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/><path d="M9.5 14.5a2.5 2.5 0 0 0 2.5 2.5"/>',
+  raio: '<path d="M13 2.5L4.5 13.5H12l-1 8 8.5-11H12z"/>',
+  frasco: '<path d="M9 2.5h6M10 2.5v4L6 10v9.5A2 2 0 0 0 8 21.5h8a2 2 0 0 0 2-2V10l-4-3.5v-4"/><path d="M6 14h12"/>',
+  fabrica: '<path d="M3 21V10l5 3V10l5 3V10l5 3V4h3v17z"/><path d="M7 17h2M12 17h2M17 17h2"/>',
+  grafico: '<path d="M3 20h18"/><path d="M6 16v-4M11 16V8M16 16v-6M20 5l-5 4-4-2-5 4"/>',
+  mentor: '<circle cx="12" cy="7" r="3.5"/><path d="M5 21v-1.5A5.5 5.5 0 0 1 10.5 14h3a5.5 5.5 0 0 1 5.5 5.5V21"/>',
+  tecnico: '<circle cx="12" cy="7.5" r="3.5"/><path d="M8.5 6h7M5 21v-1.5A5.5 5.5 0 0 1 10.5 14h3a5.5 5.5 0 0 1 5.5 5.5V21"/><path d="M12 14v3"/>',
+  pin: '<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+  relogio: '<circle cx="12" cy="12" r="9.5"/><path d="M12 7v5l3 2"/>',
+  cadeado: '<rect x="4.5" y="10.5" width="15" height="10.5" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/>',
+  cookie: '<path d="M20.5 12.5A8.5 8.5 0 1 1 11.5 3.5a3 3 0 0 0 4 3.5 3 3 0 0 0 5 5.5z"/><circle cx="8.5" cy="10" r=".8" fill="currentColor"/><circle cx="12.5" cy="15.5" r=".8" fill="currentColor"/><circle cx="8" cy="15" r=".8" fill="currentColor"/>',
+  email: '<rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/>',
+  instagram: '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".6" fill="currentColor"/>',
+  whats: '<path fill="currentColor" stroke="none" d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91A9.86 9.86 0 0 0 12.04 2zm5.8 14.03c-.25.69-1.44 1.32-2 1.36-.51.05-1 .24-3.36-.7-2.84-1.12-4.63-4.03-4.77-4.22-.14-.19-1.14-1.52-1.14-2.9 0-1.38.72-2.06.98-2.34.25-.28.55-.35.74-.35l.53.01c.17.01.4-.06.62.48.25.6.84 2.06.92 2.21.07.15.12.32.02.51-.1.19-.15.32-.29.49-.15.17-.31.38-.44.51-.15.15-.3.31-.13.6.17.29.76 1.25 1.63 2.02 1.12 1 2.06 1.31 2.35 1.45.29.15.46.12.63-.07.17-.2.73-.85.92-1.14.19-.29.39-.24.65-.15.27.1 1.7.8 1.99.95.29.15.48.22.55.34.07.12.07.69-.18 1.37z"/>',
+} as const;
+const { nome, class: classe = "size-6", titulo } = Astro.props;
+---
+<svg class={classe} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden={titulo ? undefined : "true"} role={titulo ? "img" : undefined} set:html={(titulo ? `<title>${titulo}</title>` : "") + caminhos[nome]} />

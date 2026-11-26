@@ -1,0 +1,16 @@
+---
+import { faq } from "@/data/faq";
+interface Props { class?: string }
+const { class: classe = "" } = Astro.props;
+// coloca o e-mail da garantia como link clicável
+const comLink = (texto: string, email?: string) =>
+  email ? texto.replace(email, `<a href="mailto:${email}">${email}</a>`) : texto;
+---
+<div class:list={["grid gap-3", classe]} data-cascata="90">
+  {faq.map((f, i) => (
+    <details class="faq-item" name="faq" open={i === 0} data-anim="sobe">
+      <summary><span class="faq-mais" aria-hidden="true"></span><span>{f.pergunta}</span></summary>
+      <p class="faq-resposta" set:html={comLink(f.resposta, "email" in f ? f.email : undefined)} />
+    </details>
+  ))}
+</div>

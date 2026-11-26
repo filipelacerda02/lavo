@@ -1,0 +1,28 @@
+---
+import { Image } from "astro:assets";
+import Icone from "./Icone.astro";
+import type { Produto } from "@/data/produtos";
+interface Props { produto: Produto; titulo?: "h2" | "h3"; botao?: boolean; carregar?: "eager" | "lazy" }
+const { produto: p, titulo: H = "h3", botao = true, carregar = "lazy" } = Astro.props;
+const rotuloTipo = { lavadora: "Lavadora", secadora: "Secadora" } as const;
+---
+<article class="produto" data-produto={p.id} data-grupo={p.grupo} data-inclinar>
+  <div class="produto-foto">
+    <Image src={p.imagem} alt={p.alt} widths={[320, 480, 640]} sizes="(min-width: 1024px) 380px, (min-width: 640px) 45vw, 90vw" loading={carregar} />
+  </div>
+  <div class="flex flex-1 flex-col gap-3 p-5 sm:p-6">
+    <div class="flex flex-wrap gap-1.5">
+      {p.tipos.map((t) => <span class="rounded-full bg-nevoa px-2.5 py-1 font-titulo text-[0.7rem] font-semibold tracking-wide text-grafite-escuro uppercase">{rotuloTipo[t]}</span>)}
+      <span class="rounded-full bg-laranja-claro px-2.5 py-1 font-titulo text-[0.7rem] font-semibold tracking-wide text-laranja-noite uppercase">Speed Queen</span>
+    </div>
+    <H class="text-2xl font-bold text-grafite-noite">{p.modelo}</H>
+    <p class="-mt-2 text-tinta-suave">{p.descricao}</p>
+    {botao && (
+      <a class="botao-orcamento mt-auto self-start" href={`/orcamento?produto=${p.id}`} data-adicionar={p.id}>
+        <Icone nome="mais" class="rotulo-off" /><span class="rotulo-off">Adicionar ao orçamento</span>
+        <Icone nome="check" class="rotulo-on" /><span class="rotulo-on">No orçamento</span>
+        <span class="sr-only">: {p.modelo}</span>
+      </a>
+    )}
+  </div>
+</article>

@@ -1,0 +1,61 @@
+---
+import { Image } from "astro:assets";
+import Icone from "./Icone.astro";
+import Logo from "./Logo.astro";
+import Catavento from "./Catavento.astro";
+import alliance from "@/assets/img/alliance-distribuidor.png";
+import { site, navegacao, linkWhats } from "@/config/site";
+const ano = new Date().getFullYear();
+const preencher = (v: string) => v.startsWith("PREENCHER");
+---
+<footer class="on-dark relative overflow-hidden bg-carvao pt-20 pb-8 text-white/80 sm:pt-24">
+  <div class="pointer-events-none absolute -right-40 -bottom-48 size-[560px] text-white/[0.04]" aria-hidden="true">
+    <Catavento class="size-full animate-giro-lento" laranja="rgb(236 102 8 / 0.14)" />
+  </div>
+  <div class="container-vrx relative">
+    <div class="mb-14 flex flex-wrap items-end justify-between gap-8" data-anim="sobe">
+      <p class="max-w-3xl font-titulo text-[clamp(2rem,5.4vw,4.2rem)] leading-[1.02] font-bold tracking-[-0.03em] text-white">
+        Seja dono da sua lavanderia <span class="text-[#ffb27a]">sem complicação.</span>
+      </p>
+      <a class="btn btn-laranja" href="/orcamento" data-ima>Pedir orçamento <Icone nome="seta" /></a>
+    </div>
+    <div class="grid gap-10 border-b border-white/10 pb-12 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+      <div>
+        <Logo variante="branco" largura={160} class="mb-5 h-auto w-40" />
+        <p class="max-w-xs text-[0.95rem]">Distribuidor homologado Alliance Laundry Systems. Lavadoras e secadoras Speed Queen de nível industrial.</p>
+        <div class="mt-5 flex gap-2.5">
+          <a href={site.instagram} target="_blank" rel="noopener" aria-label="Instagram da VRX (abre em nova aba)" class="grid size-11 place-items-center rounded-full bg-white/10 transition-colors hover:bg-laranja-escuro"><Icone nome="instagram" class="size-5" /></a>
+          <a href={`mailto:${site.email}`} aria-label={`Enviar e-mail para ${site.email}`} class="grid size-11 place-items-center rounded-full bg-white/10 transition-colors hover:bg-laranja-escuro"><Icone nome="email" class="size-5" /></a>
+          <a href={linkWhats()} target="_blank" rel="noopener" aria-label="WhatsApp da VRX (abre em nova aba)" class="grid size-11 place-items-center rounded-full bg-white/10 transition-colors hover:bg-laranja-escuro"><Icone nome="whats" class="size-5" /></a>
+        </div>
+      </div>
+      <nav aria-label="Rodapé: navegação">
+        <h2 class="mb-4 text-xs font-semibold tracking-[0.16em] text-white uppercase">Navegue</h2>
+        <ul class="grid gap-2.5">{navegacao.map((n) => <li><a class="no-underline hover:text-[#ffb27a]" href={n.href}>{n.rotulo}</a></li>)}</ul>
+      </nav>
+      <div>
+        <h2 class="mb-4 text-xs font-semibold tracking-[0.16em] text-white uppercase">Contato</h2>
+        <ul class="grid gap-2.5">
+          <li><a class="no-underline hover:text-[#ffb27a]" href={linkWhats()} target="_blank" rel="noopener">WhatsApp {site.whatsappExibicao}<span class="sr-only"> (abre em nova aba)</span></a></li>
+          <li><a class="break-all no-underline hover:text-[#ffb27a]" href={`mailto:${site.email}`}>{site.email}</a></li>
+          <li><a class="no-underline hover:text-[#ffb27a]" href={site.instagram} target="_blank" rel="noopener">@vrxequipamentos<span class="sr-only"> no Instagram (abre em nova aba)</span></a></li>
+        </ul>
+      </div>
+      <nav aria-label="Rodapé: privacidade">
+        <h2 class="mb-4 text-xs font-semibold tracking-[0.16em] text-white uppercase">Privacidade</h2>
+        <ul class="grid gap-2.5">
+          <li><a class="no-underline hover:text-[#ffb27a]" href="/privacidade">Política de privacidade</a></li>
+          <li><a class="no-underline hover:text-[#ffb27a]" href="/cookies">Política de cookies</a></li>
+          <li><a class="no-underline hover:text-[#ffb27a]" href="/direitos-do-titular">Seus direitos (LGPD)</a></li>
+          <li><a class="no-underline hover:text-[#ffb27a]" href="/termos">Termos de uso</a></li>
+          <li><a class="no-underline hover:text-[#ffb27a]" href="/acessibilidade">Acessibilidade</a></li>
+          <li><button type="button" class="cursor-pointer text-left hover:text-[#ffb27a]" data-abrir-consentimento>Preferências de cookies</button></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 pt-6 text-sm text-white/65">
+      <span>© {ano} {site.nome}{!preencher(site.razaoSocial) && ` · ${site.razaoSocial}`}{!preencher(site.cnpj) && ` · CNPJ ${site.cnpj}`}</span>
+      <span class="flex items-center gap-3 rounded-xl bg-white px-3 py-2"><Image src={alliance} alt="Distribuidor homologado Alliance Laundry Systems" width={150} densities={[1, 2]} class="h-auto w-[150px]" /></span>
+    </div>
+  </div>
+</footer>

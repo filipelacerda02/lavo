@@ -1,0 +1,79 @@
+---
+import Base from "@/layouts/Base.astro";
+import PaginaHero from "@/components/PaginaHero.astro";
+import Icone from "@/components/Icone.astro";
+import Catavento from "@/components/Catavento.astro";
+import TituloAnimado from "@/components/TituloAnimado.astro";
+import Faq from "@/components/Faq.astro";
+import { site, linkWhats } from "@/config/site";
+import { faqJsonLd } from "@/data/faq";
+
+const passosGarantia = [
+  { icone: "documento", titulo: "Confira a política de garantias", texto: "O problema precisa estar dentro das regras descritas na política de garantias do fabricante." },
+  { icone: "tecnico", titulo: "Laudo de técnico homologado", texto: "Um técnico homologado avalia o equipamento e emite o laudo." },
+  { icone: "email", titulo: "Envie o laudo para a Alliance", texto: `Encaminhe o laudo para ${site.emailGarantia}.` },
+  { icone: "chave", titulo: "Reposição e manutenção", texto: "Com o laudo, a reposição e a manutenção da peça já são providenciadas." },
+] as const;
+---
+<Base titulo="Suporte e garantia | VRX Laundry Supply" descricao="Técnicos autorizados em todas as regiões do país e garantia de fábrica de 1 ano para mão de obra e 3 anos para peças. Veja como acionar e tire suas dúvidas." dadosEstruturados={[faqJsonLd]}>
+  <PaginaHero eyebrow="Suporte e garantia" titulo="Apoio do pedido *ao pós-venda*" texto="A VRX, em conjunto com a Alliance do Brasil, possui uma relação de técnicos autorizados em todas as regiões do país. E os equipamentos têm garantia de fábrica." />
+
+  <!-- TRÊS PILARES -->
+  <section class="bg-white py-16 sm:py-24" aria-label="Suporte, garantia e infraestrutura">
+    <div class="container-vrx grid gap-5 md:grid-cols-3" data-cascata="110">
+      <article class="card-vrx" data-anim="sobe" data-inclinar>
+        <span class="icone-redondo mb-6"><Icone nome="tecnico" class="size-7" /></span>
+        <h2 class="text-xl font-semibold text-grafite-noite">Suporte técnico</h2>
+        <p class="mt-2 leading-relaxed text-tinta-suave">Técnicos autorizados em todas as regiões do país, numa rede mantida pela VRX em conjunto com a Alliance do Brasil.</p>
+      </article>
+      <article class="card-vrx" data-anim="sobe" data-inclinar>
+        <span class="icone-redondo mb-6"><Icone nome="escudo" class="size-7" /></span>
+        <h2 class="text-xl font-semibold text-grafite-noite">Garantia de fábrica</h2>
+        <p class="mt-2 leading-relaxed text-tinta-suave"><strong class="text-tinta">1 ano</strong> para mão de obra e <strong class="text-tinta">3 anos</strong> para peças, conforme a política de garantias.</p>
+      </article>
+      <article class="card-vrx" data-anim="sobe" data-inclinar>
+        <span class="icone-redondo mb-6"><Icone nome="planta" class="size-7" /></span>
+        <h2 class="text-xl font-semibold text-grafite-noite">Infraestrutura da loja</h2>
+        <p class="mt-2 leading-relaxed text-tinta-suave">A infraestrutura é do proprietário, com o apoio de um material criado por uma empresa de engenharia especializada em lavanderias.</p>
+        <a class="link-seta mt-5" href={linkWhats("Olá! Quero receber o material de apoio para preparar o ponto da minha lavanderia.")} target="_blank" rel="noopener">Pedir o material de apoio<span class="sr-only"> pelo WhatsApp (abre em nova aba)</span> <Icone nome="seta" /></a>
+      </article>
+    </div>
+  </section>
+
+  <!-- COMO ACIONAR A GARANTIA -->
+  <section class="on-dark relative overflow-hidden bg-grafite-escuro py-20 text-white sm:py-28" aria-labelledby="titulo-acionar">
+    <div class="pointer-events-none absolute -right-36 -bottom-40 size-[560px] text-white/[0.07]" aria-hidden="true" data-paralaxe="0.1"><Catavento class="size-full animate-giro-lento" laranja="rgb(236 102 8 / 0.25)" /></div>
+    <div class="container-vrx relative">
+      <span class="eyebrow" data-anim="sobe"><Catavento class="size-5" />Passo a passo</span>
+      <TituloAnimado tag="h2" id="titulo-acionar" texto="Como acionar a *garantia*" class="text-[clamp(2rem,4vw,3.2rem)] leading-[1.06] font-bold" />
+      <ol class="relative mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-4" data-cascata="120">
+        {passosGarantia.map((p, i) => (
+          <li class="relative rounded-3xl border border-white/15 bg-white/[0.07] p-7" data-anim="sobe">
+            <span class="mb-5 flex items-center gap-3">
+              <span class="icone-redondo"><Icone nome={p.icone} class="size-6" /></span>
+              <span class="font-titulo text-4xl font-bold text-white/25" aria-hidden="true">0{i + 1}</span>
+            </span>
+            <h3 class="text-lg font-semibold">{p.titulo}</h3>
+            <p class="mt-2 leading-relaxed text-white/85">{p.texto}</p>
+          </li>
+        ))}
+      </ol>
+      <div class="mt-10 flex flex-wrap gap-3" data-anim="sobe">
+        <a class="btn btn-branco" href={`mailto:${site.emailGarantia}`}><Icone nome="email" class="size-5" />Enviar laudo para {site.emailGarantia}</a>
+        <a class="btn btn-contorno" href={linkWhats("Olá! Preciso de suporte técnico para um equipamento.")} target="_blank" rel="noopener"><Icone nome="whats" class="size-5" />Falar com a VRX<span class="sr-only"> pelo WhatsApp (abre em nova aba)</span></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="bg-nevoa py-20 sm:py-28" aria-labelledby="titulo-faq">
+    <div class="container-vrx max-w-4xl">
+      <div class="mb-10 text-center">
+        <span class="eyebrow" data-anim="sobe"><Catavento class="size-5" />FAQ</span>
+        <TituloAnimado tag="h2" id="titulo-faq" texto="Principais *dúvidas*" class="text-[clamp(2rem,4vw,3.2rem)] leading-[1.06] font-bold text-grafite-noite" />
+      </div>
+      <Faq />
+      <p class="mt-10 text-center text-tinta-suave" data-anim="sobe">Ficou com outra dúvida? <a class="font-semibold text-laranja-escuro underline" href={linkWhats("Olá! Tenho uma dúvida sobre os equipamentos.")} target="_blank" rel="noopener">Pergunte no WhatsApp<span class="sr-only"> (abre em nova aba)</span></a>.</p>
+    </div>
+  </section>
+</Base>

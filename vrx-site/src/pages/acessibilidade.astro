@@ -1,0 +1,30 @@
+---
+import Texto from "@/layouts/Texto.astro";
+import { linkWhats } from "@/config/site";
+---
+<Texto titulo="Acessibilidade | VRX Laundry Supply" descricao="Compromisso de acessibilidade digital do site da VRX (WCAG 2.1 AA e Lei Brasileira de Inclusão)." eyebrow="Inclusão" tituloHero="Declaração de *acessibilidade*" resumo="Queremos que todas as pessoas consigam usar este site, com ou sem tecnologias assistivas." atualizado="26 de novembro de 2026">
+  <h2>Nosso compromisso</h2>
+  <p>Este site busca atender ao nível AA das Diretrizes de Acessibilidade para Conteúdo Web (WCAG 2.1) e à Lei Brasileira de Inclusão (Lei nº 13.146/2015, art. 63).</p>
+
+  <h2>O que fizemos</h2>
+  <ul>
+    <li>Contraste de cores adequado entre texto e fundo, com tons de laranja e grafite ajustados para leitura.</li>
+    <li>Navegação completa pelo teclado, com foco sempre visível, e um link "Ir para o conteúdo" no início de cada página.</li>
+    <li>Estrutura semântica (cabeçalho, navegação, conteúdo principal, rodapé) e títulos em ordem.</li>
+    <li>Textos alternativos em todas as imagens com informação. Imagens decorativas são ignoradas pelos leitores de tela.</li>
+    <li>Atributos ARIA no menu, nos filtros do catálogo, na lista de orçamento, nas perguntas frequentes e no painel de privacidade, com avisos de resultado lidos automaticamente.</li>
+    <li>Formulários com rótulos, mensagens de erro ligadas a cada campo e confirmação anunciada.</li>
+    <li>Links que abrem em nova aba avisam isso aos leitores de tela.</li>
+    <li>As animações são desligadas automaticamente quando o sistema pede movimento reduzido, e todo o conteúdo aparece mesmo sem JavaScript.</li>
+    <li>O texto pode ser ampliado até 200% sem perder conteúdo.</li>
+  </ul>
+
+  <h2>Limitações conhecidas</h2>
+  <ul>
+    <li>As fotos dos produtos vêm das artes do fabricante e trazem ícones gráficos. O tipo de cada equipamento também está escrito em texto ao lado da foto.</li>
+    <li>O desafio anti-robô (Cloudflare Turnstile) é fornecido por terceiros. Se tiver dificuldade, use o WhatsApp ou o e-mail do site.</li>
+  </ul>
+
+  <h2>Encontrou uma barreira?</h2>
+  <p>Conte para a gente pelo <a href={linkWhats("Olá! Encontrei uma barreira de acessibilidade no site.")} target="_blank" rel="noopener">WhatsApp<span class="sr-only"> (abre em nova aba)</span></a> ou pelo canal do <a href="/privacidade#encarregado">encarregado de dados</a>. Responderemos e corrigiremos o problema o quanto antes.</p>
+</Texto>

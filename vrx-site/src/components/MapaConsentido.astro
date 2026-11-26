@@ -1,0 +1,49 @@
+---
+/**
+ * Mapa do Google bloqueado até o consentimento "Funcionais" (LGPD).
+ * Antes do aceite, só aparece um quadro com o botão "Carregar mapa": nenhum pedido é feito ao Google.
+ */
+import Icone from "./Icone.astro";
+interface Props { endereco: string; titulo?: string }
+const { endereco, titulo = "Onde estamos" } = Astro.props;
+---
+<div class="card-vrx p-0" data-mapa={endereco}>
+  <div class="p-7 pb-4">
+    <h2 class="text-lg font-semibold">{titulo}</h2>
+    <p class="mt-1 text-tinta-suave">{endereco}</p>
+  </div>
+  <div class="relative grid aspect-[4/3] place-items-center bg-nevoa p-6 text-center" data-mapa-area>
+    <div>
+      <Icone nome="pin" class="mx-auto mb-3 size-9 text-laranja-escuro" />
+      <p class="mb-4 text-sm text-tinta-suave">O mapa é do Google e só carrega com a sua permissão (categoria "Funcionais").</p>
+      <button type="button" class="btn btn-grafite min-h-11 px-5 text-sm" data-carregar-mapa>Carregar mapa</button>
+      <p class="mt-3 text-sm"><a class="font-semibold text-laranja-escuro underline" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}`} target="_blank" rel="noopener">Abrir no Google Maps<span class="sr-only"> (abre em nova aba)</span></a></p>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { quandoPermitido, salvarConsentimento, obterConsentimento } from "@/scripts/consentimento";
+  function iniciar() {
+    document.querySelectorAll<HTMLElement>("[data-mapa]").forEach((caixa) => {
+      const area = caixa.querySelector<HTMLElement>("[data-mapa-area]")!;
+      const montar = () => {
+        if (area.querySelector("iframe")) return;
+        const f = document.createElement("iframe");
+        f.title = "Mapa com a localização da VRX (Google Maps)";
+        f.loading = "lazy";
+        f.referrerPolicy = "strict-origin-when-cross-origin";
+        f.className = "absolute inset-0 size-full border-0";
+        f.src = `https://www.google.com/maps?q=${encodeURIComponent(caixa.dataset["mapa"] ?? "")}&output=embed`;
+        area.replaceChildren(f);
+      };
+      quandoPermitido("funcionais", montar);
+      caixa.querySelector("[data-carregar-mapa]")?.addEventListener("click", () => {
+        const atual = obterConsentimento()?.categorias ?? { funcionais: false, analiticos: false, marketing: false };
+        salvarConsentimento({ ...atual, funcionais: true }, "carregar_mapa");
+        montar();
+      });
+    });
+  }
+  document.addEventListener("astro:page-load", iniciar);
+</script>

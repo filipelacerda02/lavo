@@ -1,0 +1,260 @@
+---
+/**
+ * Ilustração vetorial "realista" de uma lavanderia sendo montada (viewBox 800×640):
+ * parede e piso com reflexo, porta de vidro com placa ABERTO, linhas de água, energia e esgoto,
+ * três equipamentos (lavadora front, conjunto lavadora + secadora empilhado e secadora front)
+ * em esmalte branco, com aros cromados, vidro e visor, celular com o pedido de orçamento e o selo de garantia.
+ * O estado padrão do SVG é a cena COMPLETA (sem JS ou com movimento reduzido); o GSAP
+ * (src/scripts/jornada.ts) define os estados iniciais e conduz cada etapa pela rolagem.
+ */
+
+/** Uma porta circular com aro cromado, vidro, tambor perfurado e roupas */
+interface Porta { id: string; cx: number; cy: number; r: number; tipo: "lav" | "sec" }
+const portas: Porta[] = [
+  { id: "a", cx: 305, cy: 410, r: 42, tipo: "lav" },
+  { id: "b1", cx: 485, cy: 238, r: 36, tipo: "sec" },
+  { id: "b2", cx: 485, cy: 410, r: 40, tipo: "lav" },
+  { id: "c", cx: 665, cy: 410, r: 42, tipo: "sec" },
+];
+const furos = (cx: number, cy: number, r: number) => {
+  const pts: Array<[number, number]> = [];
+  for (let rr = 8; rr < r * 0.78; rr += 8) {
+    const n = Math.round((2 * Math.PI * rr) / 9);
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + (rr % 16 ? 0.25 : 0);
+      pts.push([+(cx + Math.cos(a) * rr).toFixed(1), +(cy + Math.sin(a) * rr).toFixed(1)]);
+    }
+  }
+  return pts;
+};
+/** Gabinete de um equipamento: x, y, largura, altura */
+const gabinete = (x: number, y: number, w: number, h: number) => ({ x, y, w, h });
+const A = gabinete(232, 318, 146, 154);
+const B = gabinete(412, 148, 146, 324);
+const C = gabinete(592, 318, 146, 154);
+const maquinas = [
+  { g: A, paineis: [{ x: A.x, y: A.y, id: "a" }], portas: [portas[0]!] },
+  { g: B, paineis: [{ x: B.x, y: B.y, id: "b1" }, { x: B.x, y: B.y + 162, id: "b2" }], portas: [portas[1]!, portas[2]!] },
+  { g: C, paineis: [{ x: C.x, y: C.y, id: "c" }], portas: [portas[3]!] },
+];
+const pinos = [[118, 470], [210, 560], [520, 590], [700, 548], [770, 470]] as const;
+---
+<svg viewBox="0 0 800 640" class="loja-svg" role="img" aria-labelledby="titulo-loja" data-loja>
+  <title id="titulo-loja">Ilustração: uma lavanderia montada, com porta de vidro e placa de aberto, instalações de água, energia e esgoto na parede e três equipamentos brancos: uma lavadora de porta frontal, um conjunto de secadora sobre lavadora e uma secadora de porta frontal, além de um selo de garantia.</title>
+  <defs>
+    <linearGradient id="l-parede" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbfbfa" /><stop offset="1" stop-color="#e6e6e3" /></linearGradient>
+    <linearGradient id="l-piso" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d6d6d2" /><stop offset="1" stop-color="#b9b9b4" /></linearGradient>
+    <linearGradient id="l-rodape" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9c9d98" /><stop offset="1" stop-color="#7d7e79" /></linearGradient>
+    <linearGradient id="l-esmalte" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ececea" /><stop offset=".18" stop-color="#ffffff" /><stop offset=".6" stop-color="#f6f6f4" /><stop offset="1" stop-color="#d9d9d5" />
+    </linearGradient>
+    <linearGradient id="l-lateral" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#cfcfcb" /><stop offset="1" stop-color="#a9a9a4" /></linearGradient>
+    <linearGradient id="l-painel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f4f2" /><stop offset="1" stop-color="#d8d8d4" /></linearGradient>
+    <linearGradient id="l-visor" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2d2e2c" /><stop offset="1" stop-color="#121311" /></linearGradient>
+    <linearGradient id="l-cromo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" /><stop offset=".25" stop-color="#d4d4d0" /><stop offset=".5" stop-color="#8e8f8a" /><stop offset=".62" stop-color="#f5f5f3" /><stop offset=".85" stop-color="#a2a39e" /><stop offset="1" stop-color="#6f706b" />
+    </linearGradient>
+    <radialGradient id="l-borracha" cx=".5" cy=".5" r=".5"><stop offset=".8" stop-color="#2b2c2a" /><stop offset=".94" stop-color="#121311" /><stop offset="1" stop-color="#3b3c39" /></radialGradient>
+    <radialGradient id="l-tambor" cx=".5" cy=".45" r=".55"><stop offset="0" stop-color="#d9d9d6" /><stop offset=".55" stop-color="#9a9b96" /><stop offset=".9" stop-color="#4f504c" /><stop offset="1" stop-color="#2b2c2a" /></radialGradient>
+    <radialGradient id="l-vidro" cx=".36" cy=".3" r=".75"><stop offset="0" stop-color="#ffffff" stop-opacity=".38" /><stop offset=".6" stop-color="#cfe3f2" stop-opacity=".12" /><stop offset="1" stop-color="#5f6f7a" stop-opacity=".3" /></radialGradient>
+    <linearGradient id="l-agua" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe2ff" stop-opacity=".9" /><stop offset="1" stop-color="#3f7fb8" stop-opacity=".9" /></linearGradient>
+    <radialGradient id="l-quente" cx=".5" cy=".55" r=".55"><stop offset="0" stop-color="#ffd59a" stop-opacity=".95" /><stop offset=".55" stop-color="#ff9a4d" stop-opacity=".5" /><stop offset="1" stop-color="#ec6608" stop-opacity="0" /></radialGradient>
+    <linearGradient id="l-porta-vidro" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e7f1f7" /><stop offset=".5" stop-color="#c9dbe6" /><stop offset="1" stop-color="#a9c0cf" /></linearGradient>
+    <linearGradient id="l-reflexo" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0" /><stop offset=".5" stop-color="#fff" stop-opacity=".7" /><stop offset="1" stop-color="#fff" stop-opacity="0" /></linearGradient>
+    <linearGradient id="l-sombra-piso" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".28" /><stop offset="1" stop-color="#000" stop-opacity="0" /></linearGradient>
+    <linearGradient id="l-celular" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4a4b48" /><stop offset="1" stop-color="#1e1f1d" /></linearGradient>
+    <linearGradient id="l-escudo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff8a3d" /><stop offset=".55" stop-color="#ec6608" /><stop offset="1" stop-color="#a84305" /></linearGradient>
+    <pattern id="l-azulejo" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0v40" fill="none" stroke="#000" stroke-opacity=".045" stroke-width="1.2" /></pattern>
+    <pattern id="l-grade" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0v20" fill="none" stroke="#3f7fb8" stroke-opacity=".35" stroke-width=".8" /></pattern>
+    <filter id="l-desfoque" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="6" /></filter>
+    <filter id="l-sombra" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#000" flood-opacity=".25" /></filter>
+    {portas.map((p) => <clipPath id={`l-clip-${p.id}`}><circle cx={p.cx} cy={p.cy} r={p.r * 0.8} /></clipPath>)}
+  </defs>
+
+  <!-- ===== Ambiente ===== -->
+  <rect width="800" height="478" fill="url(#l-parede)" />
+  <rect width="800" height="478" fill="url(#l-azulejo)" />
+  <path d="M0 478h800v162H0z" fill="url(#l-piso)" />
+  <g stroke="#000" stroke-opacity=".06" stroke-width="1.2">
+    <path d="M0 520h800M0 572h800M0 630h800" /><path d="M120 478l-60 162M300 478l-30 162M480 478v162M660 478l30 162M800 520l-40 120" />
+  </g>
+  <rect y="466" width="800" height="12" fill="url(#l-rodape)" />
+
+  <!-- porta de vidro e placa -->
+  <g>
+    <rect x="34" y="150" width="150" height="318" rx="4" fill="#5d5e5a" />
+    <rect x="44" y="160" width="130" height="304" fill="url(#l-porta-vidro)" />
+    <path d="M58 170l40 0-60 120v-60z" fill="url(#l-reflexo)" opacity=".7" />
+    <rect x="152" y="300" width="8" height="54" rx="4" fill="url(#l-cromo)" />
+    <rect x="58" y="118" width="102" height="30" rx="8" fill="#3f403d" />
+    <rect x="62" y="122" width="94" height="22" rx="6" fill="#2a2b29" data-placa />
+    <text x="109" y="138" text-anchor="middle" font-family="Poppins, sans-serif" font-size="13" font-weight="700" letter-spacing="2" fill="#ffb27a" data-placa-texto>ABERTO</text>
+  </g>
+
+  <!-- ===== Projeto: grade de planta e cotas (etapa "Prepare o ponto") ===== -->
+  <g data-planta opacity="0">
+    <rect x="210" y="96" width="560" height="380" fill="url(#l-grade)" />
+    <g stroke="#3f7fb8" stroke-width="1.6" fill="none" data-cotas>
+      <path d="M232 492h146M232 486v12M378 486v12" /><path d="M412 492h146M412 486v12M558 486v12" /><path d="M592 492h146M592 486v12M738 486v12" />
+    </g>
+  </g>
+
+  <!-- ===== Instalações: água (azul), energia (laranja) e esgoto (grafite) ===== -->
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" data-instalacoes>
+    <path d="M200 116H760" stroke="#3f7fb8" stroke-width="7" data-linha="agua" />
+    <path d="M200 116H760" stroke="#fff" stroke-opacity=".45" stroke-width="2" data-linha="agua" />
+    <path d="M300 116v176M480 116v18M660 116v176" stroke="#3f7fb8" stroke-width="5" data-linha="agua" />
+    <path d="M200 98H760" stroke="#ec6608" stroke-width="5" stroke-dasharray="1 0" data-linha="energia" />
+    <path d="M356 98v196M536 98v30M716 98v196" stroke="#ec6608" stroke-width="4" data-linha="energia" />
+    <path d="M206 458H770" stroke="#575854" stroke-width="9" data-linha="esgoto" />
+    <path d="M250 458v-12M430 458v-12M610 458v-12" stroke="#575854" stroke-width="7" data-linha="esgoto" />
+  </g>
+  <g data-pontos>
+    {[[300, 296], [660, 296], [480, 138]].map(([x, y]) => <g><circle cx={x} cy={y} r="7" fill="#fff" stroke="#3f7fb8" stroke-width="3" /><circle cx={x} cy={y} r="2.5" fill="#3f7fb8" /></g>)}
+    {[[356, 298], [716, 298], [536, 132]].map(([x, y]) => <g><rect x={x! - 9} y={y! - 7} width="18" height="14" rx="3" fill="#fff" stroke="#ec6608" stroke-width="2.5" /><path d={`M${x! - 3} ${y! - 2}v4M${x! + 3} ${y! - 2}v4`} stroke="#3f403d" stroke-width="2" /></g>)}
+  </g>
+
+  <!-- ===== Contornos (etapa "Escolha"): os equipamentos escolhidos, ainda em projeto ===== -->
+  <g fill="none" stroke="#b84a06" stroke-width="2.4" stroke-dasharray="8 6" data-contornos opacity="0">
+    <rect x={A.x} y={A.y} width={A.w} height={A.h} rx="8" data-contorno />
+    <rect x={B.x} y={B.y} width={B.w} height={B.h} rx="8" data-contorno />
+    <rect x={C.x} y={C.y} width={C.w} height={C.h} rx="8" data-contorno />
+  </g>
+  <g font-family="Poppins, sans-serif" font-size="13" font-weight="700" data-etiquetas opacity="0">
+    {[[A.x + A.w / 2, A.y - 14, "SFNN"], [B.x + B.w / 2, B.y - 14, "STEWX"], [C.x + C.w / 2, C.y - 14, "SDEN"]].map(([x, y, t]) => (
+      <g data-etiqueta>
+        <rect x={(x as number) - 34} y={(y as number) - 15} width="68" height="24" rx="12" fill="#b84a06" />
+        <text x={x} y={(y as number) + 2} text-anchor="middle" fill="#fff">{t}</text>
+      </g>
+    ))}
+  </g>
+
+  <!-- ===== Equipamentos (cada um num grupo, para o GSAP posicionar) ===== -->
+  {maquinas.map((m, i) => (
+    <g data-maquina={i}>
+      <ellipse cx={m.g.x + m.g.w / 2} cy={m.g.y + m.g.h + 4} rx={m.g.w * 0.62} ry="10" fill="#000" opacity=".22" filter="url(#l-desfoque)" data-sombra />
+      <rect x={m.g.x} y={m.g.y + m.g.h + 2} width={m.g.w} height="46" fill="url(#l-sombra-piso)" opacity=".35" />
+      <path d={`M${m.g.x + m.g.w} ${m.g.y + 6}l12 -6v${m.g.h - 6}l-12 6z`} fill="url(#l-lateral)" />
+      <rect x={m.g.x} y={m.g.y} width={m.g.w} height={m.g.h} rx="7" fill="url(#l-esmalte)" stroke="#c8c8c4" />
+      <rect x={m.g.x + 8} y={m.g.y + 6} width="10" height={m.g.h - 12} rx="5" fill="url(#l-reflexo)" opacity=".55" />
+      {m.paineis.length > 1 && <rect x={m.g.x} y={m.g.y + 158} width={m.g.w} height="4" fill="#c8c8c4" />}
+      {m.paineis.map((pn) => (
+        <g>
+          <rect x={pn.x + 4} y={pn.y + 4} width="138" height="40" rx="5" fill="url(#l-painel)" />
+          <rect x={pn.x + 14} y={pn.y + 12} width="62" height="22" rx="3" fill="url(#l-visor)" />
+          <text x={pn.x + 45} y={pn.y + 27.5} text-anchor="middle" font-family="ui-monospace, monospace" font-size="10.5" font-weight="700" fill="#ffb27a" data-visor={pn.id}>PRONTO</text>
+          <circle cx={pn.x + 92} cy={pn.y + 23} r="5" fill="#4cd07d" data-led={pn.id} />
+          {[0, 1, 2].map((k) => <rect x={pn.x + 104 + k * 11} y={pn.y + 17} width="8" height="12" rx="2" fill="#bdbdb8" />)}
+          <rect x={pn.x + 4} y={pn.y + 44} width="138" height="1.5" fill="#bdbdb8" />
+          <text x={pn.x + 73} y={pn.y + 58} text-anchor="middle" font-family="Poppins, sans-serif" font-size="7" font-weight="800" letter-spacing="1.5" fill="#9a9b96">SPEED QUEEN</text>
+        </g>
+      ))}
+      {m.portas.map((p) => (
+        <g data-porta={p.id}>
+          <circle cx={p.cx} cy={p.cy} r={p.r + 6} fill="#d4d4d0" />
+          <circle cx={p.cx} cy={p.cy} r={p.r} fill="url(#l-cromo)" />
+          <circle cx={p.cx} cy={p.cy} r={p.r * 0.86} fill="url(#l-borracha)" />
+          <g clip-path={`url(#l-clip-${p.id})`}>
+            <g data-tambor={p.id}>
+              <circle cx={p.cx} cy={p.cy} r={p.r * 0.8} fill="url(#l-tambor)" />
+              {furos(p.cx, p.cy, p.r).map(([x, y]) => <circle cx={x} cy={y} r="1.3" fill="#3b3c39" />)}
+              {[0, 120, 240].map((a) => <rect x={p.cx - 3} y={p.cy - p.r * 0.8} width="6" height={p.r * 0.32} rx="3" fill="#e9e9e6" transform={`rotate(${a} ${p.cx} ${p.cy})`} />)}
+              <path d={`M${p.cx - p.r * 0.5} ${p.cy + p.r * 0.2}c${p.r * 0.3} ${-p.r * 0.35} ${p.r * 0.7} ${-p.r * 0.2} ${p.r * 0.95} ${p.r * 0.1}c-${p.r * 0.2} ${p.r * 0.35} -${p.r * 0.75} ${p.r * 0.35} -${p.r * 0.95} -${p.r * 0.1}z`} fill={p.tipo === "lav" ? "#7d93b8" : "#d98a5a"} opacity=".9" />
+              <path d={`M${p.cx - p.r * 0.2} ${p.cy - p.r * 0.45}c${p.r * 0.35} ${p.r * 0.05} ${p.r * 0.55} ${p.r * 0.25} ${p.r * 0.55} ${p.r * 0.45}c-${p.r * 0.35} ${p.r * 0.05} -${p.r * 0.6} -${p.r * 0.15} -${p.r * 0.55} -${p.r * 0.45}z`} fill="#f2f2ef" opacity=".85" />
+            </g>
+            {p.tipo === "lav" && (
+              <g data-agua={p.id} opacity="0">
+                <path d={`M${p.cx - p.r * 2} ${p.cy + p.r * 0.15}q${p.r * 0.25} -8 ${p.r * 0.5} 0t${p.r * 0.5} 0t${p.r * 0.5} 0t${p.r * 0.5} 0t${p.r * 0.5} 0t${p.r * 0.5} 0t${p.r * 0.5} 0t${p.r * 0.5} 0V${p.cy + p.r}H${p.cx - p.r * 2}z`} fill="url(#l-agua)" data-onda={p.id} data-periodo={p.r} />
+                {[[-0.4, 0.4], [0.1, 0.55], [0.35, 0.3], [-0.1, 0.25]].map(([dx, dy]) => <circle cx={p.cx + dx! * p.r} cy={p.cy + dy! * p.r} r="3" fill="#fff" opacity=".7" />)}
+              </g>
+            )}
+            {p.tipo === "sec" && <circle cx={p.cx} cy={p.cy} r={p.r * 0.8} fill="url(#l-quente)" opacity="0" data-calor={p.id} />}
+          </g>
+          <circle cx={p.cx} cy={p.cy} r={p.r * 0.8} fill="url(#l-vidro)" />
+          <path d={`M${p.cx - p.r * 0.55} ${p.cy - p.r * 0.25}a${p.r * 0.62} ${p.r * 0.62} 0 0 1 ${p.r * 0.5} -${p.r * 0.42}`} fill="none" stroke="#fff" stroke-opacity=".8" stroke-width="3" stroke-linecap="round" />
+          <rect x={p.cx + p.r - 4} y={p.cy - 10} width="12" height="20" rx="4" fill="url(#l-cromo)" />
+        </g>
+      ))}
+    </g>
+  ))}
+
+  <!-- ===== Celular com o pedido de orçamento (etapa "Orçamento") ===== -->
+  <g data-celular opacity="0">
+    <g filter="url(#l-sombra)">
+      <rect x="560" y="150" width="190" height="360" rx="28" fill="url(#l-celular)" />
+      <rect x="570" y="166" width="170" height="328" rx="18" fill="#f1efe9" />
+      <rect x="620" y="156" width="70" height="8" rx="4" fill="#111" />
+    </g>
+    <rect x="570" y="166" width="170" height="44" rx="18" fill="#128c4b" />
+    <rect x="570" y="190" width="170" height="20" fill="#128c4b" />
+    <circle cx="594" cy="188" r="12" fill="#fff" /><text x="594" y="192.5" text-anchor="middle" font-family="Poppins, sans-serif" font-size="9" font-weight="800" fill="#62635f">VRX</text>
+    <text x="614" y="192" font-family="Poppins, sans-serif" font-size="12" font-weight="600" fill="#fff">VRX</text>
+    <g font-family="Roboto, sans-serif" font-size="11">
+      <g data-bolha="0"><rect x="598" y="226" width="132" height="30" rx="10" fill="#d9fdd3" /><text x="608" y="245" fill="#1f2a1f">Olá! Quero um orçamento:</text></g>
+      <g data-bolha="1">
+        <rect x="598" y="262" width="132" height="66" rx="10" fill="#d9fdd3" />
+        <text x="608" y="281" fill="#1f2a1f">1 × SFNN</text><text x="608" y="299" fill="#1f2a1f">1 × STEWX</text><text x="608" y="317" fill="#1f2a1f">1 × SDEN</text>
+      </g>
+      <g data-bolha="2"><rect x="580" y="338" width="128" height="30" rx="10" fill="#fff" /><text x="590" y="357" fill="#1f2a1f">Recebido! Já vamos ver.</text></g>
+    </g>
+    <g data-documento>
+      <rect x="586" y="380" width="138" height="96" rx="10" fill="#fff" stroke="#e1ded6" />
+      <rect x="598" y="392" width="26" height="32" rx="3" fill="#fde7d6" /><path d="M604 402h14M604 409h14M604 416h9" stroke="#b84a06" stroke-width="2" />
+      <text x="632" y="405" font-family="Poppins, sans-serif" font-size="11" font-weight="700" fill="#3f403d">Orçamento</text>
+      <text x="632" y="420" font-family="Roboto, sans-serif" font-size="9.5" fill="#575854">Speed Queen</text>
+      <path d="M598 440h112M598 452h84M598 464h98" stroke="#e1ded6" stroke-width="5" stroke-linecap="round" data-linhas-doc />
+    </g>
+  </g>
+
+  <!-- ===== Material de apoio (etapa "Prepare o ponto") ===== -->
+  <g data-material opacity="0" transform="translate(0 130)">
+    <g filter="url(#l-sombra)">
+      <rect x="40" y="96" width="150" height="112" rx="12" fill="#fff" />
+    </g>
+    <rect x="52" y="108" width="40" height="48" rx="5" fill="#e3eef7" />
+    <path d="M58 118h28M58 126h28M58 134h18M72 118v30" stroke="#3f7fb8" stroke-width="2" />
+    <text x="100" y="124" font-family="Poppins, sans-serif" font-size="11" font-weight="700" fill="#3f403d">Material</text>
+    <text x="100" y="138" font-family="Poppins, sans-serif" font-size="11" font-weight="700" fill="#3f403d">de apoio</text>
+    <text x="52" y="176" font-family="Roboto, sans-serif" font-size="9.5" fill="#575854">Engenharia especializada</text>
+    <text x="52" y="190" font-family="Roboto, sans-serif" font-size="9.5" fill="#575854">em lavanderias</text>
+  </g>
+
+  <!-- ===== Eficiência (etapa "Funcionando") ===== -->
+  <g data-eficiencia opacity="0" font-family="Poppins, sans-serif" font-size="10.5" font-weight="600" fill="#3f403d">
+    {[["água", "#3f7fb8", 0], ["energia", "#ec6608", 1], ["insumos", "#575854", 2]].map(([t, cor, k]) => (
+      <g data-indicador={k}>
+        <rect x={236 + (k as number) * 168} y="40" width="132" height="34" rx="17" fill="#fff" stroke="#e1ded6" />
+        <circle cx={256 + (k as number) * 168} cy="57" r="9" fill={cor as string} />
+        <path d={`M${252 + (k as number) * 168} 54l4 5 4-5`} stroke="#fff" stroke-width="2" fill="none" />
+        <text x={272 + (k as number) * 168} y="61">menos {t}</text>
+      </g>
+    ))}
+  </g>
+
+  <!-- ===== Suporte e garantia ===== -->
+  <g data-pinos opacity="0">
+    {pinos.map(([x, y]) => (
+      <g data-pino>
+        <ellipse cx={x} cy={y + 2} rx="9" ry="3" fill="#000" opacity=".2" />
+        <path d={`M${x} ${y}c-10-12-14-18-14-24a14 14 0 0 1 28 0c0 6-4 12-14 24z`} fill="#b84a06" />
+        <circle cx={x} cy={y - 24} r="5.5" fill="#fff" />
+      </g>
+    ))}
+  </g>
+  <g data-selo opacity="0">
+    <g filter="url(#l-sombra)">
+      <path d="M400 128l58 22v44c0 40-26 64-58 74-32-10-58-34-58-74v-44z" fill="url(#l-escudo)" />
+    </g>
+    <path d="M400 140l46 17v37c0 31-20 50-46 59-26-9-46-28-46-59v-37z" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="2" />
+    <path d="M378 196l15 15 30-32" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" data-check />
+    <g data-chave>
+      <circle cx="458" cy="150" r="22" fill="#3f403d" />
+      <path d="M465 141a8 8 0 0 0-10.8 10.4l-9.4 9.4a2.6 2.6 0 0 0 3.7 3.7l9.4-9.4a8 8 0 0 0 10.4-10.8l-4.6 4.6-3.5-.5-.5-3.5z" fill="#fff" />
+    </g>
+    <g font-family="Poppins, sans-serif" font-weight="700" text-anchor="middle">
+      <rect x="300" y="280" width="200" height="58" rx="16" fill="#fff" stroke="#e1ded6" />
+      <text x="400" y="303" font-size="13" fill="#b84a06">GARANTIA DE FÁBRICA</text>
+      <text x="400" y="324" font-size="12" font-weight="600" fill="#3f403d">1 ano mão de obra · 3 anos peças</text>
+    </g>
+  </g>
+</svg>
