@@ -5,7 +5,6 @@ import Icone from "@/components/Icone.astro";
 import Catavento from "@/components/Catavento.astro";
 import TituloAnimado from "@/components/TituloAnimado.astro";
 import ProdutoCard from "@/components/ProdutoCard.astro";
-import Jornada from "@/components/Jornada.astro";
 import Faq from "@/components/Faq.astro";
 import Logo from "@/components/Logo.astro";
 import { site, linkWhats } from "@/config/site";
@@ -42,7 +41,7 @@ const listaProdutos = {
         <div data-anim="sobe">
           <Image src={allianceSq} alt="Distribuidor homologado Alliance Laundry Systems e Speed Queen" width={200} densities={[1, 2]} loading="eager" class="mb-7 h-auto w-[200px]" />
         </div>
-        <TituloAnimado texto="Seja dono da sua *lavanderia* sem complicação" class="text-[clamp(2.5rem,6vw,4.9rem)] leading-[1.02] font-bold text-grafite-noite" />
+        <TituloAnimado texto="Seja dono da sua *lavanderia* sem complicação" class="text-[clamp(2.4rem,4.9vw,4.4rem)] leading-[1.04] font-bold text-grafite-noite" />
         <p class="mt-6 max-w-[34em] text-[clamp(1.05rem,1.5vw,1.25rem)] text-tinta-suave" data-anim="sobe" data-atraso="500">
           Um modelo de negócio simples, prático e lucrativo para você começar a empreender com <strong class="font-semibold text-grafite-noite">segurança e apoio total.</strong>
         </p>
@@ -104,7 +103,7 @@ const listaProdutos = {
   </section>
 
   <!-- POR QUE COMPRAR DE NÓS -->
-  <section class="on-dark relative overflow-hidden bg-grafite-escuro py-20 text-white sm:py-28" aria-labelledby="titulo-porque">
+  <section class="on-dark relative overflow-hidden bg-grafite-noite py-20 text-white sm:py-28" aria-labelledby="titulo-porque">
     <div class="pointer-events-none absolute -top-32 -left-40 size-[620px] text-white/[0.07]" aria-hidden="true" data-paralaxe="0.1">
       <Catavento class="size-full animate-giro-lento" laranja="rgb(236 102 8 / 0.25)" />
     </div>
@@ -127,9 +126,6 @@ const listaProdutos = {
       </div>
     </div>
   </section>
-
-  <!-- JORNADA (storytelling guiado pela rolagem) -->
-  <Jornada />
 
   <!-- GARANTIA EM NÚMEROS -->
   <section class="bg-white py-20 sm:py-28" aria-labelledby="titulo-garantia">

@@ -1,5 +1,5 @@
 /**
- * Motor de animações de entrada ao rolar (sem bibliotecas, ~3 KB). GSAP fica com a jornada e a transição.
+ * Motor de animações de entrada ao rolar (sem bibliotecas, ~3 KB). A transição entre páginas usa GSAP.
  * Atributos disponíveis no HTML:
  *  data-anim="sobe|desce|esquerda|direita|zoom|desfoque|cortina|cortina-lado|giro"  entrada ao rolar
  *  data-atraso="200"            atraso em ms

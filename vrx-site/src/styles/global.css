@@ -77,7 +77,7 @@
   .btn:hover svg { @apply translate-x-1; }
   .btn-laranja { @apply bg-laranja-escuro text-white hover:bg-laranja-noite hover:shadow-laranja; }
   .btn-grafite { @apply bg-grafite-noite text-white hover:bg-carvao hover:shadow-suave; }
-  .btn-whats { @apply bg-[#128c4b] text-white hover:bg-[#0d7a40] hover:shadow-suave; }
+  .btn-whats { @apply bg-[#0b7a3e] text-white hover:bg-[#08652f] hover:shadow-suave; }
   .btn-branco { @apply bg-white text-carvao hover:shadow-suave; }
   .btn-contorno { @apply border-2 border-grafite-escuro text-grafite-noite hover:border-laranja-escuro hover:bg-laranja-escuro hover:text-white; }
   .on-dark .btn-contorno { @apply border-white/60 text-white hover:border-white hover:bg-white hover:text-carvao; }
@@ -190,7 +190,7 @@
   .produto { @apply flex flex-col overflow-hidden rounded-3xl border border-carvao/10 bg-white transition-[transform,box-shadow] duration-500 hover:shadow-suave; }
   .produto[hidden] { display: none; }
   .produto-foto { @apply relative overflow-hidden bg-cinza; }
-  .produto-foto img { @apply aspect-[960/1114] h-auto w-full object-cover transition-transform duration-700 ease-out; }
+  .produto-foto img { @apply aspect-[960/860] h-auto w-full object-cover object-bottom transition-transform duration-700 ease-out; }
   .produto:hover .produto-foto img { @apply scale-105; }
   .botao-orcamento { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full border-2 border-laranja-escuro px-4 font-titulo text-sm font-semibold text-laranja-escuro no-underline transition-colors hover:bg-laranja-escuro hover:text-white aria-pressed:bg-laranja-escuro aria-pressed:text-white; }
   .botao-orcamento svg { @apply size-4.5; }
@@ -229,64 +229,6 @@
   .texto-legal th, .texto-legal td { @apply border-b border-carvao/12 px-3 py-2.5 text-left align-top; }
   .texto-legal th { @apply bg-nevoa font-titulo font-semibold text-grafite-noite; }
   .texto-legal .aviso { @apply rounded-2xl border border-laranja/50 bg-laranja-claro/60 p-4 text-sm; }
-}
-
-/* ================= Jornada: duas metades guiadas pela rolagem (GSAP) ================= */
-@layer components {
-  .jornada { @apply py-20 sm:py-28; }
-  .jornada-grade { @apply grid items-center gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-14; }
-  .jornada-h2 { @apply text-[clamp(1.9rem,3.6vw,3.1rem)] leading-[1.06] font-bold text-grafite-noite; }
-  .jornada-trilha { @apply hidden; }
-  .jornada-paineis { @apply mt-8 grid gap-4; }
-  .jornada-painel { @apply rounded-3xl border border-carvao/10 bg-white p-6; }
-  .jornada-painel-icone { @apply grid size-14 flex-none place-items-center rounded-full bg-laranja text-white shadow-laranja; }
-  .jornada-painel-rotulo { @apply font-titulo text-xs font-bold tracking-[0.14em] text-laranja-escuro uppercase; }
-  .jornada-painel-titulo { @apply mt-4 font-titulo text-2xl leading-tight font-bold text-grafite-noite; }
-  .jornada-painel-texto { @apply mt-2 text-[1.02rem] leading-relaxed text-tinta-suave; }
-  .jornada-cta { @apply mt-6 self-start; }
-  .jornada-cena { @apply relative mx-auto w-full max-w-[760px]; }
-  .jornada-cena-fundo { @apply absolute inset-[4%] rounded-[40%] bg-[radial-gradient(circle,rgb(236_102_8/0.16),rgb(236_102_8/0)_68%)]; }
-  .loja-svg { @apply relative block h-auto w-full; }
-
-  .jornada:not(.animado) .jornada-cena { @apply lg:sticky lg:top-28 lg:self-start; }
-
-  /* ---- modo animado: a seção fica presa enquanto a rolagem conduz a história ---- */
-  .jornada.animado { @apply py-0; }
-  .jornada.animado .jornada-palco { @apply flex h-svh items-center overflow-hidden; }
-  .jornada.animado .jornada-grade { @apply h-full w-full py-6 lg:py-10; }
-  .jornada.animado .jornada-texto { @apply flex flex-col justify-center; }
-  .jornada.animado .jornada-trilha { @apply mt-6 flex flex-wrap gap-1.5; }
-  .jornada.animado .jornada-trilha li {
-    @apply relative overflow-hidden rounded-full border border-carvao/15 bg-white px-3 py-1 font-titulo text-[0.72rem] font-semibold text-tinta-suave transition-colors duration-300;
-  }
-  .jornada.animado .jornada-trilha li[data-estado="feito"] { @apply border-laranja-claro bg-laranja-claro text-laranja-noite; }
-  .jornada.animado .jornada-trilha li[data-estado="ativo"] { @apply border-laranja-escuro bg-laranja-escuro text-white; }
-  .jornada.animado .jornada-paineis { @apply relative mt-6 block min-h-[230px]; }
-  .jornada.animado .jornada-painel { @apply absolute inset-x-0 top-0 border-0 bg-transparent p-0; visibility: hidden; }
-  .jornada.animado .jornada-painel-titulo { @apply text-[clamp(1.8rem,3.2vw,2.7rem)]; }
-  .jornada.animado .jornada-painel-texto { @apply max-w-md text-[clamp(1rem,1.3vw,1.12rem)]; }
-  .jornada.animado .jornada-cta { @apply invisible opacity-0; }
-  .jornada.animado .jornada-cena { @apply flex h-full max-w-none items-center justify-center; }
-  .jornada.animado .loja-svg { @apply max-h-full; }
-
-  @media (max-width: 1023px) {
-    .jornada.animado .jornada-grade { @apply grid-rows-[auto_minmax(0,1fr)] content-stretch gap-2 py-4; }
-    .jornada.animado .jornada-texto { @apply justify-start; }
-    .jornada.animado .jornada-h2 { @apply text-[1.3rem]; }
-    .jornada.animado .eyebrow { @apply mb-1; }
-    .jornada.animado .jornada-trilha { @apply mt-3 flex-nowrap overflow-hidden; }
-    .jornada.animado .jornada-trilha li { @apply px-2 text-[0.6rem]; }
-    .jornada.animado .jornada-paineis { @apply mt-3 min-h-[150px]; }
-    .jornada.animado .jornada-painel-icone { @apply size-11; }
-    .jornada.animado .jornada-painel-titulo { @apply mt-2 text-[1.4rem]; }
-    .jornada.animado .jornada-painel-texto { @apply mt-1 text-[0.92rem] leading-snug; }
-    .jornada.animado .jornada-cta { @apply mt-2 min-h-10 px-5 text-sm; }
-    .jornada.animado .jornada-cena { @apply min-h-0; }
-  }
-  @media (max-height: 820px) and (min-width: 1024px) {
-    .jornada.animado .jornada-paineis { @apply min-h-[200px]; }
-    .jornada.animado .jornada-h2 { @apply text-[clamp(1.6rem,2.6vw,2.3rem)]; }
-  }
 }
 
 /* ================= Transição entre páginas: o cata-vento da VRX fecha e abre ================= */
